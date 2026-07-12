@@ -1,3 +1,9 @@
+export type ItemRecordStatus =
+  | "active"
+  | "lost"
+  | "found"
+  | "inactive";
+
 export type ItemRecord = {
   id: string;
   assetName: string;
@@ -6,7 +12,7 @@ export type ItemRecord = {
   email: string;
   description: string;
   category: string;
-  status: string;
+  status: ItemRecordStatus;
   createdAt: string;
 };
 

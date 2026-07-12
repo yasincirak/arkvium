@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { changeRecordStatus } from "@/lib/actions";
 import {
   getFinderMessagesByRecordId,
   getRecordById,
@@ -23,6 +24,15 @@ export default function RecordDetailPage({
   const messages = getFinderMessagesByRecordId(record.id)
     .slice()
     .reverse();
+
+  const statusLabel =
+    record.status === "lost"
+      ? "Kayıp"
+      : record.status === "found"
+        ? "Bulundu"
+        : record.status === "inactive"
+          ? "Pasif"
+          : "Aktif";
 
   return (
     <div className="space-y-6">
@@ -56,7 +66,7 @@ export default function RecordDetailPage({
           </div>
 
           <span className="w-fit rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-white/70">
-            {record.status === "active" ? "Aktif" : record.status}
+            {statusLabel}
           </span>
         </div>
 
@@ -101,6 +111,74 @@ export default function RecordDetailPage({
         </div>
 
         <div className="mt-6">
+          <p className="mb-3 text-sm text-white/40">
+            Kayıt durumunu değiştir
+          </p>
+
+          <div className="flex flex-wrap gap-3">
+            <form
+              action={async () => {
+                "use server";
+                await changeRecordStatus(record.id, "active");
+              }}
+            >
+              <button
+                type="submit"
+                disabled={record.status === "active"}
+                className="rounded-lg border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Aktif
+              </button>
+            </form>
+
+            <form
+              action={async () => {
+                "use server";
+                await changeRecordStatus(record.id, "lost");
+              }}
+            >
+              <button
+                type="submit"
+                disabled={record.status === "lost"}
+                className="rounded-lg border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Kayıp
+              </button>
+            </form>
+
+            <form
+              action={async () => {
+                "use server";
+                await changeRecordStatus(record.id, "found");
+              }}
+            >
+              <button
+                type="submit"
+                disabled={record.status === "found"}
+                className="rounded-lg border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Bulundu
+              </button>
+            </form>
+
+            <form
+              action={async () => {
+                "use server";
+                await changeRecordStatus(record.id, "inactive");
+              }}
+            >
+              <button
+                type="submit"
+                disabled={record.status === "inactive"}
+                className="rounded-lg border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Pasif
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <div className="mt-6">
           <Link
             href={`/item/${record.id}`}
             className="inline-flex rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20"
@@ -131,7 +209,7 @@ export default function RecordDetailPage({
         ) : (
           <div className="mt-5 space-y-4">
             {messages.map((message) => {
-              const statusLabel =
+              const messageStatusLabel =
                 message.status === "completed"
                   ? "Tamamlandı"
                   : message.status === "read"
@@ -151,7 +229,7 @@ export default function RecordDetailPage({
                         </h3>
 
                         <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-white/60">
-                          {statusLabel}
+                          {messageStatusLabel}
                         </span>
                       </div>
 

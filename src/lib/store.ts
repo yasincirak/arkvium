@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import type {
   ItemRecord,
+  ItemRecordStatus,
   FinderMessage,
   FinderMessageStatus,
 } from "./types";
@@ -33,6 +34,7 @@ export function getRecords(): ItemRecord[] {
 
 export function getRecordById(id: string): ItemRecord | null {
   const records = getRecords();
+
   return records.find((record) => record.id === id) ?? null;
 }
 
@@ -40,9 +42,41 @@ export function saveRecord(record: ItemRecord) {
   const records = getRecords();
   records.push(record);
 
-  fs.writeFileSync(recordsFile, JSON.stringify(records, null, 2), "utf-8");
+  fs.writeFileSync(
+    recordsFile,
+    JSON.stringify(records, null, 2),
+    "utf-8"
+  );
 
   return record;
+}
+
+export function updateRecordStatus(
+  recordId: string,
+  status: ItemRecordStatus
+): ItemRecord | null {
+  const records = getRecords();
+
+  const recordIndex = records.findIndex(
+    (record) => record.id === recordId
+  );
+
+  if (recordIndex === -1) {
+    return null;
+  }
+
+  records[recordIndex] = {
+    ...records[recordIndex],
+    status,
+  };
+
+  fs.writeFileSync(
+    recordsFile,
+    JSON.stringify(records, null, 2),
+    "utf-8"
+  );
+
+  return records[recordIndex];
 }
 
 export function getFinderMessages(): FinderMessage[] {
@@ -57,9 +91,14 @@ export function getFinderMessages(): FinderMessage[] {
   }));
 }
 
-export function getFinderMessagesByRecordId(recordId: string): FinderMessage[] {
+export function getFinderMessagesByRecordId(
+  recordId: string
+): FinderMessage[] {
   const messages = getFinderMessages();
-  return messages.filter((message) => message.recordId === recordId);
+
+  return messages.filter(
+    (message) => message.recordId === recordId
+  );
 }
 
 export function saveFinderMessage(message: FinderMessage) {

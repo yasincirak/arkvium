@@ -8,9 +8,11 @@ import {
   saveFinderMessage,
   getRecordById,
   updateFinderMessageStatus,
+  updateRecordStatus,
 } from "./store";
 import type {
   ItemRecord,
+  ItemRecordStatus,
   FinderMessage,
   FinderMessageStatus,
 } from "./types";
@@ -22,7 +24,7 @@ type CreateRecordInput = {
   email: string;
   description: string;
   category: string;
-  status: string;
+  status: ItemRecordStatus;
 };
 
 type CreateFinderMessageInput = {
@@ -109,4 +111,18 @@ export async function changeFinderMessageStatus(
   revalidatePath("/admin");
 
   return updatedMessage;
+}
+
+export async function changeRecordStatus(
+  recordId: string,
+  status: ItemRecordStatus
+): Promise<ItemRecord | null> {
+  const updatedRecord = updateRecordStatus(recordId, status);
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/records");
+  revalidatePath(`/admin/records/${recordId}`);
+  revalidatePath(`/item/${recordId}`);
+
+  return updatedRecord;
 }
