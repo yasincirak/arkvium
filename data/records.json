@@ -1,0 +1,46 @@
+[
+  {
+    "id": "612f7625-60af-455a-b31b-380f0e3e9ab1",
+    "assetName": "MacBook Pro",
+    "ownerName": "Yasin",
+    "phone": "5555555555",
+    "email": "test@test.com",
+    "description": "Test kaydı",
+    "category": "Elektronik",
+    "status": "active",
+    "createdAt": "2026-07-07T20:22:26.792Z"
+  },
+  {
+    "id": "6ef36254-a7ed-4943-b95b-b9b3e4d299cc",
+    "assetName": "MacBook",
+    "ownerName": "Yasin",
+    "phone": "5555555555",
+    "email": "test@test.com",
+    "description": "Test",
+    "category": "Elektronik",
+    "status": "active",
+    "createdAt": "2026-07-07T20:41:18.622Z"
+  },
+  {
+    "id": "33bf596b-9468-4897-8ace-c3b926551c2f",
+    "assetName": "macbook ",
+    "ownerName": "yasin çırak",
+    "phone": "0555555555",
+    "email": "yasin.cirak78@gmail.com",
+    "description": "kayıp eşyayı buldum",
+    "category": "elektronik",
+    "status": "active",
+    "createdAt": "2026-07-12T10:33:16.578Z"
+  },
+  {
+    "id": "b866972e-7893-4706-b1b5-e50f816cd824",
+    "assetName": "macbook ",
+    "ownerName": "yasin çırak",
+    "phone": "0555555555",
+    "email": "yasin.cirak78@gmail.com",
+    "description": "kayıp eşyayı buldum",
+    "category": "elektronik",
+    "status": "active",
+    "createdAt": "2026-07-12T10:59:12.097Z"
+  }
+]
