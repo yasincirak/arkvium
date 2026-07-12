@@ -19,22 +19,44 @@ export default function EditRecordForm({ record }: Props) {
   const [category, setCategory] = useState(record.category);
   const [description, setDescription] = useState(record.description);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     setSaving(true);
+    setError("");
 
-    await editRecord(record.id, {
-      assetName,
-      ownerName,
-      phone,
-      email,
-      category,
-      description,
-    });
+    try {
+      const updatedRecord = await editRecord(record.id, {
+        assetName,
+        ownerName,
+        phone,
+        email,
+        category,
+        description,
+      });
 
+      if (!updatedRecord) {
+        setError(
+          "Kayıt güncellenemedi. Lütfen bilgileri kontrol edip tekrar deneyin."
+        );
+        setSaving(false);
+        return;
+      }
+
+      router.push(`/admin/records/${record.id}`);
+      router.refresh();
+    } catch {
+      setError(
+        "Kayıt güncellenirken beklenmeyen bir hata oluştu. Lütfen tekrar deneyin."
+      );
+      setSaving(false);
+    }
+  }
+
+  function handleCancel() {
     router.push(`/admin/records/${record.id}`);
-    router.refresh();
   }
 
   return (
@@ -119,13 +141,30 @@ export default function EditRecordForm({ record }: Props) {
         />
       </div>
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="rounded-xl bg-white px-5 py-3 font-semibold text-black disabled:opacity-50"
-      >
-        {saving ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
-      </button>
+      {error && (
+        <p className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          {error}
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-xl bg-white px-5 py-3 font-semibold text-black disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {saving ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
+        </button>
+
+        <button
+          type="button"
+          onClick={handleCancel}
+          disabled={saving}
+          className="rounded-xl border border-white/10 bg-white/5 px-5 py-3 font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          İptal
+        </button>
+      </div>
     </form>
   );
 }
