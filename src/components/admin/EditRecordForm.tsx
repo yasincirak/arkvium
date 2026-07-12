@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { editRecord } from "@/lib/actions";
 import type { ItemRecord } from "@/lib/types";
 
@@ -9,6 +10,8 @@ type Props = {
 };
 
 export default function EditRecordForm({ record }: Props) {
+  const router = useRouter();
+
   const [assetName, setAssetName] = useState(record.assetName);
   const [ownerName, setOwnerName] = useState(record.ownerName);
   const [phone, setPhone] = useState(record.phone);
@@ -16,12 +19,10 @@ export default function EditRecordForm({ record }: Props) {
   const [category, setCategory] = useState(record.category);
   const [description, setDescription] = useState(record.description);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
-    setSaved(false);
 
     await editRecord(record.id, {
       assetName,
@@ -32,8 +33,8 @@ export default function EditRecordForm({ record }: Props) {
       description,
     });
 
-    setSaving(false);
-    setSaved(true);
+    router.push(`/admin/records/${record.id}`);
+    router.refresh();
   }
 
   return (
@@ -42,7 +43,10 @@ export default function EditRecordForm({ record }: Props) {
       className="space-y-6 rounded-2xl border border-white/10 bg-white/5 p-6"
     >
       <div>
-        <label className="mb-2 block text-sm text-white/60">Eşya Adı</label>
+        <label className="mb-2 block text-sm text-white/60">
+          Eşya Adı
+        </label>
+
         <input
           value={assetName}
           onChange={(event) => setAssetName(event.target.value)}
@@ -52,7 +56,10 @@ export default function EditRecordForm({ record }: Props) {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm text-white/60">Sahip Adı</label>
+        <label className="mb-2 block text-sm text-white/60">
+          Sahip Adı
+        </label>
+
         <input
           value={ownerName}
           onChange={(event) => setOwnerName(event.target.value)}
@@ -62,7 +69,10 @@ export default function EditRecordForm({ record }: Props) {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm text-white/60">Telefon</label>
+        <label className="mb-2 block text-sm text-white/60">
+          Telefon
+        </label>
+
         <input
           value={phone}
           onChange={(event) => setPhone(event.target.value)}
@@ -72,7 +82,10 @@ export default function EditRecordForm({ record }: Props) {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm text-white/60">E-posta</label>
+        <label className="mb-2 block text-sm text-white/60">
+          E-posta
+        </label>
+
         <input
           type="email"
           value={email}
@@ -82,7 +95,10 @@ export default function EditRecordForm({ record }: Props) {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm text-white/60">Kategori</label>
+        <label className="mb-2 block text-sm text-white/60">
+          Kategori
+        </label>
+
         <input
           value={category}
           onChange={(event) => setCategory(event.target.value)}
@@ -91,7 +107,10 @@ export default function EditRecordForm({ record }: Props) {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm text-white/60">Açıklama</label>
+        <label className="mb-2 block text-sm text-white/60">
+          Açıklama
+        </label>
+
         <textarea
           value={description}
           onChange={(event) => setDescription(event.target.value)}
@@ -107,12 +126,6 @@ export default function EditRecordForm({ record }: Props) {
       >
         {saving ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
       </button>
-
-      {saved && (
-        <p className="text-sm text-green-400">
-          Değişiklikler başarıyla kaydedildi.
-        </p>
-      )}
     </form>
   );
 }
