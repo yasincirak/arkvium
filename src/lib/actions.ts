@@ -7,6 +7,7 @@ import {
   saveRecord,
   saveFinderMessage,
   getRecordById,
+  updateRecord,
   updateFinderMessageStatus,
   updateRecordStatus,
 } from "./store";
@@ -25,6 +26,15 @@ type CreateRecordInput = {
   description: string;
   category: string;
   status: ItemRecordStatus;
+};
+
+type UpdateRecordInput = {
+  assetName: string;
+  ownerName: string;
+  phone: string;
+  email: string;
+  description: string;
+  category: string;
 };
 
 type CreateFinderMessageInput = {
@@ -48,6 +58,20 @@ export async function createRecord(
   saveRecord(record);
 
   return record;
+}
+
+export async function editRecord(
+  recordId: string,
+  data: UpdateRecordInput
+): Promise<ItemRecord | null> {
+  const updatedRecord = updateRecord(recordId, data);
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/records");
+  revalidatePath(`/admin/records/${recordId}`);
+  revalidatePath(`/item/${recordId}`);
+
+  return updatedRecord;
 }
 
 export async function createFinderMessage(

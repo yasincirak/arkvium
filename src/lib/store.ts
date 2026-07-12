@@ -11,6 +11,15 @@ const dataDir = path.join(process.cwd(), "data");
 const recordsFile = path.join(dataDir, "records.json");
 const finderMessagesFile = path.join(dataDir, "finder-messages.json");
 
+type UpdateRecordData = {
+  assetName: string;
+  ownerName: string;
+  phone: string;
+  email: string;
+  description: string;
+  category: string;
+};
+
 function ensureDataFile() {
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir);
@@ -49,6 +58,34 @@ export function saveRecord(record: ItemRecord) {
   );
 
   return record;
+}
+
+export function updateRecord(
+  recordId: string,
+  data: UpdateRecordData
+): ItemRecord | null {
+  const records = getRecords();
+
+  const recordIndex = records.findIndex(
+    (record) => record.id === recordId
+  );
+
+  if (recordIndex === -1) {
+    return null;
+  }
+
+  records[recordIndex] = {
+    ...records[recordIndex],
+    ...data,
+  };
+
+  fs.writeFileSync(
+    recordsFile,
+    JSON.stringify(records, null, 2),
+    "utf-8"
+  );
+
+  return records[recordIndex];
 }
 
 export function updateRecordStatus(
