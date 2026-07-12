@@ -6,11 +6,24 @@ export default function AdminDashboardPage() {
   const records = getRecords();
   const messages = getFinderMessages();
 
+  const activeRecords = records.filter(
+    (record) => record.status === "active"
+  ).length;
+
+  const newMessages = messages.filter(
+    (message) => message.status === "new"
+  ).length;
+
+  const completedMessages = messages.filter(
+    (message) => message.status === "completed"
+  ).length;
+
   return (
     <div>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-white">Genel Bakış</h2>
+
           <p className="mt-1 text-sm text-gray-400">
             ARKVIUM yönetim paneline hoş geldiniz.
           </p>
@@ -29,19 +42,19 @@ export default function AdminDashboardPage() {
         <StatCard
           icon="🔗"
           label="Aktif Bağlantı"
-          value={records.length.toString()}
+          value={activeRecords.toString()}
         />
 
         <StatCard
           icon="🔔"
           label="Yeni Bildirim"
-          value={messages.length.toString()}
+          value={newMessages.toString()}
         />
 
         <StatCard
           icon="✅"
           label="Tamamlanan"
-          value="0"
+          value={completedMessages.toString()}
         />
       </div>
 
@@ -60,6 +73,7 @@ export default function AdminDashboardPage() {
                 className="rounded-lg border border-white/10 p-4"
               >
                 <p className="font-semibold">{record.assetName}</p>
+
                 <p className="text-sm text-gray-400">
                   {record.ownerName}
                 </p>
