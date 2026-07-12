@@ -1,6 +1,10 @@
 import fs from "fs";
 import path from "path";
-import type { ItemRecord, FinderMessage } from "./types";
+import type {
+  ItemRecord,
+  FinderMessage,
+  FinderMessageStatus,
+} from "./types";
 
 const dataDir = path.join(process.cwd(), "data");
 const recordsFile = path.join(dataDir, "records.json");
@@ -45,7 +49,12 @@ export function getFinderMessages(): FinderMessage[] {
   ensureDataFile();
 
   const fileContent = fs.readFileSync(finderMessagesFile, "utf-8");
-  return JSON.parse(fileContent) as FinderMessage[];
+  const messages = JSON.parse(fileContent) as FinderMessage[];
+
+  return messages.map((message) => ({
+    ...message,
+    status: message.status ?? "new",
+  }));
 }
 
 export function getFinderMessagesByRecordId(recordId: string): FinderMessage[] {
@@ -64,4 +73,32 @@ export function saveFinderMessage(message: FinderMessage) {
   );
 
   return message;
+}
+
+export function updateFinderMessageStatus(
+  messageId: string,
+  status: FinderMessageStatus
+): FinderMessage | null {
+  const messages = getFinderMessages();
+
+  const messageIndex = messages.findIndex(
+    (message) => message.id === messageId
+  );
+
+  if (messageIndex === -1) {
+    return null;
+  }
+
+  messages[messageIndex] = {
+    ...messages[messageIndex],
+    status,
+  };
+
+  fs.writeFileSync(
+    finderMessagesFile,
+    JSON.stringify(messages, null, 2),
+    "utf-8"
+  );
+
+  return messages[messageIndex];
 }

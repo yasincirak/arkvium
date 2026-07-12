@@ -10,6 +10,8 @@ export type ItemRecord = {
   createdAt: string;
 };
 
+export type FinderMessageStatus = "new" | "read" | "completed";
+
 export type FinderMessage = {
   id: string;
   recordId: string;
@@ -18,5 +20,6 @@ export type FinderMessage = {
   finderEmail?: string;
   location: string;
   message: string;
+  status: FinderMessageStatus;
   createdAt: string;
 };

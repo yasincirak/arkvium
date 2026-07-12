@@ -2,12 +2,18 @@
 
 import { randomUUID } from "crypto";
 import nodemailer from "nodemailer";
+import { revalidatePath } from "next/cache";
 import {
   saveRecord,
   saveFinderMessage,
   getRecordById,
+  updateFinderMessageStatus,
 } from "./store";
-import type { ItemRecord, FinderMessage } from "./types";
+import type {
+  ItemRecord,
+  FinderMessage,
+  FinderMessageStatus,
+} from "./types";
 
 type CreateRecordInput = {
   assetName: string;
@@ -48,6 +54,7 @@ export async function createFinderMessage(
   const message: FinderMessage = {
     id: randomUUID(),
     ...data,
+    status: "new",
     createdAt: new Date().toISOString(),
   };
 
@@ -90,4 +97,16 @@ Dijital Sahiplik Platformu
   }
 
   return message;
+}
+
+export async function changeFinderMessageStatus(
+  messageId: string,
+  status: FinderMessageStatus
+): Promise<FinderMessage | null> {
+  const updatedMessage = updateFinderMessageStatus(messageId, status);
+
+  revalidatePath("/admin/notifications");
+  revalidatePath("/admin");
+
+  return updatedMessage;
 }

@@ -6,7 +6,8 @@
     "finderPhone": "05551234567",
     "location": "Bağcılar",
     "message": "Bu bir test mesajıdır.",
-    "createdAt": "2026-07-08T20:25:30.267Z"
+    "createdAt": "2026-07-08T20:25:30.267Z",
+    "status": "completed"
   },
   {
     "id": "a4de6a73-ce85-4dc0-8e45-0e589c18efb7",
@@ -15,7 +16,8 @@
     "finderPhone": "05076046894",
     "location": "bağcılar",
     "message": "elektronik eşya buldum MacBook",
-    "createdAt": "2026-07-10T21:04:03.249Z"
+    "createdAt": "2026-07-10T21:04:03.249Z",
+    "status": "new"
   },
   {
     "id": "69138a44-39ac-4096-ab6b-12b71ce9fc7f",
@@ -24,7 +26,8 @@
     "finderPhone": "05545521041",
     "location": "bağcılar",
     "message": "gri bir bilgisayar",
-    "createdAt": "2026-07-12T10:39:04.906Z"
+    "createdAt": "2026-07-12T10:39:04.906Z",
+    "status": "new"
   },
   {
     "id": "2b8eaa30-c347-4f7a-a75f-1333eb65d644",
@@ -33,6 +36,7 @@
     "finderPhone": "05545651234",
     "location": "bağcılar",
     "message": "MacBook",
-    "createdAt": "2026-07-12T11:00:27.774Z"
+    "createdAt": "2026-07-12T11:00:27.774Z",
+    "status": "new"
   }
 ]
