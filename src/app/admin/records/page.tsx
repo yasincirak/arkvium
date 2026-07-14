@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { getRecords } from "@/lib/store";
 
-export default function RecordsPage() {
-  const records = getRecords();
+export default async function RecordsPage() {
+  const records = await getRecords();
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-white">Kayıtlar</h1>
+
         <p className="mt-2 text-sm text-white/50">
           Oluşturulan tüm ARKVIUM kayıtları burada listelenir.
         </p>
@@ -69,10 +70,10 @@ export default function RecordsPage() {
 
               <div className="mt-5">
                 <Link
-                 href={`/admin/records/${record.id}`}
+                  href={`/admin/records/${record.id}`}
                   className="inline-flex rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20"
                 >
-                 Detayları Gör
+                  Detayları Gör
                 </Link>
               </div>
             </div>
@@ -80,5 +81,5 @@ export default function RecordsPage() {
         </div>
       )}
     </div>
-  );  
+  );
 }

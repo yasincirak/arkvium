@@ -1,0 +1,38 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model ItemRecord {
+  id          String   @id
+  assetName   String
+  ownerName   String
+  phone       String
+  email       String
+  description String
+  category    String
+  status      String
+  createdAt   DateTime
+
+  finderMessages FinderMessage[]
+}
+
+model FinderMessage {
+  id                  String   @id
+  recordId            String
+  finderName          String
+  finderPhone         String
+  finderEmail         String?
+  location            String
+  message             String
+  status              String
+  emailDeliveryStatus String?
+  emailDeliveredAt    DateTime?
+  createdAt           DateTime
+
+  record ItemRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+}

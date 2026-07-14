@@ -12,18 +12,16 @@ type RecordDetailPageProps = {
   };
 };
 
-export default function RecordDetailPage({
+export default async function RecordDetailPage({
   params,
 }: RecordDetailPageProps) {
-  const record = getRecordById(params.id);
+  const record = await getRecordById(params.id);
 
   if (!record) {
     notFound();
   }
 
-  const messages = getFinderMessagesByRecordId(record.id)
-    .slice()
-    .reverse();
+  const messages = await getFinderMessagesByRecordId(record.id);
 
   const statusLabel =
     record.status === "lost"

@@ -2,9 +2,9 @@ import StatCard from "@/components/admin/StatCard";
 import NewRecordButton from "@/components/admin/NewRecordButton";
 import { getRecords, getFinderMessages } from "@/lib/store";
 
-export default function AdminDashboardPage() {
-  const records = getRecords();
-  const messages = getFinderMessages();
+export default async function AdminDashboardPage() {
+  const records = await getRecords();
+  const messages = await getFinderMessages();
 
   const activeRecords = records.filter(
     (record) => record.status === "active"

@@ -56,7 +56,7 @@ export async function createRecord(
     createdAt: new Date().toISOString(),
   };
 
-  saveRecord(record);
+  await saveRecord(record);
 
   return record;
 }
@@ -65,7 +65,7 @@ export async function editRecord(
   recordId: string,
   data: UpdateRecordInput
 ): Promise<ItemRecord | null> {
-  const updatedRecord = updateRecord(recordId, data);
+  const updatedRecord = await updateRecord(recordId, data);
 
   revalidatePath("/admin");
   revalidatePath("/admin/records");
@@ -116,10 +116,10 @@ export async function createFinderMessage(
     createdAt: new Date().toISOString(),
   };
 
-  saveFinderMessage(message);
+  await saveFinderMessage(message);
   revalidatePath("/admin/notifications");
 
-  const record = getRecordById(data.recordId);
+  const record = await getRecordById(data.recordId);
 
   if (record?.email) {
     try {
@@ -151,14 +151,18 @@ Dijital Sahiplik Platformu
         `.trim(),
       });
 
-      updateFinderMessageDeliveryStatus(
+      await updateFinderMessageDeliveryStatus(
         message.id,
         "sent",
         new Date().toISOString()
       );
     } catch (error) {
       console.error("E-posta gönderilemedi:", error);
-      updateFinderMessageDeliveryStatus(message.id, "failed");
+
+      await updateFinderMessageDeliveryStatus(
+        message.id,
+        "failed"
+      );
     }
   }
 
@@ -169,7 +173,10 @@ export async function changeFinderMessageStatus(
   messageId: string,
   status: FinderMessageStatus
 ): Promise<FinderMessage | null> {
-  const updatedMessage = updateFinderMessageStatus(messageId, status);
+  const updatedMessage = await updateFinderMessageStatus(
+    messageId,
+    status
+  );
 
   revalidatePath("/admin/notifications");
   revalidatePath("/admin");
@@ -181,7 +188,10 @@ export async function changeRecordStatus(
   recordId: string,
   status: ItemRecordStatus
 ): Promise<ItemRecord | null> {
-  const updatedRecord = updateRecordStatus(recordId, status);
+  const updatedRecord = await updateRecordStatus(
+    recordId,
+    status
+  );
 
   revalidatePath("/admin");
   revalidatePath("/admin/records");

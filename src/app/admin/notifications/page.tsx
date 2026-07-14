@@ -1,8 +1,15 @@
 import { changeFinderMessageStatus } from "@/lib/actions";
 import { getFinderMessages, getRecordById } from "@/lib/store";
 
-export default function NotificationsPage() {
-  const messages = getFinderMessages();
+export default async function NotificationsPage() {
+  const messages = await getFinderMessages();
+
+  const messagesWithRecords = await Promise.all(
+    messages.map(async (message) => ({
+      message,
+      record: await getRecordById(message.recordId),
+    }))
+  );
 
   return (
     <div className="space-y-6">
@@ -14,15 +21,13 @@ export default function NotificationsPage() {
         </p>
       </div>
 
-      {messages.length === 0 ? (
+      {messagesWithRecords.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-white/60">
           Henüz gelen bildirim yok.
         </div>
       ) : (
         <div className="space-y-4">
-          {messages.map((message) => {
-            const record = getRecordById(message.recordId);
-
+          {messagesWithRecords.map(({ message, record }) => {
             const statusLabel =
               message.status === "completed"
                 ? "Tamamlandı"
@@ -114,7 +119,10 @@ export default function NotificationsPage() {
                     <form
                       action={async () => {
                         "use server";
-                        await changeFinderMessageStatus(message.id, "completed");
+                        await changeFinderMessageStatus(
+                          message.id,
+                          "completed"
+                        );
                       }}
                     >
                       <button

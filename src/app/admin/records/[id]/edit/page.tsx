@@ -8,8 +8,8 @@ type Props = {
   };
 };
 
-export default function EditRecordPage({ params }: Props) {
-  const record = getRecordById(params.id);
+export default async function EditRecordPage({ params }: Props) {
+  const record = await getRecordById(params.id);
 
   if (!record) {
     notFound();

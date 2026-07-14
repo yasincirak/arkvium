@@ -1,5 +1,4 @@
-import fs from "fs";
-import path from "path";
+import { prisma } from "./prisma";
 import type {
   ItemRecord,
   ItemRecordStatus,
@@ -7,10 +6,6 @@ import type {
   FinderMessageStatus,
   EmailDeliveryStatus,
 } from "./types";
-
-const dataDir = path.join(process.cwd(), "data");
-const recordsFile = path.join(dataDir, "records.json");
-const finderMessagesFile = path.join(dataDir, "finder-messages.json");
 
 type UpdateRecordData = {
   assetName: string;
@@ -21,191 +16,222 @@ type UpdateRecordData = {
   category: string;
 };
 
-function ensureDataFile() {
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir);
-  }
-
-  if (!fs.existsSync(recordsFile)) {
-    fs.writeFileSync(recordsFile, "[]", "utf-8");
-  }
-
-  if (!fs.existsSync(finderMessagesFile)) {
-    fs.writeFileSync(finderMessagesFile, "[]", "utf-8");
-  }
+function mapItemRecord(record: {
+  id: string;
+  assetName: string;
+  ownerName: string;
+  phone: string;
+  email: string;
+  description: string;
+  category: string;
+  status: string;
+  createdAt: Date;
+}): ItemRecord {
+  return {
+    ...record,
+    status: record.status as ItemRecordStatus,
+    createdAt: record.createdAt.toISOString(),
+  };
 }
 
-export function getRecords(): ItemRecord[] {
-  ensureDataFile();
-
-  const fileContent = fs.readFileSync(recordsFile, "utf-8");
-  return JSON.parse(fileContent) as ItemRecord[];
+function mapFinderMessage(message: {
+  id: string;
+  recordId: string;
+  finderName: string;
+  finderPhone: string;
+  finderEmail: string | null;
+  location: string;
+  message: string;
+  status: string;
+  emailDeliveryStatus: string | null;
+  emailDeliveredAt: Date | null;
+  createdAt: Date;
+}): FinderMessage {
+  return {
+    id: message.id,
+    recordId: message.recordId,
+    finderName: message.finderName,
+    finderPhone: message.finderPhone,
+    finderEmail: message.finderEmail ?? undefined,
+    location: message.location,
+    message: message.message,
+    status: message.status as FinderMessageStatus,
+    emailDeliveryStatus:
+      (message.emailDeliveryStatus as EmailDeliveryStatus | null) ?? undefined,
+    emailDeliveredAt: message.emailDeliveredAt?.toISOString(),
+    createdAt: message.createdAt.toISOString(),
+  };
 }
 
-export function getRecordById(id: string): ItemRecord | null {
-  const records = getRecords();
+export async function getRecords(): Promise<ItemRecord[]> {
+  const records = await prisma.itemRecord.findMany({
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
 
-  return records.find((record) => record.id === id) ?? null;
+  return records.map(mapItemRecord);
 }
 
-export function saveRecord(record: ItemRecord) {
-  const records = getRecords();
-  records.push(record);
+export async function getRecordById(
+  id: string
+): Promise<ItemRecord | null> {
+  const record = await prisma.itemRecord.findUnique({
+    where: { id },
+  });
 
-  fs.writeFileSync(
-    recordsFile,
-    JSON.stringify(records, null, 2),
-    "utf-8"
-  );
-
-  return record;
+  return record ? mapItemRecord(record) : null;
 }
 
-export function updateRecord(
+export async function saveRecord(
+  record: ItemRecord
+): Promise<ItemRecord> {
+  const savedRecord = await prisma.itemRecord.create({
+    data: {
+      id: record.id,
+      assetName: record.assetName,
+      ownerName: record.ownerName,
+      phone: record.phone,
+      email: record.email,
+      description: record.description,
+      category: record.category,
+      status: record.status,
+      createdAt: new Date(record.createdAt),
+    },
+  });
+
+  return mapItemRecord(savedRecord);
+}
+
+export async function updateRecord(
   recordId: string,
   data: UpdateRecordData
-): ItemRecord | null {
-  const records = getRecords();
+): Promise<ItemRecord | null> {
+  const existingRecord = await prisma.itemRecord.findUnique({
+    where: { id: recordId },
+  });
 
-  const recordIndex = records.findIndex(
-    (record) => record.id === recordId
-  );
-
-  if (recordIndex === -1) {
+  if (!existingRecord) {
     return null;
   }
 
-  records[recordIndex] = {
-    ...records[recordIndex],
-    ...data,
-  };
+  const updatedRecord = await prisma.itemRecord.update({
+    where: { id: recordId },
+    data,
+  });
 
-  fs.writeFileSync(
-    recordsFile,
-    JSON.stringify(records, null, 2),
-    "utf-8"
-  );
-
-  return records[recordIndex];
+  return mapItemRecord(updatedRecord);
 }
 
-export function updateRecordStatus(
+export async function updateRecordStatus(
   recordId: string,
   status: ItemRecordStatus
-): ItemRecord | null {
-  const records = getRecords();
+): Promise<ItemRecord | null> {
+  const existingRecord = await prisma.itemRecord.findUnique({
+    where: { id: recordId },
+  });
 
-  const recordIndex = records.findIndex(
-    (record) => record.id === recordId
-  );
-
-  if (recordIndex === -1) {
+  if (!existingRecord) {
     return null;
   }
 
-  records[recordIndex] = {
-    ...records[recordIndex],
-    status,
-  };
+  const updatedRecord = await prisma.itemRecord.update({
+    where: { id: recordId },
+    data: { status },
+  });
 
-  fs.writeFileSync(
-    recordsFile,
-    JSON.stringify(records, null, 2),
-    "utf-8"
-  );
-
-  return records[recordIndex];
+  return mapItemRecord(updatedRecord);
 }
 
-export function getFinderMessages(): FinderMessage[] {
-  ensureDataFile();
+export async function getFinderMessages(): Promise<FinderMessage[]> {
+  const messages = await prisma.finderMessage.findMany({
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
 
-  const fileContent = fs.readFileSync(finderMessagesFile, "utf-8");
-  const messages = JSON.parse(fileContent) as FinderMessage[];
-
-  return messages.map((message) => ({
-    ...message,
-    status: message.status ?? "new",
-  }));
+  return messages.map(mapFinderMessage);
 }
 
-export function getFinderMessagesByRecordId(
+export async function getFinderMessagesByRecordId(
   recordId: string
-): FinderMessage[] {
-  const messages = getFinderMessages();
+): Promise<FinderMessage[]> {
+  const messages = await prisma.finderMessage.findMany({
+    where: { recordId },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
 
-  return messages.filter(
-    (message) => message.recordId === recordId
-  );
+  return messages.map(mapFinderMessage);
 }
 
-export function saveFinderMessage(message: FinderMessage) {
-  const messages = getFinderMessages();
-  messages.push(message);
+export async function saveFinderMessage(
+  message: FinderMessage
+): Promise<FinderMessage> {
+  const savedMessage = await prisma.finderMessage.create({
+    data: {
+      id: message.id,
+      recordId: message.recordId,
+      finderName: message.finderName,
+      finderPhone: message.finderPhone,
+      finderEmail: message.finderEmail,
+      location: message.location,
+      message: message.message,
+      status: message.status,
+      emailDeliveryStatus: message.emailDeliveryStatus,
+      emailDeliveredAt: message.emailDeliveredAt
+        ? new Date(message.emailDeliveredAt)
+        : null,
+      createdAt: new Date(message.createdAt),
+    },
+  });
 
-  fs.writeFileSync(
-    finderMessagesFile,
-    JSON.stringify(messages, null, 2),
-    "utf-8"
-  );
-
-  return message;
+  return mapFinderMessage(savedMessage);
 }
 
-export function updateFinderMessageStatus(
+export async function updateFinderMessageStatus(
   messageId: string,
   status: FinderMessageStatus
-): FinderMessage | null {
-  const messages = getFinderMessages();
+): Promise<FinderMessage | null> {
+  const existingMessage = await prisma.finderMessage.findUnique({
+    where: { id: messageId },
+  });
 
-  const messageIndex = messages.findIndex(
-    (message) => message.id === messageId
-  );
-
-  if (messageIndex === -1) {
+  if (!existingMessage) {
     return null;
   }
 
-  messages[messageIndex] = {
-    ...messages[messageIndex],
-    status,
-  };
+  const updatedMessage = await prisma.finderMessage.update({
+    where: { id: messageId },
+    data: { status },
+  });
 
-  fs.writeFileSync(
-    finderMessagesFile,
-    JSON.stringify(messages, null, 2),
-    "utf-8"
-  );
-
-  return messages[messageIndex];
+  return mapFinderMessage(updatedMessage);
 }
 
-export function updateFinderMessageDeliveryStatus(
+export async function updateFinderMessageDeliveryStatus(
   messageId: string,
   emailDeliveryStatus: EmailDeliveryStatus,
   emailDeliveredAt?: string
-): FinderMessage | null {
-  const messages = getFinderMessages();
+): Promise<FinderMessage | null> {
+  const existingMessage = await prisma.finderMessage.findUnique({
+    where: { id: messageId },
+  });
 
-  const messageIndex = messages.findIndex(
-    (message) => message.id === messageId
-  );
-
-  if (messageIndex === -1) {
+  if (!existingMessage) {
     return null;
   }
 
-  messages[messageIndex] = {
-    ...messages[messageIndex],
-    emailDeliveryStatus,
-    ...(emailDeliveredAt ? { emailDeliveredAt } : {}),
-  };
+  const updatedMessage = await prisma.finderMessage.update({
+    where: { id: messageId },
+    data: {
+      emailDeliveryStatus,
+      ...(emailDeliveredAt
+        ? { emailDeliveredAt: new Date(emailDeliveredAt) }
+        : {}),
+    },
+  });
 
-  fs.writeFileSync(
-    finderMessagesFile,
-    JSON.stringify(messages, null, 2),
-    "utf-8"
-  );
-
-  return messages[messageIndex];
+  return mapFinderMessage(updatedMessage);
 }

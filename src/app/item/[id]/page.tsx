@@ -8,8 +8,8 @@ type Props = {
   };
 };
 
-export default function ItemPage({ params }: Props) {
-  const record = getRecordById(params.id);
+export default async function ItemPage({ params }: Props) {
+  const record = await getRecordById(params.id);
 
   if (!record) {
     notFound();
@@ -41,7 +41,7 @@ export default function ItemPage({ params }: Props) {
           </div>
         </div>
 
-       <ItemFinderSection recordId={record.id} />
+        <ItemFinderSection recordId={record.id} />
       </div>
     </main>
   );
