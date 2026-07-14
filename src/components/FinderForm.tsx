@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createFinderMessage } from "@/lib/actions";
 
 type FinderFormProps = {
@@ -15,6 +15,7 @@ export default function FinderForm({ recordId }: FinderFormProps) {
   const [consent, setConsent] = useState(false);
   const [isSent, setIsSent] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   async function handleSubmit() {
     if (!fullName || !phone || !location) {
@@ -29,6 +30,11 @@ export default function FinderForm({ recordId }: FinderFormProps) {
       return;
     }
 
+    if (isSubmittingRef.current || isSending) {
+      return;
+    }
+
+    isSubmittingRef.current = true;
     setIsSending(true);
 
     try {
@@ -44,6 +50,7 @@ export default function FinderForm({ recordId }: FinderFormProps) {
     } catch {
       alert("Bildirim gönderilirken bir hata oluştu. Lütfen tekrar deneyin.");
     } finally {
+      isSubmittingRef.current = false;
       setIsSending(false);
     }
   }

@@ -30,6 +30,13 @@ export default function NotificationsPage() {
                   ? "Okundu"
                   : "Yeni";
 
+            const emailDeliveryStatusLabel =
+              message.emailDeliveryStatus === "sent"
+                ? "Gönderildi"
+                : message.emailDeliveryStatus === "failed"
+                  ? "Başarısız"
+                  : "Bekliyor";
+
             return (
               <div
                 key={message.id}
@@ -44,6 +51,10 @@ export default function NotificationsPage() {
 
                       <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-medium text-white/70">
                         {statusLabel}
+                      </span>
+
+                      <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-medium text-white/70">
+                        E-posta: {emailDeliveryStatusLabel}
                       </span>
                     </div>
 
@@ -103,10 +114,7 @@ export default function NotificationsPage() {
                     <form
                       action={async () => {
                         "use server";
-                        await changeFinderMessageStatus(
-                          message.id,
-                          "completed"
-                        );
+                        await changeFinderMessageStatus(message.id, "completed");
                       }}
                     >
                       <button

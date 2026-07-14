@@ -5,6 +5,7 @@ import type {
   ItemRecordStatus,
   FinderMessage,
   FinderMessageStatus,
+  EmailDeliveryStatus,
 } from "./types";
 
 const dataDir = path.join(process.cwd(), "data");
@@ -168,6 +169,36 @@ export function updateFinderMessageStatus(
   messages[messageIndex] = {
     ...messages[messageIndex],
     status,
+  };
+
+  fs.writeFileSync(
+    finderMessagesFile,
+    JSON.stringify(messages, null, 2),
+    "utf-8"
+  );
+
+  return messages[messageIndex];
+}
+
+export function updateFinderMessageDeliveryStatus(
+  messageId: string,
+  emailDeliveryStatus: EmailDeliveryStatus,
+  emailDeliveredAt?: string
+): FinderMessage | null {
+  const messages = getFinderMessages();
+
+  const messageIndex = messages.findIndex(
+    (message) => message.id === messageId
+  );
+
+  if (messageIndex === -1) {
+    return null;
+  }
+
+  messages[messageIndex] = {
+    ...messages[messageIndex],
+    emailDeliveryStatus,
+    ...(emailDeliveredAt ? { emailDeliveredAt } : {}),
   };
 
   fs.writeFileSync(

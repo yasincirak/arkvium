@@ -2,14 +2,22 @@
 
 import { useState } from "react";
 import { createRecord } from "@/lib/actions";
-import type { ItemRecord } from "@/lib/types";
+import type { ItemRecord, ItemRecordStatus } from "@/lib/types";
 import { QRCodeSVG } from "qrcode.react";
 
 export default function NewRecordPage() {
   const [saving, setSaving] = useState(false);
   const [created, setCreated] = useState<ItemRecord | null>(null);
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    assetName: string;
+    ownerName: string;
+    phone: string;
+    email: string;
+    description: string;
+    category: string;
+    status: ItemRecordStatus;
+  }>({
     assetName: "",
     ownerName: "",
     phone: "",
@@ -99,11 +107,13 @@ export default function NewRecordPage() {
           <select
             className="rounded-lg border border-white/10 bg-black/30 p-3 outline-none"
             value={form.status}
-            onChange={(e) => setForm({ ...form, status: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, status: e.target.value as ItemRecordStatus })
+            }
           >
             <option value="active">Aktif</option>
             <option value="lost">Kayıp</option>
-            <option value="passive">Pasif</option>
+            <option value="inactive">Pasif</option>
           </select>
 
           <button

@@ -17,6 +17,7 @@ export type ItemRecord = {
 };
 
 export type FinderMessageStatus = "new" | "read" | "completed";
+export type EmailDeliveryStatus = "pending" | "sent" | "failed";
 
 export type FinderMessage = {
   id: string;
@@ -27,5 +28,7 @@ export type FinderMessage = {
   location: string;
   message: string;
   status: FinderMessageStatus;
+  emailDeliveryStatus?: EmailDeliveryStatus;
+  emailDeliveredAt?: string;
   createdAt: string;
 };

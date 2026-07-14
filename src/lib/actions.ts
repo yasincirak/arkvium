@@ -9,6 +9,7 @@ import {
   getRecordById,
   updateRecord,
   updateFinderMessageStatus,
+  updateFinderMessageDeliveryStatus,
   updateRecordStatus,
 } from "./store";
 import type {
@@ -77,14 +78,46 @@ export async function editRecord(
 export async function createFinderMessage(
   data: CreateFinderMessageInput
 ): Promise<FinderMessage> {
+  const finderName = data.finderName.trim();
+  const finderPhone = data.finderPhone.trim();
+  const location = data.location.trim();
+  const finderEmail = data.finderEmail?.trim();
+  const messageText = data.message?.trim();
+
+  if (!finderName || !finderPhone || !location) {
+    throw new Error("Ad soyad, telefon ve konum zorunludur.");
+  }
+
+  const normalizedPhone = finderPhone.replace(/\D/g, "");
+
+  if (normalizedPhone.length < 7) {
+    throw new Error("Telefon numarası en az 7 rakam olmalıdır.");
+  }
+
+  if (finderEmail) {
+    const hasAt = finderEmail.includes("@");
+    const hasDot = finderEmail.includes(".");
+
+    if (!hasAt || !hasDot) {
+      throw new Error("Geçerli bir e-posta adresi giriniz.");
+    }
+  }
+
   const message: FinderMessage = {
     id: randomUUID(),
     ...data,
+    finderName,
+    finderPhone,
+    finderEmail,
+    location,
+    message: messageText ?? "",
     status: "new",
+    emailDeliveryStatus: "pending",
     createdAt: new Date().toISOString(),
   };
 
   saveFinderMessage(message);
+  revalidatePath("/admin/notifications");
 
   const record = getRecordById(data.recordId);
 
@@ -117,8 +150,15 @@ ARKVIUM
 Dijital Sahiplik Platformu
         `.trim(),
       });
+
+      updateFinderMessageDeliveryStatus(
+        message.id,
+        "sent",
+        new Date().toISOString()
+      );
     } catch (error) {
       console.error("E-posta gönderilemedi:", error);
+      updateFinderMessageDeliveryStatus(message.id, "failed");
     }
   }
 
