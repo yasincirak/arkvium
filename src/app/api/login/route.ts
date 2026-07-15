@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { createUserSessionToken } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
@@ -39,7 +40,12 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({
+    const sessionToken = await createUserSessionToken({
+      userId: user.id,
+      email: user.email,
+    });
+
+    const response = NextResponse.json({
       success: true,
       user: {
         id: user.id,
@@ -47,6 +53,16 @@ export async function POST(request: Request) {
         fullName: user.fullName,
       },
     });
+
+    response.cookies.set("arkvium_user_session", sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7,
+      path: "/",
+    });
+
+    return response;
   } catch (error) {
     console.error("Kullanıcı giriş hatası:", error);
 
