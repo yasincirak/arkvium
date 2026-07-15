@@ -7,6 +7,16 @@ datasource db {
   provider = "postgresql"
 }
 
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  fullName  String?
+  phone     String?
+  createdAt DateTime @default(now())
+
+  records ItemRecord[]
+}
+
 model ItemRecord {
   id          String   @id
   assetName   String
@@ -18,11 +28,14 @@ model ItemRecord {
   status      String
   createdAt   DateTime
 
+  userId String?
+  user   User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
   finderMessages FinderMessage[]
 }
 
 model FinderMessage {
-  id                  String   @id
+  id                  String    @id
   recordId            String
   finderName          String
   finderPhone         String
