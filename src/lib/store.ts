@@ -26,11 +26,19 @@ function mapItemRecord(record: {
   category: string;
   status: string;
   createdAt: Date;
+  userId: string | null;
 }): ItemRecord {
   return {
-    ...record,
+    id: record.id,
+    assetName: record.assetName,
+    ownerName: record.ownerName,
+    phone: record.phone,
+    email: record.email,
+    description: record.description,
+    category: record.category,
     status: record.status as ItemRecordStatus,
     createdAt: record.createdAt.toISOString(),
+    userId: record.userId ?? undefined,
   };
 }
 
@@ -97,6 +105,7 @@ export async function saveRecord(
       category: record.category,
       status: record.status,
       createdAt: new Date(record.createdAt),
+      userId: record.userId ?? null,
     },
   });
 

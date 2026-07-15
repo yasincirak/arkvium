@@ -14,10 +14,18 @@ export type ItemRecord = {
   category: string;
   status: ItemRecordStatus;
   createdAt: string;
+  userId?: string;
 };
 
-export type FinderMessageStatus = "new" | "read" | "completed";
-export type EmailDeliveryStatus = "pending" | "sent" | "failed";
+export type FinderMessageStatus =
+  | "new"
+  | "read"
+  | "completed";
+
+export type EmailDeliveryStatus =
+  | "pending"
+  | "sent"
+  | "failed";
 
 export type FinderMessage = {
   id: string;

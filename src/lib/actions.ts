@@ -2,7 +2,9 @@
 
 import { randomUUID } from "crypto";
 import nodemailer from "nodemailer";
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { verifyUserSessionToken } from "./auth";
 import {
   saveRecord,
   saveFinderMessage,
@@ -50,13 +52,31 @@ type CreateFinderMessageInput = {
 export async function createRecord(
   data: CreateRecordInput
 ): Promise<ItemRecord> {
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get("arkvium_user_session")?.value;
+
+  let userId: string | undefined;
+
+  if (sessionToken) {
+    const session = await verifyUserSessionToken(sessionToken);
+
+    if (session) {
+      userId = session.userId;
+    }
+  }
+
   const record: ItemRecord = {
     id: randomUUID(),
     ...data,
     createdAt: new Date().toISOString(),
+    userId,
   };
 
   await saveRecord(record);
+
+  revalidatePath("/account");
+  revalidatePath("/admin");
+  revalidatePath("/admin/records");
 
   return record;
 }
@@ -71,6 +91,7 @@ export async function editRecord(
   revalidatePath("/admin/records");
   revalidatePath(`/admin/records/${recordId}`);
   revalidatePath(`/item/${recordId}`);
+  revalidatePath("/account");
 
   return updatedRecord;
 }
@@ -197,6 +218,7 @@ export async function changeRecordStatus(
   revalidatePath("/admin/records");
   revalidatePath(`/admin/records/${recordId}`);
   revalidatePath(`/item/${recordId}`);
+  revalidatePath("/account");
 
   return updatedRecord;
 }
