@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getRecords } from "@/lib/store";
-
+export const dynamic = "force-dynamic";
 export default async function RecordsPage() {
   const records = await getRecords();
 
