@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifyUserSessionToken } from "@/lib/auth";
@@ -41,6 +42,7 @@ export default async function AccountPage() {
       <div className="mx-auto max-w-5xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold">Hesabım</h1>
+
           <p className="mt-2 text-white/50">
             Hoş geldin {user.fullName || user.email}
           </p>
@@ -77,9 +79,10 @@ export default async function AccountPage() {
           ) : (
             <div className="mt-4 space-y-4">
               {user.records.map((record) => (
-                <div
+                <Link
                   key={record.id}
-                  className="rounded-2xl border border-white/10 bg-white/[0.03] p-6"
+                  href={`/account/records/${record.id}`}
+                  className="block rounded-2xl border border-white/10 bg-white/[0.03] p-6 transition hover:border-indigo-500/40 hover:bg-white/[0.05]"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -90,13 +93,17 @@ export default async function AccountPage() {
                       <p className="mt-2 text-sm text-white/50">
                         {record.category || "Kategori belirtilmedi"}
                       </p>
+
+                      <p className="mt-4 text-sm font-medium text-indigo-400">
+                        Detayları Gör →
+                      </p>
                     </div>
 
                     <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/60">
                       {record.status}
                     </span>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
