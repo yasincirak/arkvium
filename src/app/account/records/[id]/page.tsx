@@ -97,7 +97,14 @@ export default async function AccountRecordDetailPage({
             </p>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link
+              href={`/account/records/${record.id}/edit`}
+              className="inline-flex rounded-xl border border-white/10 bg-white/5 px-5 py-3 font-semibold text-white transition hover:bg-white/10"
+            >
+              Ürünü Düzenle
+            </Link>
+
             <Link
               href={`/item/${record.id}`}
               className="inline-flex rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-500"
