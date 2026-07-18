@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -41,13 +42,24 @@ export default async function AccountPage() {
   return (
     <main className="min-h-screen bg-[#09090f] px-4 py-10 text-white">
       <div className="mx-auto max-w-5xl">
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Hesabım</h1>
+        <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <Image
+              src="/arkvium.jpeg"
+              alt="ARKVIUM"
+              width={72}
+              height={72}
+              priority
+              className="h-16 w-16 rounded-xl object-cover"
+            />
 
-            <p className="mt-2 text-white/50">
-              Hoş geldin {user.fullName || user.email}
-            </p>
+            <div>
+              <h1 className="text-3xl font-bold">Hesabım</h1>
+
+              <p className="mt-2 text-white/50">
+                Hoş geldin {user.fullName || user.email}
+              </p>
+            </div>
           </div>
 
           <LogoutButton />
