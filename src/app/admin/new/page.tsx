@@ -27,10 +27,11 @@ export default function NewRecordPage() {
     status: "active",
   });
 
-  const itemUrl =
-    typeof window !== "undefined" && created
-      ? `${window.location.origin}/item/${created.id}`
-      : "";
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (typeof window !== "undefined" ? window.location.origin : "");
+
+  const itemUrl = created ? `${baseUrl}/item/${created.id}` : "";
 
   async function handleSave() {
     if (!form.assetName || !form.ownerName || !form.phone) {
