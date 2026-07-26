@@ -10,6 +10,7 @@ import {
   hizSiniriSifirla,
   istemciIpAdresi,
 } from "@/lib/rate-limit";
+import { yoneticiSifreHashi } from "@/lib/admin-credentials";
 
 /** Bkz. /api/login — yanıt süresinden bilgi sızmasını engeller. */
 const ZAMAN_ESITLEME_HASHI =
@@ -50,12 +51,12 @@ export async function POST(request: Request) {
     const password = String(body.password || "");
 
     const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-    const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH;
+    const adminPasswordHash = yoneticiSifreHashi();
 
     if (!adminEmail || !adminPasswordHash) {
       // Yapılandırma durumu istemciye sızdırılmaz, sunucu logunda görünür.
       console.error(
-        "Yönetici girişi yapılandırılmamış: ADMIN_EMAIL veya ADMIN_PASSWORD_HASH tanımlı değil."
+        "Yönetici girişi yapılandırılmamış: ADMIN_EMAIL tanımlı değil veya şifre hash'i okunamıyor."
       );
 
       return NextResponse.json(

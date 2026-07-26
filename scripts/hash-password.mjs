@@ -68,6 +68,21 @@ function envDegeriniYaz(anahtar, deger) {
   writeFileSync(ENV_PATH, icerik, { mode: 0o600 });
 }
 
+function envSatiriniSil(anahtar) {
+  if (!existsSync(ENV_PATH)) {
+    return;
+  }
+
+  const icerik = readFileSync(ENV_PATH, "utf8");
+  const desen = new RegExp(`^\\s*${anahtar}\\s*=.*\\n?`, "m");
+
+  if (!desen.test(icerik)) {
+    return;
+  }
+
+  writeFileSync(ENV_PATH, icerik.replace(desen, ""), { mode: 0o600 });
+}
+
 async function main() {
   console.log("ARKVIUM admin şifresi belirleme\n");
   console.log(
@@ -92,12 +107,23 @@ async function main() {
 
   const hash = await bcrypt.hash(sifre, BCRYPT_COST);
 
-  envDegeriniYaz("ADMIN_PASSWORD_HASH", hash);
+  // Hash base64 olarak saklanır. Ham bcrypt hash'i "$2b$12$..." biçimindedir
+  // ve Next.js env yükleyicisi .env içindeki "$isim" kalıplarını değişken
+  // referansı sayıp genişlettiği için değer bozulur. Base64 alfabesinde "$"
+  // bulunmadığından bu sorun tamamen ortadan kalkar.
+  const base64Hash = Buffer.from(hash, "utf8").toString("base64");
 
-  console.log("\n✓ ADMIN_PASSWORD_HASH değeri .env dosyasına yazıldı.");
+  envDegeriniYaz("ADMIN_PASSWORD_HASH_B64", base64Hash);
+  envSatiriniSil("ADMIN_PASSWORD_HASH");
+
+  console.log("\n✓ ADMIN_PASSWORD_HASH_B64 değeri .env dosyasına yazıldı.");
   console.log("  Hash güvenlik nedeniyle ekrana basılmadı.");
   console.log(
-    "\nCanlı ortam için: .env dosyasındaki ADMIN_PASSWORD_HASH satırının"
+    "  (Varsa eski ADMIN_PASSWORD_HASH satırı kaldırıldı; bcrypt hash'i '$'"
+  );
+  console.log("   içerdiği için .env yüklenirken bozuluyordu.)");
+  console.log(
+    "\nCanlı ortam için: .env dosyasındaki ADMIN_PASSWORD_HASH_B64 satırının"
   );
   console.log(
     "  değerini kopyalayıp Vercel > Settings > Environment Variables altına ekleyin."

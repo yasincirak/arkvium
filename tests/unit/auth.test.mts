@@ -26,7 +26,7 @@ after(() => {
   process.env.USER_SESSION_SECRET = originalEnv.USER_SESSION_SECRET;
 });
 
-const auth = await import("../src/lib/auth.ts");
+const auth = await import("../../src/lib/auth.ts");
 
 describe("kullanıcı oturum token'ı", () => {
   test("üretilen token doğrulanabilir", async () => {

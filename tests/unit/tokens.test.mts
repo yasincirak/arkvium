@@ -10,7 +10,7 @@ const {
   tokenDurumu,
   tokenOzetle,
   tokenUret,
-} = await import("../src/lib/tokens.ts");
+} = await import("../../src/lib/tokens.ts");
 
 describe("token üretimi", () => {
   test("her çağrıda farklı token üretir", () => {

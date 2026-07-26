@@ -21,7 +21,22 @@ export type EpostaIcerigi = {
   metin: string;
 };
 
+/**
+ * Testlerde e-posta gönderimini tamamen kapatmak için kullanılır.
+ *
+ * Boş string yeterli değildir: Next.js `next start` sırasında .env
+ * dosyalarını yükler ve boş değerlerin üzerine yazar; bu durumda testler
+ * gerçek Gmail hesabıyla gerçek e-posta gönderebilirdi.
+ */
+function epostaKapaliMi(): boolean {
+  return process.env.EPOSTA_GONDERIMI_KAPALI === "1";
+}
+
 function tasiyiciOlustur() {
+  if (epostaKapaliMi()) {
+    return null;
+  }
+
   const kullanici = process.env.GMAIL_USER;
   const sifre = process.env.GMAIL_APP_PASSWORD;
 
@@ -46,13 +61,17 @@ export async function epostaGonder(
 
   if (!tasiyici) {
     // Sahte başarı üretilmez; eksik yapılandırma açıkça bildirilir.
-    console.error(
-      "E-posta gönderilemedi: GMAIL_USER veya GMAIL_APP_PASSWORD tanımlı değil."
-    );
+    if (!epostaKapaliMi()) {
+      console.error(
+        "E-posta gönderilemedi: GMAIL_USER veya GMAIL_APP_PASSWORD tanımlı değil."
+      );
+    }
 
     return {
       gonderildi: false,
-      hataSebebi: "E-posta sağlayıcısı yapılandırılmamış.",
+      hataSebebi: epostaKapaliMi()
+        ? "E-posta gönderimi kapalı."
+        : "E-posta sağlayıcısı yapılandırılmamış.",
     };
   }
 

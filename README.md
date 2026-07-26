@@ -79,7 +79,7 @@ Tüm değişkenlerin adı ve açıklaması [`.env.example`](.env.example) dosyas
 | `USER_SESSION_SECRET` | ✅ | Kullanıcı oturum JWT imza anahtarı (**en az 32 karakter**) |
 | `ADMIN_SESSION_SECRET` | ✅ | Admin oturum JWT imza anahtarı (**en az 32 karakter**, kullanıcınınkinden farklı) |
 | `ADMIN_EMAIL` | ✅ | Yönetim paneline giriş yapacak e-posta |
-| `ADMIN_PASSWORD_HASH` | ✅ | Yönetici şifresinin bcrypt hash'i (`npm run hash-password`) |
+| `ADMIN_PASSWORD_HASH_B64` | ✅ | Yönetici şifresinin bcrypt hash'i, **base64 kodlu** (`npm run hash-password`) |
 | `GMAIL_USER` | ✅ | Bildirim e-postalarının gönderileceği Gmail hesabı |
 | `GMAIL_APP_PASSWORD` | ✅ | Gmail **uygulama şifresi** (normal hesap şifresi değil) |
 | `NEXT_PUBLIC_APP_URL` | ✅ | QR kodlarının işaret ettiği genel adres (sonunda `/` olmadan) |
@@ -101,7 +101,17 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 npm run hash-password
 ```
 
-Şifre ekranda görünmez, komut geçmişine girmez ve üretilen hash terminale basılmaz; doğrudan `.env` dosyasına yazılır. Canlı ortam için `.env` içindeki `ADMIN_PASSWORD_HASH` satırının değerini Vercel ortam değişkenlerine kopyalayın.
+Şifre ekranda görünmez, komut geçmişine girmez ve üretilen hash terminale basılmaz; doğrudan `.env` dosyasına yazılır. Canlı ortam için `.env` içindeki `ADMIN_PASSWORD_HASH_B64` satırının değerini Vercel ortam değişkenlerine kopyalayın.
+
+> ### ⚠️ `.env` içinde `$` içeren değerler bozulur
+>
+> Next.js env yükleyicisi (`dotenv` + `dotenv-expand`) `.env` dosyalarındaki değerlerde `$isim` kalıplarını **değişken referansı sayıp genişletir**. bcrypt hash'leri `$2b$12$...` biçiminde olduğu için ham hâlde yazıldıklarında sessizce bozulur: 60 karakterlik hash kısalır, doğru şifre girilse bile giriş `401` döner ve hiçbir hata mesajı görünmez.
+>
+> Ters bölü ile kaçış (`\$`) tek bir `.env` dosyasında işe yarar; ancak `.env` ve `.env.local` birlikte yüklendiğinde genişletme birden fazla kez çalıştığı için güvenilir değildir.
+>
+> Bu yüzden yönetici hash'i **base64** olarak saklanır (`ADMIN_PASSWORD_HASH_B64`). base64 alfabesinde `$` bulunmaz.
+>
+> Aynı tuzak `$` içeren her değer için geçerlidir — parola içeren veritabanı bağlantı dizeleri dahil. `src/lib/admin-credentials.ts`, bozuk bir hash algıladığında sunucu logunda açık bir uyarı yazar.
 
 ---
 
@@ -160,17 +170,39 @@ Uygulamadan önce:
 
 ## Test
 
-```bash
-npm test
-```
+Node.js'in yerleşik test çalıştırıcısı kullanılır — ek test bağımlılığı yoktur.
 
-Testler `tests/` klasöründedir ve Node.js'in yerleşik test çalıştırıcısını kullanır — ek test bağımlılığı yoktur.
+| Komut | Kapsam |
+|---|---|
+| `npm test` | Birim testleri (`tests/unit/`) — veritabanı gerektirmez |
+| `npm run test:integration` | Uçtan uca testler (`tests/integration/`) — test veritabanı gerektirir |
+| `npm run test:all` | Hepsi |
 
-> **Önemli:** Testlerde gerçek kullanıcı verisi, gerçek e-posta adresi veya production gizli değerleri kullanılmaz.
+### Test veritabanı kurulumu
 
-**Mevcut kapsam:** oturum token'ı üretme/doğrulama, kullanıcı–admin oturum ayrımı, gizli anahtar zorunluluğu, çerez ayarları.
+Entegrasyon testleri **ayrı bir veritabanı** gerektirir. Production veritabanı kullanılmaz.
 
-**Henüz yazılamadı:** Kayıt/giriş, sahiplik ve buluntu bildirimi uçtan uca testleri bir veritabanı gerektirir. Production Supabase veritabanı test için kullanılmamalıdır; ayrı bir test veritabanı bağlantısı tanımlanana kadar bu testler eksiktir. Bkz. [Bilinen eksikler](#bilinen-eksikler).
+1. Supabase'de ikinci bir proje oluşturun (örn. `arkvium-test`).
+2. Bağlantı dizesini `.env.test` dosyasına yazın:
+   ```
+   TEST_DATABASE_URL=postgresql://...
+   ```
+3. Şemayı test veritabanına uygulayın:
+   ```bash
+   npm run test:db:migrate
+   ```
+
+> **Güvenlik kilidi:** Hem `npm run test:db:migrate` hem de test altyapısı, `TEST_DATABASE_URL` değerini `.env` içindeki `DATABASE_URL` ve `DIRECT_URL` ile karşılaştırır. Aynı veritabanını gösteriyorlarsa **hiçbir işlem yapılmadan durur**. Böylece yanlışlıkla production verisi silinemez.
+
+**Testler sırasında:**
+- Uygulama yalnızca `TEST_DATABASE_URL` ile başlatılır.
+- Her testten önce tüm tablolar `TRUNCATE` edilir.
+- E-posta gönderimi `EPOSTA_GONDERIMI_KAPALI=1` ile kesin olarak kapatılır; hiç kimseye gerçek e-posta gitmez.
+- Gerçek kullanıcı verisi, gerçek e-posta adresi veya production gizli değerleri kullanılmaz.
+
+Sunucu çıktısını görmek için: `TEST_SUNUCU_LOG=1 npm run test:integration`
+
+**Kapsam:** kayıt, giriş, çıkış, oturum çerezi ayarları, kullanıcı numaralandırma koruması, kullanıcı–admin oturum ayrımı, yönetici girişi, sahiplik kontrolü (IDOR), şifre sıfırlama, şifre değiştirme ve oturum iptali, e-posta doğrulama, hız sınırlama, genel eşya sayfası gizliliği, `robots.txt`.
 
 ---
 

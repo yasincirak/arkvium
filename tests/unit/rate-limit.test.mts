@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
-const { istemciIpAdresi } = await import("../src/lib/request-ip.ts");
+const { istemciIpAdresi } = await import("../../src/lib/request-ip.ts");
 
 describe("istemci IP adresi okuma", () => {
   test("x-forwarded-for başlığındaki ilk adresi alır", () => {
