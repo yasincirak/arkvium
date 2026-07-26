@@ -1,0 +1,156 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import ItemFinderSection from "@/components/ItemFinderSection";
+import { prisma } from "@/lib/prisma";
+import type { TagDurumu } from "@/lib/tags";
+
+/**
+ * Etiket genel erişim sayfası (yeni akış).
+ *
+ * Adres kriptografik `publicToken` içerir; veritabanı ID'si geçmez.
+ * Eski QR kodları /item/<kayıt-id> adresini kullanmaya devam eder
+ * (bkz. src/app/item/[id]/page.tsx).
+ */
+
+type Props = {
+  params: {
+    token: string;
+  };
+};
+
+export const metadata: Metadata = {
+  title: "Bulunan Eşya",
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: { index: false, follow: false },
+  },
+};
+
+export const dynamic = "force-dynamic";
+
+const durumEtiketleri: Record<string, string> = {
+  active: "Aktif",
+  lost: "Kayıp",
+  found: "Bulundu",
+  inactive: "Pasif",
+};
+
+function BilgiKutusu({
+  baslik,
+  aciklama,
+  ton,
+}: {
+  baslik: string;
+  aciklama: string;
+  ton: "notr" | "uyari";
+}) {
+  const sinif =
+    ton === "uyari"
+      ? "border-amber-500/25 bg-amber-500/10 text-amber-100"
+      : "border-white/10 bg-white/5 text-white/70";
+
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#0a0a0f] p-6 text-white">
+      <div className={`w-full max-w-xl rounded-2xl border p-8 ${sinif}`}>
+        <h1 className="text-2xl font-bold">{baslik}</h1>
+        <p className="mt-4 leading-7">{aciklama}</p>
+
+        <p className="mt-8 text-sm opacity-70">
+          ARKVIUM — Dijital Sahiplik Platformu
+        </p>
+      </div>
+    </main>
+  );
+}
+
+export default async function TagPage({ params }: Props) {
+  const tag = await prisma.tag.findUnique({
+    where: { publicToken: params.token },
+    include: { itemRecord: true },
+  });
+
+  if (!tag) {
+    notFound();
+  }
+
+  const durum = tag.status as TagDurumu;
+
+  if (durum === "revoked") {
+    return (
+      <BilgiKutusu
+        ton="uyari"
+        baslik="Bu etiket iptal edilmiş"
+        aciklama="Bu etiket artık kullanılmıyor. Bir eşya bulduysanız lütfen etiketin üzerindeki başka bir iletişim yolunu kullanın."
+      />
+    );
+  }
+
+  if (durum === "unused") {
+    return (
+      <BilgiKutusu
+        ton="notr"
+        baslik="Bu etiket henüz etkinleştirilmemiş"
+        aciklama="Bu etiket bir ürüne bağlanmamış. Etiket sizin elinizdeyse ARKVIUM hesabınızdan etkinleştirebilirsiniz."
+      />
+    );
+  }
+
+  if (durum === "inactive") {
+    return (
+      <BilgiKutusu
+        ton="notr"
+        baslik="Bu etiket şu anda pasif"
+        aciklama="Etiket sahibi bu etiketi geçici olarak devre dışı bırakmış. Şu anda bildirim gönderilemiyor."
+      />
+    );
+  }
+
+  const record = tag.itemRecord;
+
+  if (!record) {
+    return (
+      <BilgiKutusu
+        ton="notr"
+        baslik="Bu etikete bağlı ürün bulunamadı"
+        aciklama="Etiket etkin ancak herhangi bir ürüne bağlı değil. Şu anda bildirim gönderilemiyor."
+      />
+    );
+  }
+
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#0a0a0f] p-6 text-white">
+      <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-white/5 p-8">
+        <h1 className="text-3xl font-bold">{record.assetName}</h1>
+
+        <p className="mt-3 text-white/60">
+          Bu eşya ARKVIUM dijital sahiplik sistemine kayıtlıdır.
+        </p>
+
+        <div className="mt-8 space-y-3">
+          {record.category && (
+            <div>
+              <span className="text-white/40">Kategori</span>
+              <p>{record.category}</p>
+            </div>
+          )}
+
+          <div>
+            <span className="text-white/40">Durum</span>
+            <p>{durumEtiketleri[record.status] ?? "Aktif"}</p>
+          </div>
+
+          {record.description && (
+            <div>
+              <span className="text-white/40">Açıklama</span>
+              <p>{record.description}</p>
+            </div>
+          )}
+        </div>
+
+        <ItemFinderSection recordId={record.id} />
+      </div>
+    </main>
+  );
+}

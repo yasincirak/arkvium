@@ -97,6 +97,25 @@ export default async function AccountPage() {
 
         <ChangePasswordForm />
 
+        <div className="mb-8 rounded-2xl border border-indigo-500/25 bg-indigo-500/10 p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Elinde bir etiket mi var?</h2>
+
+              <p className="mt-1 text-sm leading-6 text-white/60">
+                ARKVIUM etiketini hesabına bağla ve bir ürünle eşleştir.
+              </p>
+            </div>
+
+            <Link
+              href="/account/tags/activate"
+              className="w-fit shrink-0 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500"
+            >
+              Etiket Etkinleştir
+            </Link>
+          </div>
+        </div>
+
         <div>
           <h2 className="text-2xl font-semibold">Ürünlerim</h2>
 

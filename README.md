@@ -167,7 +167,61 @@ Uygulamadan önce:
 
 ### Mevcut modeller
 
-`User`, `ItemRecord`, `FinderMessage`, `RateLimitEntry`, `PasswordResetToken`, `EmailVerificationToken`
+`User`, `ItemRecord`, `FinderMessage`, `RateLimitEntry`, `PasswordResetToken`, `EmailVerificationToken`, `Tag`, `TagEvent`
+
+---
+
+## Etiket (Tag) sistemi
+
+### İki ayrı genel erişim akışı
+
+| | LEGACY akış | YENİ akış |
+|---|---|---|
+| Adres | `/item/<kayıt-id>` | `/t/<publicToken>` |
+| Adreste ne var | Kaydın veritabanı ID'si | 256 bit kriptografik token |
+| Durum yönetimi | Yok | `unused` / `active` / `inactive` / `revoked` |
+| Dosya | [`src/app/item/[id]/page.tsx`](src/app/item/[id]/page.tsx) | [`src/app/t/[token]/page.tsx`](src/app/t/[token]/page.tsx) |
+
+> **LEGACY akış kaldırılmamalıdır.** Etiket sistemi eklenmeden önce üretilmiş QR kodları fiziksel olarak basılmış olabilir ve `/item/<kayıt-id>` adresine bakar. Bu adres desteklenmeye devam eder.
+>
+> **Eski kayıtlar yeni sisteme zorla dönüştürülmez.** Kullanıcı isterse ürününe yeni bir etiket bağlar; bağladıktan sonra her iki adres de çalışmaya devam eder.
+
+### Etiketin üç değeri
+
+Karıştırılmamalıdır:
+
+| Değer | Gizli mi? | Nerede durur | Ne işe yarar |
+|---|---|---|---|
+| `code` (`ARK-XXXX-XXXX`) | Hayır | Etiketin üzerinde basılı, veritabanında normalleştirilmiş | Etiketi tanımlar, kullanıcı aktivasyonda yazar |
+| `activationCode` (`XXXX-XXXX-XXXX`) | **Evet** | Yalnızca etiketin üzerinde (kazınarak açılır) | Etikete fiziksel sahipliğin kanıtı |
+| `publicToken` | Hayır ama tahmin edilemez | Veritabanı + QR adresi | Genel erişim adresi (`/t/<token>`) |
+
+- Kodlar **Crockford Base32** alfabesinden üretilir; `I`, `L`, `O`, `U` bilerek yoktur (elle okunurken `1/I`, `0/O` karışmasın diye).
+- `activationCode` veritabanında **düz metin saklanmaz**, yalnızca SHA-256 özeti tutulur. Veritabanı sızsa bile kimse başkasının etiketini aktive edemez.
+- `code` veritabanına normalleştirilmiş biçimde (`ARKXXXXXXXX`) yazılır; kullanıcı tireli, boşluklu veya küçük harfle yazsa da eşleşir. Baskı biçimi `etiketKoduBicimle` ile üretilir.
+
+### Aktivasyon kuralları
+
+- Yalnızca **giriş yapmış** kullanıcı aktive edebilir.
+- **Aktivasyon kodu** doğrulanır (fiziksel sahiplik kanıtı).
+- Yalnızca `unused` durumundaki etiketler aktive edilebilir; **aynı etiket ikinci kez aktive edilemez**.
+- Durum geçişi koşullu güncelleme (`updateMany where status='unused'`) ile yapılır ve etkilenen satır sayısı kontrol edilir; iki eşzamanlı istekten yalnızca biri başarılı olur, diğeri işlemi geri alır.
+- Var olan bir ürüne bağlanacaksa **ürünün kullanıcıya ait olduğu** doğrulanır.
+- Bir ürünün en fazla bir etiketi olur (`Tag.itemRecordId` üzerinde unique kısıt).
+- Var olmayan etiket kodu ile yanlış aktivasyon kodu **aynı yanıtı** döner; hangi kodların var olduğu sızdırılmaz.
+- Deneme yanılmayı engellemek için IP başına saatte 10 aktivasyon denemesi sınırı vardır.
+
+Tüm kontroller sunucu tarafındadır; istemciden gelen hiçbir yetki bilgisine güvenilmez.
+
+### Etiket geçmişi
+
+`TagEvent` tablosu aktivasyon, ürün değişimi, devir, pasife alma ve iptal işlemlerini kaydeder (`type`, `actorUserId`, `fromItemRecordId`, `toItemRecordId`, `fromUserId`, `toUserId`).
+
+### Toplu üretim
+
+`POST /api/admin/tags/generate` (yalnızca yönetici) — bir seferde en fazla 500 etiket.
+
+> Aktivasyon kodları **yalnızca bu yanıtta bir kez** döner. Kaydedilmezse geri getirilemez ve etiketlerin yeniden üretilmesi gerekir. Bu bilinçli bir tercihtir.
 
 ---
 
@@ -304,6 +358,7 @@ Sayaçlar **veritabanında** (`RateLimitEntry` tablosu) tutulur. Bellek içi say
 | `POST /api/password/reset` | IP | 10 / saat |
 | `POST /api/password/change` | Kullanıcı | 5 / 15 dk |
 | `POST /api/session/logout-all` | Kullanıcı | 10 / saat |
+| `POST /api/tags/activate` | IP | 10 / saat |
 | `POST /api/email/verify` | IP | 20 / saat |
 | `POST /api/email/verify/resend` | Kullanıcı | 3 / saat |
 | Buluntu bildirimi (Server Action) | IP | 5 / saat |
@@ -353,10 +408,11 @@ Bu bölüm kasıtlı olarak açıktır; aşağıdaki özellikler **henüz uygula
 - Kayıt ekranında e-posta numaralandırma koruması (var olan e-postada "zaten kayıtlı" mesajı döner; IP başına saat başı 5 kayıt sınırı bunu kısmen dengeler)
 
 **Etiket ve ürün**
-- Ayrı `Tag` modeli, etiket aktivasyonu ve tahmin edilmesi zor public token
-  (şu an genel erişim sayfası kaydın veritabanı ID'sini kullanır)
 - Sahiplik transferi
 - Etiketin başka ürüne taşınması
+- Etiketi pasife alma / yeniden etkinleştirme / iptal etme arayüzü
+- Yönetici etiket yönetimi ekranı ve CSV dışa aktarma
+- Baskıya uygun QR çıktısı
 - Ürün görseli yükleme
 
 **İletişim**

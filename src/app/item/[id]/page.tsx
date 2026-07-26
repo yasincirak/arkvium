@@ -10,6 +10,19 @@ type Props = {
 };
 
 /**
+ * ESKİ (LEGACY) QR AKIŞI — kaldırılmamalıdır.
+ *
+ * Bu adres kaydın veritabanı ID'sini içerir ve etiket sistemi eklenmeden
+ * önce üretilmiş QR kodları hâlâ buraya bakar. Bu kodlar fiziksel olarak
+ * basılmış olabileceği için adres desteklenmeye devam eder.
+ *
+ * YENİ akış /t/<publicToken> adresini kullanır (src/app/t/[token]/page.tsx):
+ * adres kriptografik token taşır, veritabanı ID'si içermez ve etiket
+ * durumuna (unused/active/inactive/revoked) göre davranır.
+ *
+ * Eski kayıtlar yeni sisteme zorla dönüştürülmez; kullanıcı isterse
+ * ürününe yeni bir etiket bağlayabilir.
+ *
  * Bu sayfa belirli bir kişinin eşyasına ait genel erişim sayfasıdır ve
  * arama motorlarına kapalı tutulur.
  */

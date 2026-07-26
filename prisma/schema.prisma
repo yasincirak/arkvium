@@ -33,6 +33,7 @@ model User {
   records                 ItemRecord[]
   passwordResetTokens     PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
+  tags                    Tag[]
 }
 
 /// Şifre sıfırlama tokenları.
@@ -84,6 +85,78 @@ model ItemRecord {
   user   User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   finderMessages FinderMessage[]
+
+  /// Bu ürüne bağlı etiket. Eski (legacy) kayıtlarda etiket bulunmaz;
+  /// onlar /item/<kayıt-id> adresinden erişilmeye devam eder.
+  tag Tag?
+}
+
+/// Fiziksel QR/NFC etiketi.
+///
+/// Eski akıştan farkı: genel erişim adresi veritabanı ID'si yerine
+/// kriptografik olarak üretilmiş `publicToken` kullanır (/t/<token>).
+/// Etiket, aktivasyon koduna sahip olan kullanıcı tarafından bir kez
+/// aktive edilir ve bir ürüne bağlanır.
+model Tag {
+  id String @id @default(cuid())
+
+  /// Etiketin üzerine basılan, insan tarafından okunabilen kod (ARK-XXXX-XXXX).
+  /// Gizli değildir; yalnızca etiketi tanımlar.
+  code String @unique
+
+  /// QR/NFC adresinde kullanılan kriptografik token (256 bit).
+  /// Tahmin edilemez ve veritabanı ID'si içermez.
+  publicToken String @unique
+
+  /// unused | active | inactive | revoked
+  status String @default("unused")
+
+  /// Aktivasyon kodunun SHA-256 özeti. Kod düz metin saklanmaz;
+  /// yalnızca fiziksel etiketin üzerinde bulunur.
+  activationCodeHash String
+
+  activatedAt DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  /// Etiketi aktive eden (sahibi olan) kullanıcı.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  /// Etiketin bağlı olduğu ürün. Bir ürünün en fazla bir etiketi olur.
+  itemRecordId String?     @unique
+  itemRecord   ItemRecord? @relation(fields: [itemRecordId], references: [id], onDelete: SetNull)
+
+  events TagEvent[]
+
+  @@index([status])
+  @@index([userId])
+}
+
+/// Etiket geçmişi. Aktivasyon, ürün değişimi, devir ve iptal işlemleri
+/// geri dönük olarak izlenebilsin diye kaydedilir.
+model TagEvent {
+  id String @id @default(cuid())
+
+  tagId String
+  tag   Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  /// activated | moved | deactivated | reactivated | revoked | transferred
+  type String
+
+  /// İşlemi yapan kullanıcı. Yönetici işlemlerinde null olabilir.
+  actorUserId String?
+
+  fromItemRecordId String?
+  toItemRecordId   String?
+  fromUserId       String?
+  toUserId         String?
+
+  createdAt DateTime @default(now())
+
+  @@index([tagId])
+  @@index([createdAt])
 }
 
 model FinderMessage {
