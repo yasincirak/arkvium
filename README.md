@@ -120,7 +120,8 @@ npm run hash-password
 | Komut | Açıklama |
 |---|---|
 | `npm run dev` | Geliştirme sunucusu |
-| `npm run build` | Production build |
+| `npm run build` | Production build (`.next`) |
+| `npm run build:check` | Production build doğrulaması (`.next-build`) — dev sunucusunu bozmaz |
 | `npm start` | Production sunucusu (build sonrası) |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | TypeScript kontrolü (`tsc --noEmit`) |
@@ -131,6 +132,20 @@ npm run hash-password
 | `npm run hash-password` | Yönetici şifresi hash'i üretir ve `.env`'e yazar |
 | `npx prisma generate` | Prisma client üretimi |
 | `npx prisma migrate status` | Migration durumu |
+
+---
+
+> ### ⚠️ `next dev` çalışırken `next build` çalıştırmayın
+>
+> İkisi de aynı `.next` klasörünü kullanır. Geliştirme sunucusu açıkken production build alınırsa dev sunucusunun chunk referansları bozulur ve sayfalar şu hatayı verir:
+>
+> ```
+> Cannot find module '../8948.js'
+> ```
+>
+> Kurtarmak için: dev sunucusunu durdurun, **yalnızca** `.next` klasörünü silin (`rm -rf .next`), sunucuyu yeniden başlatın. Kaynak koda, `node_modules`'a veya veritabanına dokunmaya gerek yoktur.
+>
+> Bunu önlemek için build doğrulamasını ayrı klasöre alın: `npm run build:check` (→ `.next-build`). `npm run test:integration` de kendi klasörünü kullanır (→ `.next-test`). İkisi de dev sunucusuyla aynı anda güvenle çalışır.
 
 ---
 
