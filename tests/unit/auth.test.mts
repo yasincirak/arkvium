@@ -33,34 +33,69 @@ describe("kullanıcı oturum token'ı", () => {
     const token = await auth.createUserSessionToken({
       userId: "kullanici-1",
       email: "test@example.com",
+      sessionVersion: 0,
     });
 
     const session = await auth.verifyUserSessionToken(token);
 
-    assert.equal(session?.userId, "kullanici-1");
-    assert.equal(session?.email, "test@example.com");
-    assert.ok(session?.issuedAt instanceof Date);
+    assert.deepEqual(session, {
+      userId: "kullanici-1",
+      email: "test@example.com",
+      sessionVersion: 0,
+    });
   });
 
-  test("token üretim anı (issuedAt) döner", async () => {
-    const oncesi = Date.now();
-
+  test("oturum sürümü token içinde taşınır", async () => {
     const token = await auth.createUserSessionToken({
       userId: "kullanici-1",
       email: "test@example.com",
+      sessionVersion: 7,
     });
 
     const session = await auth.verifyUserSessionToken(token);
 
-    // iat saniye çözünürlüğünde olduğu için 1 saniyelik tolerans bırakılır.
-    assert.ok(session!.issuedAt.getTime() >= oncesi - 1000);
-    assert.ok(session!.issuedAt.getTime() <= Date.now() + 1000);
+    assert.equal(session?.sessionVersion, 7);
+  });
+
+  test("sessionVersion taşımayan eski token reddedilir", async () => {
+    // Sürüm mekanizması eklenmeden önce üretilmiş bir token taklit edilir.
+    const { SignJWT } = await import("jose");
+
+    const eskiToken = await new SignJWT({
+      userId: "kullanici-1",
+      email: "test@example.com",
+      type: "user",
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setIssuedAt()
+      .setExpirationTime("7d")
+      .sign(new TextEncoder().encode(TEST_USER_SECRET));
+
+    assert.equal(await auth.verifyUserSessionToken(eskiToken), null);
+  });
+
+  test("tam sayı olmayan sürüm reddedilir", async () => {
+    const { SignJWT } = await import("jose");
+
+    const bozukToken = await new SignJWT({
+      userId: "kullanici-1",
+      email: "test@example.com",
+      type: "user",
+      sessionVersion: 1.5,
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setIssuedAt()
+      .setExpirationTime("7d")
+      .sign(new TextEncoder().encode(TEST_USER_SECRET));
+
+    assert.equal(await auth.verifyUserSessionToken(bozukToken), null);
   });
 
   test("bozulmuş token reddedilir", async () => {
     const token = await auth.createUserSessionToken({
       userId: "kullanici-1",
       email: "test@example.com",
+      sessionVersion: 0,
     });
 
     assert.equal(await auth.verifyUserSessionToken(token + "x"), null);
@@ -88,6 +123,7 @@ describe("kullanıcı ve admin oturumlarının ayrımı", () => {
     const userToken = await auth.createUserSessionToken({
       userId: "kullanici-1",
       email: "test@example.com",
+      sessionVersion: 0,
     });
 
     assert.equal(await auth.verifyAdminSessionToken(userToken), null);

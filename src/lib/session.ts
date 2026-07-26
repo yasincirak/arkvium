@@ -30,24 +30,21 @@ export async function getUserSession(): Promise<UserSessionPayload | null> {
     return null;
   }
 
-  // Şifre değiştiğinde User.sessionsValidFrom güncellenir; o andan önce
-  // üretilmiş tokenlar imzası geçerli olsa bile kabul edilmez.
-  // İmza kontrolü middleware'de (edge) yapılır, bu ek kontrol veritabanına
+  // Şifre değiştiğinde User.sessionVersion artırılır; tokendaki sürüm
+  // veritabanındaki güncel sürümle birebir eşleşmiyorsa oturum reddedilir.
+  // İmza kontrolü middleware'de (edge) yapılır; bu ek kontrol veritabanına
   // erişebilen sunucu tarafında yapılır.
   try {
     const user = await prisma.user.findUnique({
       where: { id: session.userId },
-      select: { sessionsValidFrom: true },
+      select: { sessionVersion: true },
     });
 
     if (!user) {
       return null;
     }
 
-    if (
-      user.sessionsValidFrom &&
-      session.issuedAt.getTime() < user.sessionsValidFrom.getTime()
-    ) {
+    if (user.sessionVersion !== session.sessionVersion) {
       return null;
     }
   } catch (error) {

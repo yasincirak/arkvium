@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import LogoutAllButton from "./LogoutAllButton";
 
 const MIN_SIFRE_UZUNLUGU = 8;
 
@@ -168,6 +169,8 @@ export default function ChangePasswordForm() {
           </button>
         </form>
       )}
+
+      <LogoutAllButton />
     </div>
   );
 }

@@ -124,7 +124,10 @@ npm run hash-password
 | `npm start` | Production sunucusu (build sonrası) |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | TypeScript kontrolü (`tsc --noEmit`) |
-| `npm test` | Testler (`node --test`) |
+| `npm test` | Birim testleri |
+| `npm run test:integration` | Uçtan uca testler (test veritabanı gerekir) |
+| `npm run test:all` | Tüm testler |
+| `npm run test:db:migrate` | Migration'ları yalnızca test veritabanına uygular |
 | `npm run hash-password` | Yönetici şifresi hash'i üretir ve `.env`'e yazar |
 | `npx prisma generate` | Prisma client üretimi |
 | `npx prisma migrate status` | Migration durumu |
@@ -267,14 +270,24 @@ Canlıya almadan önce:
 - Yeni token üretildiğinde aynı kullanıcının önceki kullanılmamış tokenları geçersiz kılınır.
 - E-posta gönderilemezse token hemen geçersiz kılınır ve kullanıcıya hata bildirilir — sahte başarı üretilmez.
 - `POST /api/password/forgot`, e-posta kayıtlı olsun olmasın **aynı yanıtı** döner; bu uç kullanıcı numaralandırması için kullanılamaz.
-- Şifre sıfırlandığında `User.sessionsValidFrom` güncellenir; o andan önce üretilmiş tüm oturum tokenları — imzaları geçerli olsa bile — reddedilir. Böylece başka cihazlarda açık kalmış oturumlar kapanır.
+- Şifre sıfırlandığında `User.sessionVersion` artırılır; eski sürümü taşıyan tüm oturum tokenları — imzaları geçerli olsa bile — reddedilir. Böylece başka cihazlarda açık kalmış oturumlar kapanır.
 - Şifre değişimi, token kullanımı ve oturum iptali tek veritabanı işleminde (`$transaction`) yapılır.
 
-**Şifre değiştirme:** Giriş yapmış kullanıcı mevcut şifresini girerek yeni şifre belirler (`POST /api/password/change`). Diğer cihazlardaki oturumlar kapanır, işlemi yapan cihaza yeni bir oturum çerezi verilir. Bekleyen şifre sıfırlama bağlantıları da geçersiz kılınır.
+**Şifre değiştirme:** Giriş yapmış kullanıcı mevcut şifresini girerek yeni şifre belirler (`POST /api/password/change`). Diğer cihazlardaki oturumlar kapanır, işlemi yapan cihaza güncel sürümü taşıyan yeni bir oturum çerezi verilir. Bekleyen şifre sıfırlama bağlantıları da geçersiz kılınır.
 
-> `sessionsValidFrom` değeri **saniyeye yuvarlanır**. JWT `iat` alanı saniye çözünürlüğündedir ve aşağı yuvarlanır; değer milisaniye hassasiyetinde saklansaydı aynı saniye içinde üretilen yeni token `iat * 1000 < sessionsValidFrom` olacağı için geçersiz sayılır ve kullanıcı kendi şifre değişikliği yüzünden oturumdan atılırdı.
+**Tüm cihazlardan çıkış:** `POST /api/session/logout-all` — hesap sayfasındaki düğmeden çağrılır. İşlemi yapan cihaz dâhil tüm oturumları kapatır.
 
-**Oturum iptali nasıl çalışır:** İmza kontrolü middleware'de (edge runtime) yapılır, hızlıdır. `sessionsValidFrom` kontrolü ise veritabanına erişebilen sunucu tarafında (`getUserSession`) yapılır. Middleware tek başına iptal edilmiş bir oturumu tespit edemez; korumalı sayfalar ve Server Action'lar `getUserSession` kullandığı için gerçek kontrol orada gerçekleşir.
+### Oturum iptali: `sessionVersion`
+
+Her kullanıcının bir `sessionVersion` sayacı vardır. Oturum tokenı üretildiği andaki sürümü içinde taşır; doğrulamada veritabanındaki güncel değerle **tam eşitlik** aranır. Sürüm artırıldığı anda eski tokenların hepsi geçersiz olur.
+
+Sürüm şu işlemlerde artırılır: şifre değiştirme, şifre sıfırlama, tüm oturumları kapatma.
+
+> **Neden sayaç, neden zaman damgası değil?** Önce `sessionsValidFrom` zaman damgası kullanılmıştı. JWT `iat` alanı **saniye** çözünürlüğündedir ve aşağı yuvarlanır; bu yüzden zamana dayalı karşılaştırma iki kötü seçenekten birine zorluyordu: ya damga milisaniye hassasiyetinde tutulur ve kullanıcı **kendi şifre değişikliğinde oturumdan atılırdı**, ya da saniyeye yuvarlanır ve şifre değişimiyle **aynı saniye içinde üretilmiş tokenlar geçerli kalırdı** (bir saniyelik açık). Tam sayı karşılaştırması bu ikilemi tamamen ortadan kaldırır.
+
+`sessionVersion` alanı taşımayan tokenlar (mekanizma eklenmeden önce üretilenler) bilerek reddedilir.
+
+**Kontrol nerede yapılır:** İmza kontrolü middleware'de (edge runtime) yapılır, hızlıdır ama veritabanına erişemez. Sürüm kontrolü veritabanına erişebilen sunucu tarafında (`getUserSession`) yapılır. Middleware tek başına iptal edilmiş bir oturumu tespit edemez; korumalı sayfalar ve Server Action'lar `getUserSession` kullandığı için gerçek kontrol orada gerçekleşir.
 
 ### Hız sınırlama (rate limiting)
 
@@ -290,6 +303,7 @@ Sayaçlar **veritabanında** (`RateLimitEntry` tablosu) tutulur. Bellek içi say
 | `POST /api/password/forgot` | E-posta | 3 / saat |
 | `POST /api/password/reset` | IP | 10 / saat |
 | `POST /api/password/change` | Kullanıcı | 5 / 15 dk |
+| `POST /api/session/logout-all` | Kullanıcı | 10 / saat |
 | `POST /api/email/verify` | IP | 20 / saat |
 | `POST /api/email/verify/resend` | Kullanıcı | 3 / saat |
 | Buluntu bildirimi (Server Action) | IP | 5 / saat |

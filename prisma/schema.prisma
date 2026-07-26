@@ -18,9 +18,17 @@ model User {
   /// E-posta adresinin doğrulandığı an. Null ise henüz doğrulanmamıştır.
   emailVerifiedAt DateTime?
 
-  /// Bu andan önce üretilmiş oturum tokenları geçersiz sayılır.
-  /// Şifre değiştiğinde güncellenir; böylece açık kalmış oturumlar kapanır.
-  sessionsValidFrom DateTime?
+  /// Oturum sürümü. Her oturum tokenı üretildiği andaki değeri taşır ve
+  /// doğrulamada veritabanındaki güncel değerle TAM EŞİTLİK karşılaştırılır.
+  ///
+  /// Şifre değişimi, şifre sıfırlama veya "tüm oturumları kapat" işleminde
+  /// artırılır; eski tokenlar anında geçersiz olur.
+  ///
+  /// Zaman damgası yerine sayaç kullanılmasının nedeni: JWT `iat` alanı
+  /// saniye çözünürlüğündedir, bu yüzden zamana dayalı karşılaştırma ya
+  /// kullanıcıyı kendi işleminde oturumdan atar ya da bir saniyelik açık
+  /// bırakır. Sayaç karşılaştırması zamanlamadan tamamen bağımsızdır.
+  sessionVersion Int @default(0)
 
   records                 ItemRecord[]
   passwordResetTokens     PasswordResetToken[]

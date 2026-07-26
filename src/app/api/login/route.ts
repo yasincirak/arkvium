@@ -79,6 +79,13 @@ export async function POST(request: Request) {
 
     const user = await prisma.user.findUnique({
       where: { email },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        passwordHash: true,
+        sessionVersion: true,
+      },
     });
 
     const passwordIsValid = await bcrypt.compare(
@@ -102,6 +109,7 @@ export async function POST(request: Request) {
     const sessionToken = await createUserSessionToken({
       userId: user.id,
       email: user.email,
+      sessionVersion: user.sessionVersion,
     });
 
     const response = NextResponse.json({

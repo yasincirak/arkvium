@@ -31,8 +31,11 @@ export type AdminSessionPayload = {
 export type UserSessionPayload = {
   userId: string;
   email: string;
-  /** Token'ın üretildiği an. Şifre değişiminde oturum iptali için kullanılır. */
-  issuedAt: Date;
+  /**
+   * Token üretildiği andaki oturum sürümü.
+   * Doğrulamada veritabanındaki güncel değerle tam eşitlik aranır.
+   */
+  sessionVersion: number;
 };
 
 export const sessionCookieOptions = {
@@ -76,7 +79,7 @@ export async function verifyAdminSessionToken(
 }
 
 export async function createUserSessionToken(
-  payload: Omit<UserSessionPayload, "issuedAt">
+  payload: UserSessionPayload
 ): Promise<string> {
   return new SignJWT({ ...payload, type: "user" })
     .setProtectedHeader({ alg: "HS256" })
@@ -94,11 +97,14 @@ export async function verifyUserSessionToken(
       getSecret("USER_SESSION_SECRET")
     );
 
+    // sessionVersion zorunludur: bu alanı taşımayan eski tokenlar
+    // (sürüm mekanizması eklenmeden önce üretilenler) kabul edilmez.
     if (
       payload.type !== "user" ||
       typeof payload.userId !== "string" ||
       typeof payload.email !== "string" ||
-      typeof payload.iat !== "number"
+      typeof payload.sessionVersion !== "number" ||
+      !Number.isInteger(payload.sessionVersion)
     ) {
       return null;
     }
@@ -106,7 +112,7 @@ export async function verifyUserSessionToken(
     return {
       userId: payload.userId,
       email: payload.email,
-      issuedAt: new Date(payload.iat * 1000),
+      sessionVersion: payload.sessionVersion,
     };
   } catch {
     return null;

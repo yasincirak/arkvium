@@ -564,6 +564,193 @@ describe("şifre değiştirme", () => {
   });
 });
 
+describe("oturum sürümü (sessionVersion)", () => {
+  test("yeni kullanıcı 0. sürümle başlar ve tokenı geçerlidir", async () => {
+    const cerez = await kullaniciOlustur("surum0@test.invalid");
+
+    const kayit = await db.query(
+      'SELECT "sessionVersion" FROM "User" WHERE email=$1',
+      ["surum0@test.invalid"]
+    );
+
+    assert.equal(kayit.rows[0].sessionVersion, 0);
+    assert.equal((await sayfaAl("/account", cerez)).status, 200);
+  });
+
+  test("sürüm veritabanından artırılınca mevcut token anında geçersizleşir", async () => {
+    const cerez = await kullaniciOlustur("surumartis@test.invalid");
+
+    assert.equal(
+      (await sayfaAl("/account", cerez)).status,
+      200,
+      "artırım öncesi oturum geçerli olmalı"
+    );
+
+    await db.query(
+      'UPDATE "User" SET "sessionVersion" = "sessionVersion" + 1 WHERE email=$1',
+      ["surumartis@test.invalid"]
+    );
+
+    assert.equal(
+      (await sayfaAl("/account", cerez)).status,
+      307,
+      "artırım sonrası aynı token reddedilmeli"
+    );
+  });
+
+  test("sürüm artışından sonra yeni giriş geçerli token üretir", async () => {
+    const eskiCerez = await kullaniciOlustur("yenigiris@test.invalid");
+
+    await db.query(
+      'UPDATE "User" SET "sessionVersion" = "sessionVersion" + 1 WHERE email=$1',
+      ["yenigiris@test.invalid"]
+    );
+
+    assert.equal((await sayfaAl("/account", eskiCerez)).status, 307);
+
+    const giris = await istek("/api/login", {
+      govde: {
+        email: "yenigiris@test.invalid",
+        password: "GucluSifre12345",
+      },
+    });
+
+    const yeniCerez = oturumCerezi(giris.yanit, KULLANICI_CEREZI);
+
+    assert.ok(yeniCerez);
+    assert.equal(
+      (await sayfaAl("/account", yeniCerez)).status,
+      200,
+      "yeni token geçerli olmalı"
+    );
+    assert.equal(
+      (await sayfaAl("/account", eskiCerez)).status,
+      307,
+      "eski token geçersiz kalmalı"
+    );
+  });
+
+  test("şifre değişimi sürümü tam olarak bir artırır", async () => {
+    const cerez = await kullaniciOlustur("sayac@test.invalid");
+
+    const once = (
+      await db.query('SELECT "sessionVersion" v FROM "User" WHERE email=$1', [
+        "sayac@test.invalid",
+      ])
+    ).rows[0].v;
+
+    await istek("/api/password/change", {
+      cerez,
+      govde: {
+        currentPassword: "GucluSifre12345",
+        newPassword: "BambaskaSifre999",
+      },
+    });
+
+    const sonra = (
+      await db.query('SELECT "sessionVersion" v FROM "User" WHERE email=$1', [
+        "sayac@test.invalid",
+      ])
+    ).rows[0].v;
+
+    assert.equal(sonra, once + 1);
+  });
+
+  test("şifre sıfırlama sürümü artırır ve eski oturumu kapatır", async () => {
+    const eskiCerez = await kullaniciOlustur("sifirlasurum@test.invalid");
+
+    const kullaniciId = (
+      await db.query('SELECT id FROM "User" WHERE email=$1', [
+        "sifirlasurum@test.invalid",
+      ])
+    ).rows[0].id;
+
+    const token = randomBytes(32).toString("base64url");
+    const ozet = createHash("sha256").update(token).digest("hex");
+
+    await db.query(
+      'INSERT INTO "PasswordResetToken" (id,"tokenHash","userId","expiresAt","createdAt") VALUES ($1,$2,$3, now() + interval \'1 hour\', now())',
+      ["prt-surum", ozet, kullaniciId]
+    );
+
+    const once = (
+      await db.query('SELECT "sessionVersion" v FROM "User" WHERE id=$1', [
+        kullaniciId,
+      ])
+    ).rows[0].v;
+
+    const sonuc = await istek("/api/password/reset", {
+      govde: { token, password: "SifirlanmisSifre1" },
+    });
+
+    assert.equal(sonuc.yanit.status, 200);
+
+    const sonra = (
+      await db.query('SELECT "sessionVersion" v FROM "User" WHERE id=$1', [
+        kullaniciId,
+      ])
+    ).rows[0].v;
+
+    assert.equal(sonra, once + 1);
+    assert.equal(
+      (await sayfaAl("/account", eskiCerez)).status,
+      307,
+      "sıfırlama öncesi oturum kapanmalı"
+    );
+  });
+
+  test("tüm oturumları kapat her cihazı düşürür", async () => {
+    const birinciCihaz = await kullaniciOlustur("tumcikis@test.invalid");
+
+    const ikinciGiris = await istek("/api/login", {
+      govde: { email: "tumcikis@test.invalid", password: "GucluSifre12345" },
+    });
+
+    const ikinciCihaz = oturumCerezi(ikinciGiris.yanit, KULLANICI_CEREZI);
+
+    assert.ok(ikinciCihaz);
+    assert.equal((await sayfaAl("/account", birinciCihaz)).status, 200);
+    assert.equal((await sayfaAl("/account", ikinciCihaz)).status, 200);
+
+    const { yanit } = await istek("/api/session/logout-all", {
+      cerez: birinciCihaz,
+    });
+
+    assert.equal(yanit.status, 200);
+
+    assert.equal(
+      (await sayfaAl("/account", birinciCihaz)).status,
+      307,
+      "işlemi yapan cihaz da kapanmalı"
+    );
+    assert.equal(
+      (await sayfaAl("/account", ikinciCihaz)).status,
+      307,
+      "diğer cihaz da kapanmalı"
+    );
+  });
+
+  test("oturumsuz tüm oturumları kapat isteği reddedilir", async () => {
+    const { yanit } = await istek("/api/session/logout-all");
+
+    assert.equal(yanit.status, 401);
+  });
+
+  test("bir kullanıcının sürüm artışı diğerini etkilemez", async () => {
+    const aCerez = await kullaniciOlustur("etki-a@test.invalid");
+    const bCerez = await kullaniciOlustur("etki-b@test.invalid");
+
+    await istek("/api/session/logout-all", { cerez: aCerez });
+
+    assert.equal((await sayfaAl("/account", aCerez)).status, 307);
+    assert.equal(
+      (await sayfaAl("/account", bCerez)).status,
+      200,
+      "diğer kullanıcının oturumu etkilenmemeli"
+    );
+  });
+});
+
 describe("e-posta doğrulama", () => {
   test("geçerli token e-postayı doğrular ve tükenir", async () => {
     await kullaniciOlustur("dogrula@test.invalid");

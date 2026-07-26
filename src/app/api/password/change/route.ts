@@ -8,7 +8,6 @@ import {
 } from "@/lib/auth";
 import { getUserSession } from "@/lib/session";
 import { hizSiniriKontrol } from "@/lib/rate-limit";
-import { oturumGecerlilikBaslangici } from "@/lib/tokens";
 
 const MIN_SIFRE_UZUNLUGU = 8;
 const BCRYPT_MALIYETI = 12;
@@ -98,14 +97,15 @@ export async function POST(request: Request) {
     const passwordHash = await bcrypt.hash(newPassword, BCRYPT_MALIYETI);
     const simdi = new Date();
 
-    await prisma.$transaction([
+    const [guncelKullanici] = await prisma.$transaction([
       prisma.user.update({
         where: { id: user.id },
-        // Diğer cihazlardaki açık oturumlar kapanır.
+        // Sürüm artırılır; diğer cihazlardaki açık oturumlar kapanır.
         data: {
           passwordHash,
-          sessionsValidFrom: oturumGecerlilikBaslangici(simdi),
+          sessionVersion: { increment: 1 },
         },
+        select: { sessionVersion: true },
       }),
       // Bekleyen şifre sıfırlama bağlantıları da geçersiz kılınır.
       prisma.passwordResetToken.updateMany({
@@ -119,11 +119,12 @@ export async function POST(request: Request) {
       message: "Şifreniz güncellendi. Diğer cihazlardaki oturumlar kapatıldı.",
     });
 
-    // Bu cihazdaki oturum yeni bir tokenla tazelenir; kullanıcı kendi
-    // işlemi yüzünden dışarı atılmaz.
+    // Bu cihazdaki oturum, GÜNCEL sürümü taşıyan yeni bir tokenla tazelenir;
+    // kullanıcı kendi işlemi yüzünden dışarı atılmaz.
     const yeniToken = await createUserSessionToken({
       userId: user.id,
       email: user.email,
+      sessionVersion: guncelKullanici.sessionVersion,
     });
 
     response.cookies.set(
