@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { prisma } from "./prisma";
 import {
   ADMIN_SESSION_COOKIE,
   USER_SESSION_COOKIE,
@@ -23,7 +24,39 @@ export async function getUserSession(): Promise<UserSessionPayload | null> {
     return null;
   }
 
-  return verifyUserSessionToken(token);
+  const session = await verifyUserSessionToken(token);
+
+  if (!session) {
+    return null;
+  }
+
+  // Şifre değiştiğinde User.sessionsValidFrom güncellenir; o andan önce
+  // üretilmiş tokenlar imzası geçerli olsa bile kabul edilmez.
+  // İmza kontrolü middleware'de (edge) yapılır, bu ek kontrol veritabanına
+  // erişebilen sunucu tarafında yapılır.
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { sessionsValidFrom: true },
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    if (
+      user.sessionsValidFrom &&
+      session.issuedAt.getTime() < user.sessionsValidFrom.getTime()
+    ) {
+      return null;
+    }
+  } catch (error) {
+    console.error("Oturum geçerlilik kontrolü yapılamadı:", error);
+
+    return null;
+  }
+
+  return session;
 }
 
 export async function getAdminSession(): Promise<AdminSessionPayload | null> {

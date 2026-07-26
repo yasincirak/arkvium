@@ -75,12 +75,21 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label
-              htmlFor="password"
-              className="mb-2 block text-sm font-medium text-white/80"
-            >
-              Şifre
-            </label>
+            <div className="mb-2 flex items-baseline justify-between gap-3">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-white/80"
+              >
+                Şifre
+              </label>
+
+              <Link
+                href="/forgot-password"
+                className="text-sm font-medium text-indigo-400 hover:text-indigo-300"
+              >
+                Şifremi unuttum
+              </Link>
+            </div>
 
             <input
               id="password"

@@ -37,10 +37,24 @@ describe("kullanıcı oturum token'ı", () => {
 
     const session = await auth.verifyUserSessionToken(token);
 
-    assert.deepEqual(session, {
+    assert.equal(session?.userId, "kullanici-1");
+    assert.equal(session?.email, "test@example.com");
+    assert.ok(session?.issuedAt instanceof Date);
+  });
+
+  test("token üretim anı (issuedAt) döner", async () => {
+    const oncesi = Date.now();
+
+    const token = await auth.createUserSessionToken({
       userId: "kullanici-1",
       email: "test@example.com",
     });
+
+    const session = await auth.verifyUserSessionToken(token);
+
+    // iat saniye çözünürlüğünde olduğu için 1 saniyelik tolerans bırakılır.
+    assert.ok(session!.issuedAt.getTime() >= oncesi - 1000);
+    assert.ok(session!.issuedAt.getTime() <= Date.now() + 1000);
   });
 
   test("bozulmuş token reddedilir", async () => {

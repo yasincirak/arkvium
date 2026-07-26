@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { hizSiniriKontrol, istemciIpAdresi } from "@/lib/rate-limit";
+import { dogrulamaEpostasiGonder } from "@/lib/email-verification";
 
 // Aynı IP'den toplu sahte hesap açılmasını sınırlar.
 const IP_LIMIT = 5;
@@ -64,17 +65,28 @@ export async function POST(request: Request) {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         fullName,
         email,
         phone: phone || null,
         passwordHash,
       },
+      select: { id: true, email: true, fullName: true },
     });
 
+    // Doğrulama e-postası gönderilemezse kayıt geri alınmaz; kullanıcı
+    // hesabına giriş yapıp e-postayı yeniden isteyebilir.
+    const dogrulama = await dogrulamaEpostasiGonder(user);
+
     return NextResponse.json(
-      { success: true },
+      {
+        success: true,
+        emailVerificationSent: dogrulama.gonderildi,
+        message: dogrulama.gonderildi
+          ? "Hesabınız oluşturuldu. E-posta adresinizi doğrulamak için gelen kutunuzu kontrol edin."
+          : "Hesabınız oluşturuldu. Doğrulama e-postası şu anda gönderilemedi; hesabınızdan tekrar isteyebilirsiniz.",
+      },
       { status: 201 }
     );
   } catch (error) {

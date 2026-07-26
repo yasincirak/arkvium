@@ -15,7 +15,50 @@ model User {
   phone        String?
   createdAt    DateTime @default(now())
 
-  records ItemRecord[]
+  /// E-posta adresinin doğrulandığı an. Null ise henüz doğrulanmamıştır.
+  emailVerifiedAt DateTime?
+
+  /// Bu andan önce üretilmiş oturum tokenları geçersiz sayılır.
+  /// Şifre değiştiğinde güncellenir; böylece açık kalmış oturumlar kapanır.
+  sessionsValidFrom DateTime?
+
+  records                 ItemRecord[]
+  passwordResetTokens     PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+}
+
+/// Şifre sıfırlama tokenları.
+/// Token düz metin saklanmaz; yalnızca SHA-256 özeti tutulur.
+/// Veritabanı sızsa bile özetten geçerli token üretilemez.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// E-posta doğrulama tokenları.
+/// `email` alanı, ileride e-posta değişikliği doğrulaması için hedef adresi tutar.
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model ItemRecord {

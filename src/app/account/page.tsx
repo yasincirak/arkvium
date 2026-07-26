@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import LogoutButton from "@/components/account/LogoutButton";
+import EmailVerificationNotice from "@/components/account/EmailVerificationNotice";
 import { getUserSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
@@ -57,6 +58,8 @@ export default async function AccountPage() {
           <LogoutButton />
         </div>
 
+        {!user.emailVerifiedAt && <EmailVerificationNotice />}
+
         <div className="mb-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
           <h2 className="text-xl font-semibold">Hesap Bilgileri</h2>
 
@@ -68,7 +71,20 @@ export default async function AccountPage() {
 
             <div>
               <p className="text-sm text-white/40">E-posta</p>
-              <p className="mt-1">{user.email}</p>
+
+              <p className="mt-1 flex flex-wrap items-center gap-2">
+                {user.email}
+
+                {user.emailVerifiedAt ? (
+                  <span className="rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-300">
+                    ✓ Doğrulandı
+                  </span>
+                ) : (
+                  <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-300">
+                    ! Doğrulanmadı
+                  </span>
+                )}
+              </p>
             </div>
 
             <div>

@@ -154,7 +154,7 @@ Uygulamadan önce:
 
 ### Mevcut modeller
 
-`User`, `ItemRecord`, `FinderMessage`, `RateLimitEntry`
+`User`, `ItemRecord`, `FinderMessage`, `RateLimitEntry`, `PasswordResetToken`, `EmailVerificationToken`
 
 ---
 
@@ -227,6 +227,19 @@ Canlıya almadan önce:
 - Kişiye özel sayfalar `robots.txt` ve sayfa bazlı `noindex` ile arama motorlarına kapalıdır.
 - Kullanıcı bulunamadığında da bcrypt karşılaştırması yapılır; yanıt süresinden hangi e-postaların kayıtlı olduğu anlaşılamaz.
 
+### Şifre sıfırlama ve e-posta doğrulama
+
+- Tokenlar `crypto.randomBytes(32)` ile üretilir (256 bit entropi).
+- Veritabanında **düz metin token saklanmaz**, yalnızca SHA-256 özeti tutulur. Veritabanı sızsa bile özetten geçerli bir bağlantı üretilemez.
+- Tokenlar **tek kullanımlıktır** (`usedAt`) ve **sürelidir**: şifre sıfırlama 1 saat, e-posta doğrulama 24 saat.
+- Yeni token üretildiğinde aynı kullanıcının önceki kullanılmamış tokenları geçersiz kılınır.
+- E-posta gönderilemezse token hemen geçersiz kılınır ve kullanıcıya hata bildirilir — sahte başarı üretilmez.
+- `POST /api/password/forgot`, e-posta kayıtlı olsun olmasın **aynı yanıtı** döner; bu uç kullanıcı numaralandırması için kullanılamaz.
+- Şifre sıfırlandığında `User.sessionsValidFrom` güncellenir; o andan önce üretilmiş tüm oturum tokenları — imzaları geçerli olsa bile — reddedilir. Böylece başka cihazlarda açık kalmış oturumlar kapanır.
+- Şifre değişimi, token kullanımı ve oturum iptali tek veritabanı işleminde (`$transaction`) yapılır.
+
+**Oturum iptali nasıl çalışır:** İmza kontrolü middleware'de (edge runtime) yapılır, hızlıdır. `sessionsValidFrom` kontrolü ise veritabanına erişebilen sunucu tarafında (`getUserSession`) yapılır. Middleware tek başına iptal edilmiş bir oturumu tespit edemez; korumalı sayfalar ve Server Action'lar `getUserSession` kullandığı için gerçek kontrol orada gerçekleşir.
+
 ### Hız sınırlama (rate limiting)
 
 Sayaçlar **veritabanında** (`RateLimitEntry` tablosu) tutulur. Bellek içi sayaç kullanılmaz: Vercel birden fazla sunucu örneği çalıştırır ve her örnek kendi sayacını tutarsa sınır pratikte örnek sayısı kadar büyür.
@@ -237,6 +250,11 @@ Sayaçlar **veritabanında** (`RateLimitEntry` tablosu) tutulur. Bellek içi say
 | `POST /api/login` | E-posta | 5 / 15 dk |
 | `POST /api/admin/login` | IP | 5 / 15 dk |
 | `POST /api/register` | IP | 5 / saat |
+| `POST /api/password/forgot` | IP | 5 / saat |
+| `POST /api/password/forgot` | E-posta | 3 / saat |
+| `POST /api/password/reset` | IP | 10 / saat |
+| `POST /api/email/verify` | IP | 20 / saat |
+| `POST /api/email/verify/resend` | Kullanıcı | 3 / saat |
 | Buluntu bildirimi (Server Action) | IP | 5 / saat |
 
 Sınır aşıldığında `429` ve `Retry-After` başlığı döner. Başarılı girişten sonra ilgili sayaçlar sıfırlanır.
@@ -278,9 +296,8 @@ npx next build 2>&1 | grep Middleware
 Bu bölüm kasıtlı olarak açıktır; aşağıdaki özellikler **henüz uygulanmamıştır**:
 
 **Hesap ve güvenlik**
-- Şifremi unuttum / şifre sıfırlama
-- E-posta doğrulama
-- Şifre değiştirme
+- Şifre değiştirme (giriş yapmış kullanıcı için, mevcut şifreyle)
+- E-posta adresi değiştirme
 - Hesap silme
 - Audit log
 - Kayıt ekranında e-posta numaralandırma koruması (var olan e-postada "zaten kayıtlı" mesajı döner; IP başına saat başı 5 kayıt sınırı bunu kısmen dengeler)

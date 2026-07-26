@@ -5,6 +5,7 @@ import { FormEvent, useState } from "react";
 
 export default function RegisterPage() {
   const [error, setError] = useState("");
+  const [basariMesaji, setBasariMesaji] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -35,7 +36,10 @@ export default function RegisterPage() {
       return;
     }
 
-    window.location.href = "/login";
+    // Kullanıcı, doğrulama e-postasının gönderilip gönderilmediğini görmeden
+    // yönlendirilmemelidir.
+    setBasariMesaji(data.message || "Hesabınız oluşturuldu.");
+    setIsSubmitting(false);
   }
 
   return (
@@ -56,6 +60,21 @@ export default function RegisterPage() {
           </p>
         </div>
 
+        {basariMesaji ? (
+          <div
+            role="status"
+            className="rounded-xl border border-green-500/20 bg-green-500/10 px-4 py-4 text-sm leading-6 text-green-200"
+          >
+            <p>{basariMesaji}</p>
+
+            <Link
+              href="/login"
+              className="mt-3 inline-block font-medium text-green-100 underline"
+            >
+              Giriş yap
+            </Link>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label
@@ -134,7 +153,10 @@ export default function RegisterPage() {
           </div>
 
           {error && (
-            <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            <div
+              role="alert"
+              className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+            >
               {error}
             </div>
           )}
@@ -147,6 +169,7 @@ export default function RegisterPage() {
             {isSubmitting ? "Hesap oluşturuluyor..." : "Hesap Oluştur"}
           </button>
         </form>
+        )}
 
         <p className="mt-6 text-center text-sm text-white/50">
           Zaten hesabın var mı?{" "}
