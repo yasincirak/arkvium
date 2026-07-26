@@ -3,7 +3,11 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { USER_SESSION_COOKIE } from "@/lib/auth";
 import { hizSiniriKontrol, istemciIpAdresi } from "@/lib/rate-limit";
-import { tokenDurumu, tokenOzetle } from "@/lib/tokens";
+import {
+  oturumGecerlilikBaslangici,
+  tokenDurumu,
+  tokenOzetle,
+} from "@/lib/tokens";
 
 const MIN_SIFRE_UZUNLUGU = 8;
 const BCRYPT_MALIYETI = 12;
@@ -85,7 +89,7 @@ export async function POST(request: Request) {
         data: {
           passwordHash,
           // Bu andan önce üretilmiş tüm oturum tokenları geçersiz olur.
-          sessionsValidFrom: simdi,
+          sessionsValidFrom: oturumGecerlilikBaslangici(simdi),
         },
       }),
       prisma.passwordResetToken.update({

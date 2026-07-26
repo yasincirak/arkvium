@@ -67,6 +67,19 @@ export function tokenDurumu(kayit: {
   return { gecerli: true };
 }
 
+/**
+ * Oturum iptal anını üretir.
+ *
+ * JWT `iat` alanı SANİYE hassasiyetindedir (aşağı yuvarlanır). Bu değer
+ * milisaniye hassasiyetinde saklanırsa, aynı saniye içinde üretilen yeni bir
+ * token `iat * 1000 < sessionsValidFrom` olduğu için geçersiz sayılır ve
+ * kullanıcı kendi şifre değişikliği yüzünden oturumdan atılır.
+ * Bu yüzden değer saniyeye yuvarlanır.
+ */
+export function oturumGecerlilikBaslangici(an: Date = new Date()): Date {
+  return new Date(Math.floor(an.getTime() / 1000) * 1000);
+}
+
 /** Token süreleri (dakika). */
 export const TOKEN_SURESI = {
   sifreSifirlama: 60,

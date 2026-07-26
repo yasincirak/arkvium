@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import LogoutButton from "@/components/account/LogoutButton";
 import EmailVerificationNotice from "@/components/account/EmailVerificationNotice";
+import ChangePasswordForm from "@/components/account/ChangePasswordForm";
 import { getUserSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
@@ -93,6 +94,8 @@ export default async function AccountPage() {
             </div>
           </div>
         </div>
+
+        <ChangePasswordForm />
 
         <div>
           <h2 className="text-2xl font-semibold">Ürünlerim</h2>

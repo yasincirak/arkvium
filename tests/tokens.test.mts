@@ -4,6 +4,7 @@ import { describe, test } from "node:test";
 
 const {
   TOKEN_SURESI,
+  oturumGecerlilikBaslangici,
   ozetlerEsit,
   sonKullanmaTarihi,
   tokenDurumu,
@@ -117,6 +118,49 @@ describe("token geçerlilik durumu", () => {
     const durum = tokenDurumu({ usedAt: null, expiresAt: new Date() });
 
     assert.deepEqual(durum, { gecerli: false, sebep: "suresi-dolmus" });
+  });
+});
+
+describe("oturum geçerlilik başlangıcı", () => {
+  test("milisaniyeler sıfırlanır", () => {
+    const an = new Date("2026-07-26T12:00:00.734Z");
+
+    assert.equal(
+      oturumGecerlilikBaslangici(an).toISOString(),
+      "2026-07-26T12:00:00.000Z"
+    );
+  });
+
+  test("aynı saniye içinde üretilen token geçerli kalır", () => {
+    // JWT iat saniye çözünürlüğündedir ve aşağı yuvarlanır.
+    const an = new Date("2026-07-26T12:00:00.734Z");
+    const iat = Math.floor(an.getTime() / 1000);
+    const tokenUretimAni = new Date(iat * 1000);
+
+    const gecerlilikBaslangici = oturumGecerlilikBaslangici(an);
+
+    // Yuvarlama yapılmasaydı bu kontrol başarısız olur ve kullanıcı kendi
+    // şifre değişikliği yüzünden oturumdan atılırdı.
+    assert.ok(
+      tokenUretimAni.getTime() >= gecerlilikBaslangici.getTime(),
+      "aynı saniyede üretilen token reddedilmemeli"
+    );
+  });
+
+  test("önceki saniyede üretilen token reddedilir", () => {
+    const an = new Date("2026-07-26T12:00:00.734Z");
+    const eskiToken = new Date("2026-07-26T11:59:59.000Z");
+
+    assert.ok(
+      eskiToken.getTime() < oturumGecerlilikBaslangici(an).getTime(),
+      "eski token geçersiz sayılmalı"
+    );
+  });
+
+  test("zaten tam saniye olan değeri değiştirmez", () => {
+    const an = new Date("2026-07-26T12:00:00.000Z");
+
+    assert.equal(oturumGecerlilikBaslangici(an).getTime(), an.getTime());
   });
 });
 

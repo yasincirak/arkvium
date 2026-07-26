@@ -238,6 +238,10 @@ Canlıya almadan önce:
 - Şifre sıfırlandığında `User.sessionsValidFrom` güncellenir; o andan önce üretilmiş tüm oturum tokenları — imzaları geçerli olsa bile — reddedilir. Böylece başka cihazlarda açık kalmış oturumlar kapanır.
 - Şifre değişimi, token kullanımı ve oturum iptali tek veritabanı işleminde (`$transaction`) yapılır.
 
+**Şifre değiştirme:** Giriş yapmış kullanıcı mevcut şifresini girerek yeni şifre belirler (`POST /api/password/change`). Diğer cihazlardaki oturumlar kapanır, işlemi yapan cihaza yeni bir oturum çerezi verilir. Bekleyen şifre sıfırlama bağlantıları da geçersiz kılınır.
+
+> `sessionsValidFrom` değeri **saniyeye yuvarlanır**. JWT `iat` alanı saniye çözünürlüğündedir ve aşağı yuvarlanır; değer milisaniye hassasiyetinde saklansaydı aynı saniye içinde üretilen yeni token `iat * 1000 < sessionsValidFrom` olacağı için geçersiz sayılır ve kullanıcı kendi şifre değişikliği yüzünden oturumdan atılırdı.
+
 **Oturum iptali nasıl çalışır:** İmza kontrolü middleware'de (edge runtime) yapılır, hızlıdır. `sessionsValidFrom` kontrolü ise veritabanına erişebilen sunucu tarafında (`getUserSession`) yapılır. Middleware tek başına iptal edilmiş bir oturumu tespit edemez; korumalı sayfalar ve Server Action'lar `getUserSession` kullandığı için gerçek kontrol orada gerçekleşir.
 
 ### Hız sınırlama (rate limiting)
@@ -253,6 +257,7 @@ Sayaçlar **veritabanında** (`RateLimitEntry` tablosu) tutulur. Bellek içi say
 | `POST /api/password/forgot` | IP | 5 / saat |
 | `POST /api/password/forgot` | E-posta | 3 / saat |
 | `POST /api/password/reset` | IP | 10 / saat |
+| `POST /api/password/change` | Kullanıcı | 5 / 15 dk |
 | `POST /api/email/verify` | IP | 20 / saat |
 | `POST /api/email/verify/resend` | Kullanıcı | 3 / saat |
 | Buluntu bildirimi (Server Action) | IP | 5 / saat |
@@ -296,7 +301,6 @@ npx next build 2>&1 | grep Middleware
 Bu bölüm kasıtlı olarak açıktır; aşağıdaki özellikler **henüz uygulanmamıştır**:
 
 **Hesap ve güvenlik**
-- Şifre değiştirme (giriş yapmış kullanıcı için, mevcut şifreyle)
 - E-posta adresi değiştirme
 - Hesap silme
 - Audit log
