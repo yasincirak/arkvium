@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
+import { createServer } from "node:net";
 import { Client } from "pg";
 
 /**
@@ -10,7 +11,34 @@ import { Client } from "pg";
  * biri başarısız olursa testler çalıştırılmaz.
  */
 
-const TEST_PORT = 3011;
+/**
+ * İşletim sisteminden boş bir port ister.
+ *
+ * Sabit port kullanılamaz: node:test birden fazla test DOSYASINI paralel
+ * çalıştırır ve her dosya kendi sunucusunu başlatır. Sabit portta ikinci
+ * sunucu portu açamaz ve testler "sunucu başlatılamadı" diye düşer.
+ */
+function bosPortBul(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const sunucu = createServer();
+
+    sunucu.once("error", reject);
+
+    sunucu.listen(0, "127.0.0.1", () => {
+      const adres = sunucu.address();
+
+      if (adres === null || typeof adres === "string") {
+        sunucu.close();
+        reject(new Error("Boş port belirlenemedi."));
+        return;
+      }
+
+      const port = adres.port;
+
+      sunucu.close(() => resolve(port));
+    });
+  });
+}
 
 function envDegeriOku(dosya: string, anahtar: string): string | null {
   if (!existsSync(dosya)) {
@@ -86,10 +114,11 @@ export type TestSunucusu = {
  */
 export async function testSunucusuBaslat(): Promise<TestSunucusu> {
   const veritabani = testVeritabaniAdresi();
+  const port = await bosPortBul();
 
   const surec: ChildProcess = spawn(
     "npx",
-    ["next", "start", "-p", String(TEST_PORT)],
+    ["next", "start", "-p", String(port)],
     {
       env: {
         ...process.env,
@@ -106,7 +135,7 @@ export async function testSunucusuBaslat(): Promise<TestSunucusu> {
           "$2b$10$M.B268i.ITJ5.oLJoy3LvOupTTPBdtm7jOCKszCD6mCHzMP7ezCB2",
           "utf8"
         ).toString("base64"),
-        NEXT_PUBLIC_APP_URL: `http://localhost:${TEST_PORT}`,
+        NEXT_PUBLIC_APP_URL: `http://localhost:${port}`,
         // Gerçek e-posta gönderimini kesin olarak kapatır.
         // Boş string yeterli değildir: Next.js .env dosyalarını yükleyip
         // boş değerlerin üzerine gerçek kimlik bilgilerini yazar.
@@ -122,7 +151,7 @@ export async function testSunucusuBaslat(): Promise<TestSunucusu> {
     surec.stderr?.on("data", (d) => process.stderr.write(`[sunucu] ${d}`));
   }
 
-  const taban = `http://localhost:${TEST_PORT}`;
+  const taban = `http://localhost:${port}`;
 
   const kapat = () =>
     new Promise<void>((resolve) => {

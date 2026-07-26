@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import TagPanel from "@/components/account/TagPanel";
 import { getUserSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { etiketAdresi, etiketKoduBicimle } from "@/lib/tags";
 
 export const dynamic = "force-dynamic";
 
@@ -25,11 +27,23 @@ export default async function AccountRecordDetailPage({
       id: params.id,
       userId: session.userId,
     },
+    include: { tag: true },
   });
 
   if (!record) {
     notFound();
   }
+
+  // Etiketin taşınabileceği ürünler: kullanıcıya ait, henüz etiketi olmayanlar.
+  const tasinabilirUrunler = record.tag
+    ? await prisma.itemRecord.findMany({
+        where: { userId: session.userId, tag: null },
+        select: { id: true, assetName: true },
+        orderBy: { createdAt: "desc" },
+      })
+    : [];
+
+  const tabanAdres = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
   return (
     <main className="min-h-screen bg-[#09090f] px-4 py-10 text-white">
@@ -88,6 +102,35 @@ export default async function AccountRecordDetailPage({
               {record.description || "Açıklama bulunmuyor."}
             </p>
           </div>
+
+          {record.tag ? (
+            <TagPanel
+              tag={{
+                id: record.tag.id,
+                code: etiketKoduBicimle(record.tag.code),
+                status: record.tag.status,
+                publicToken: record.tag.publicToken,
+              }}
+              etiketAdresi={etiketAdresi(record.tag.publicToken, tabanAdres)}
+              tasinabilirUrunler={tasinabilirUrunler}
+            />
+          ) : (
+            <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+              <h2 className="text-xl font-semibold">Etiket</h2>
+
+              <p className="mt-2 text-sm leading-6 text-white/50">
+                Bu ürüne henüz bir etiket bağlı değil. Elindeki ARKVIUM
+                etiketini hesabına bağlayarak bu ürünle eşleştirebilirsin.
+              </p>
+
+              <Link
+                href="/account/tags/activate"
+                className="mt-4 inline-flex rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
+              >
+                Etiket Etkinleştir
+              </Link>
+            </div>
+          )}
 
           <div className="mt-8 flex flex-wrap gap-3">
             <Link

@@ -651,6 +651,280 @@ describe("etiket aktivasyonu", () => {
   });
 });
 
+
+describe("etiket yönetimi", () => {
+  /** Aktive edilmiş bir etiket ve sahibinin oturumunu hazırlar. */
+  async function aktifEtiketHazirla(eposta: string) {
+    const cerez = await kullaniciOlustur(eposta);
+    const userId = await kullaniciIdAl(eposta);
+    const etiket = await etiketEkle("unused");
+
+    const sonuc = await istek("/api/tags/activate", {
+      cerez,
+      govde: {
+        tagCode: etiket.code,
+        activationCode: etiket.activationCode,
+        assetName: "Yönetilen Eşya",
+      },
+    });
+
+    assert.equal(sonuc.yanit.status, 200, JSON.stringify(sonuc.govde));
+
+    return { cerez, userId, etiket, itemRecordId: sonuc.govde.itemRecordId };
+  }
+
+  test("oturumsuz yönetim isteği reddedilir", async () => {
+    const { etiket } = await aktifEtiketHazirla("yonetim-oturumsuz@test.invalid");
+
+    const { yanit } = await istek(`/api/tags/${etiket.id}`, {
+      govde: { islem: "pasiflestir" },
+    });
+
+    assert.equal(yanit.status, 401);
+
+    const kontrol = await db.query('SELECT status FROM "Tag" WHERE id=$1', [
+      etiket.id,
+    ]);
+
+    assert.equal(kontrol.rows[0].status, "active", "durum değişmemeli");
+  });
+
+  test("başka kullanıcı etiketi yönetemez", async () => {
+    const { etiket } = await aktifEtiketHazirla("gercek-sahibi@test.invalid");
+    const yabanciCerez = await kullaniciOlustur("yabanci@test.invalid");
+
+    const { yanit } = await istek(`/api/tags/${etiket.id}`, {
+      cerez: yabanciCerez,
+      govde: { islem: "pasiflestir" },
+    });
+
+    assert.equal(yanit.status, 404, "sahip olmayan 404 almalı");
+
+    const kontrol = await db.query('SELECT status FROM "Tag" WHERE id=$1', [
+      etiket.id,
+    ]);
+
+    assert.equal(kontrol.rows[0].status, "active");
+  });
+
+  test("pasife alınan etiket genel sayfada ürün göstermez", async () => {
+    const { cerez, etiket } = await aktifEtiketHazirla("pasifleme@test.invalid");
+
+    const { yanit } = await istek(`/api/tags/${etiket.id}`, {
+      cerez,
+      govde: { islem: "pasiflestir" },
+    });
+
+    assert.equal(yanit.status, 200);
+
+    const kontrol = await db.query('SELECT status FROM "Tag" WHERE id=$1', [
+      etiket.id,
+    ]);
+
+    assert.equal(kontrol.rows[0].status, "inactive");
+
+    const genel = await sayfa(`/t/${etiket.publicToken}`);
+
+    assert.ok(genel.icerik.includes("pasif"));
+    assert.ok(!genel.icerik.includes("Yönetilen Eşya"), "ürün adı sızmamalı");
+  });
+
+  test("pasif etiket yeniden etkinleştirilebilir", async () => {
+    const { cerez, etiket } = await aktifEtiketHazirla("yeniden@test.invalid");
+
+    await istek(`/api/tags/${etiket.id}`, {
+      cerez,
+      govde: { islem: "pasiflestir" },
+    });
+
+    const { yanit } = await istek(`/api/tags/${etiket.id}`, {
+      cerez,
+      govde: { islem: "etkinlestir" },
+    });
+
+    assert.equal(yanit.status, 200);
+
+    const kontrol = await db.query('SELECT status FROM "Tag" WHERE id=$1', [
+      etiket.id,
+    ]);
+
+    assert.equal(kontrol.rows[0].status, "active");
+    assert.equal((await sayfa(`/t/${etiket.publicToken}`)).yanit.status, 200);
+  });
+
+  test("zaten aktif etiket tekrar etkinleştirilemez", async () => {
+    const { cerez, etiket } = await aktifEtiketHazirla("zatenaktif@test.invalid");
+
+    const { yanit } = await istek(`/api/tags/${etiket.id}`, {
+      cerez,
+      govde: { islem: "etkinlestir" },
+    });
+
+    assert.equal(yanit.status, 409);
+  });
+
+  test("iptal edilen etiket geri alınamaz", async () => {
+    const { cerez, etiket } = await aktifEtiketHazirla("iptaledilen@test.invalid");
+
+    const iptal = await istek(`/api/tags/${etiket.id}`, {
+      cerez,
+      govde: { islem: "iptal" },
+    });
+
+    assert.equal(iptal.yanit.status, 200);
+
+    const kayit = await db.query(
+      'SELECT status, "revokedAt" FROM "Tag" WHERE id=$1',
+      [etiket.id]
+    );
+
+    assert.equal(kayit.rows[0].status, "revoked");
+    assert.ok(kayit.rows[0].revokedAt, "revokedAt damgalanmalı");
+
+    // Yeniden etkinleştirme denemesi reddedilmeli.
+    const geriAlma = await istek(`/api/tags/${etiket.id}`, {
+      cerez,
+      govde: { islem: "etkinlestir" },
+    });
+
+    assert.equal(geriAlma.yanit.status, 409);
+
+    const genel = await sayfa(`/t/${etiket.publicToken}`);
+
+    assert.ok(genel.icerik.includes("iptal"));
+    assert.ok(!genel.icerik.includes("Yönetilen Eşya"));
+  });
+
+  test("etiket sahibin başka ürününe taşınabilir ve kayıt altına alınır", async () => {
+    const { cerez, userId, etiket, itemRecordId } =
+      await aktifEtiketHazirla("tasima@test.invalid");
+
+    await urunOlustur("tasima-hedefi", userId, "Hedef Ürün");
+
+    const { yanit } = await istek(`/api/tags/${etiket.id}`, {
+      cerez,
+      govde: { islem: "tasi", itemRecordId: "tasima-hedefi" },
+    });
+
+    assert.equal(yanit.status, 200);
+
+    const kayit = await db.query(
+      'SELECT "itemRecordId" FROM "Tag" WHERE id=$1',
+      [etiket.id]
+    );
+
+    assert.equal(kayit.rows[0].itemRecordId, "tasima-hedefi");
+
+    const olay = await db.query(
+      'SELECT type, "fromItemRecordId", "toItemRecordId", "actorUserId" FROM "TagEvent" WHERE "tagId"=$1 AND type=$2',
+      [etiket.id, "moved"]
+    );
+
+    assert.equal(olay.rowCount, 1, "taşıma TagEvent'e yazılmalı");
+    assert.equal(olay.rows[0].fromItemRecordId, itemRecordId);
+    assert.equal(olay.rows[0].toItemRecordId, "tasima-hedefi");
+    assert.equal(olay.rows[0].actorUserId, userId);
+
+    // Yeni adres yeni ürünü göstermeli.
+    const genel = await sayfa(`/t/${etiket.publicToken}`);
+
+    assert.ok(genel.icerik.includes("Hedef Ürün"));
+  });
+
+  test("etiket başkasının ürününe taşınamaz", async () => {
+    const { cerez, etiket, itemRecordId } =
+      await aktifEtiketHazirla("tasima-sahibi@test.invalid");
+
+    await kullaniciOlustur("tasima-yabanci@test.invalid");
+    const yabanciId = await kullaniciIdAl("tasima-yabanci@test.invalid");
+
+    await urunOlustur("yabanci-urun", yabanciId, "Yabancı Ürün");
+
+    const { yanit } = await istek(`/api/tags/${etiket.id}`, {
+      cerez,
+      govde: { islem: "tasi", itemRecordId: "yabanci-urun" },
+    });
+
+    assert.equal(yanit.status, 404);
+
+    const kayit = await db.query(
+      'SELECT "itemRecordId" FROM "Tag" WHERE id=$1',
+      [etiket.id]
+    );
+
+    assert.equal(kayit.rows[0].itemRecordId, itemRecordId, "bağlantı değişmemeli");
+  });
+
+  test("etiketi olan ürüne taşıma reddedilir", async () => {
+    const { cerez, userId, etiket } =
+      await aktifEtiketHazirla("cift-tasima@test.invalid");
+
+    await urunOlustur("dolu-hedef", userId, "Dolu Hedef");
+
+    const ikinciEtiket = await etiketEkle("active", {
+      userId,
+      itemRecordId: "dolu-hedef",
+    });
+
+    assert.ok(ikinciEtiket);
+
+    const { yanit } = await istek(`/api/tags/${etiket.id}`, {
+      cerez,
+      govde: { islem: "tasi", itemRecordId: "dolu-hedef" },
+    });
+
+    assert.equal(yanit.status, 409);
+  });
+
+  test("durum değişiklikleri TagEvent'e yazılır", async () => {
+    const { cerez, etiket } = await aktifEtiketHazirla("olaykaydi@test.invalid");
+
+    await istek(`/api/tags/${etiket.id}`, {
+      cerez,
+      govde: { islem: "pasiflestir" },
+    });
+    await istek(`/api/tags/${etiket.id}`, {
+      cerez,
+      govde: { islem: "etkinlestir" },
+    });
+    await istek(`/api/tags/${etiket.id}`, { cerez, govde: { islem: "iptal" } });
+
+    const olaylar = await db.query(
+      'SELECT type FROM "TagEvent" WHERE "tagId"=$1 ORDER BY "createdAt", id',
+      [etiket.id]
+    );
+
+    const tipler = olaylar.rows.map((r) => r.type);
+
+    assert.ok(tipler.includes("activated"));
+    assert.ok(tipler.includes("deactivated"));
+    assert.ok(tipler.includes("reactivated"));
+    assert.ok(tipler.includes("revoked"));
+  });
+
+  test("geçersiz işlem adı reddedilir", async () => {
+    const { cerez, etiket } = await aktifEtiketHazirla("gecersizislem@test.invalid");
+
+    const { yanit } = await istek(`/api/tags/${etiket.id}`, {
+      cerez,
+      govde: { islem: "her-neyse" },
+    });
+
+    assert.equal(yanit.status, 400);
+  });
+
+  test("var olmayan etiket 404 döner", async () => {
+    const cerez = await kullaniciOlustur("olmayanetiket@test.invalid");
+
+    const { yanit } = await istek("/api/tags/olmayan-etiket-id", {
+      cerez,
+      govde: { islem: "pasiflestir" },
+    });
+
+    assert.equal(yanit.status, 404);
+  });
+});
+
 describe("toplu etiket üretimi (yönetici)", () => {
   test("oturumsuz üretim reddedilir", async () => {
     const { yanit } = await istek("/api/admin/tags/generate", {
