@@ -12,7 +12,8 @@ export default function ItemFinderSection({
 }: ItemFinderSectionProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const whatsappNumber = "905076046894";
+  // Destek numarası koda gömülmez; tanımlı değilse buton hiç gösterilmez.
+  const whatsappNumber = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP;
 
   const whatsappMessage = `Merhaba, ARKVIUM sistemine kayıtlı bir eşyayı buldum.
 
@@ -20,9 +21,11 @@ Kayıt No: ${recordId}
 
 Eşya hakkında bilgi vermek istiyorum.`;
 
-  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-    whatsappMessage
-  )}`;
+  const whatsappUrl = whatsappNumber
+    ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
+        whatsappMessage
+      )}`
+    : null;
 
   return (
     <div className="mt-10 space-y-4">
@@ -38,14 +41,16 @@ Eşya hakkında bilgi vermek istiyorum.`;
 
       {isOpen && <FinderForm recordId={recordId} />}
 
-      <a
-        href={whatsappUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex w-full items-center justify-center rounded-xl border border-green-500/30 bg-green-500/10 py-3 font-semibold text-green-300 transition hover:bg-green-500/20"
-      >
-        WhatsApp ile iletişime geç
-      </a>
+      {whatsappUrl && (
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex w-full items-center justify-center rounded-xl border border-green-500/30 bg-green-500/10 py-3 font-semibold text-green-300 transition hover:bg-green-500/20"
+        >
+          WhatsApp ile iletişime geç
+        </a>
+      )}
     </div>
   );
 }

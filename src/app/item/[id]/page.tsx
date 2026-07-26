@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getRecordById } from "@/lib/store";
 import ItemFinderSection from "@/components/ItemFinderSection";
 import { notFound } from "next/navigation";
@@ -6,6 +7,27 @@ type Props = {
   params: {
     id: string;
   };
+};
+
+/**
+ * Bu sayfa belirli bir kişinin eşyasına ait genel erişim sayfasıdır ve
+ * arama motorlarına kapalı tutulur.
+ */
+export const metadata: Metadata = {
+  title: "Bulunan Eşya",
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: { index: false, follow: false },
+  },
+};
+
+const durumEtiketleri: Record<string, string> = {
+  active: "Aktif",
+  lost: "Kayıp",
+  found: "Bulundu",
+  inactive: "Pasif",
 };
 
 export default async function ItemPage({ params }: Props) {
@@ -32,13 +54,15 @@ export default async function ItemPage({ params }: Props) {
 
           <div>
             <span className="text-white/40">Durum</span>
-            <p>{record.status}</p>
+            <p>{durumEtiketleri[record.status] ?? "Aktif"}</p>
           </div>
 
-          <div>
-            <span className="text-white/40">Açıklama</span>
-            <p>{record.description}</p>
-          </div>
+          {record.description && (
+            <div>
+              <span className="text-white/40">Açıklama</span>
+              <p>{record.description}</p>
+            </div>
+          )}
         </div>
 
         <ItemFinderSection recordId={record.id} />

@@ -19,12 +19,21 @@ export default function Home() {
             </a>
           </div>
 
-          <a
-            href="/admin/new"
-            className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-black hover:bg-white/90"
-          >
-            Hemen Başla
-          </a>
+          <div className="flex items-center gap-3">
+            <a
+              href="/login"
+              className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white/70 transition hover:text-white"
+            >
+              Giriş Yap
+            </a>
+
+            <a
+              href="/register"
+              className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-black hover:bg-white/90"
+            >
+              Hemen Başla
+            </a>
+          </div>
         </div>
       </header>
 
@@ -49,7 +58,7 @@ export default function Home() {
 
           <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
             <a
-              href="/admin/new"
+              href="/register"
               className="rounded-xl bg-indigo-500 px-8 py-4 font-semibold hover:bg-indigo-600"
             >
               Ücretsiz Başla

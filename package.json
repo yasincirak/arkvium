@@ -1,5 +1,5 @@
 {
-  "name": "izoris",
+  "name": "arkvium",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"tests/**/*.test.mts\"",
+    "hash-password": "node scripts/hash-password.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {

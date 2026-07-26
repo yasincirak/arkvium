@@ -1,6 +1,9 @@
 import { changeFinderMessageStatus } from "@/lib/actions";
 import { getFinderMessages, getRecordById } from "@/lib/store";
 
+// Bildirimler build anında dondurulmamalı, her istekte tazelenmelidir.
+export const dynamic = "force-dynamic";
+
 export default async function NotificationsPage() {
   const messages = await getFinderMessages();
 

@@ -2,6 +2,9 @@ import StatCard from "@/components/admin/StatCard";
 import NewRecordButton from "@/components/admin/NewRecordButton";
 import { getRecords, getFinderMessages } from "@/lib/store";
 
+// Panel her zaman güncel veriyi göstermelidir; build anında dondurulmamalıdır.
+export const dynamic = "force-dynamic";
+
 export default async function AdminDashboardPage() {
   const records = await getRecords();
   const messages = await getFinderMessages();
