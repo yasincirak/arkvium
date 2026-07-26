@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { verifyUserSessionToken } from "@/lib/auth";
+import { getUserSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -15,14 +14,7 @@ type AccountRecordDetailPageProps = {
 export default async function AccountRecordDetailPage({
   params,
 }: AccountRecordDetailPageProps) {
-  const cookieStore = await cookies();
-  const sessionToken = cookieStore.get("arkvium_user_session")?.value;
-
-  if (!sessionToken) {
-    redirect("/login");
-  }
-
-  const session = await verifyUserSessionToken(sessionToken);
+  const session = await getUserSession();
 
   if (!session) {
     redirect("/login");

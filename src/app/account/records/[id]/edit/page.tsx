@@ -1,7 +1,6 @@
-import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import EditRecordForm from "@/components/account/EditRecordForm";
-import { verifyUserSessionToken } from "@/lib/auth";
+import { getUserSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -13,14 +12,7 @@ type Props = {
 };
 
 export default async function AccountEditRecordPage({ params }: Props) {
-  const cookieStore = await cookies();
-  const sessionToken = cookieStore.get("arkvium_user_session")?.value;
-
-  if (!sessionToken) {
-    redirect("/login");
-  }
-
-  const session = await verifyUserSessionToken(sessionToken);
+  const session = await getUserSession();
 
   if (!session) {
     redirect("/login");

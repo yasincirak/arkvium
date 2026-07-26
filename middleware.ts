@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAdminSessionToken } from "@/lib/auth";
+import {
+  ADMIN_SESSION_COOKIE,
+  verifyAdminSessionToken,
+} from "@/lib/auth";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -8,7 +11,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = request.cookies.get("arkvium_admin_session")?.value;
+  const token = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
 
   if (!token) {
     return NextResponse.redirect(new URL("/admin/login", request.url));
@@ -21,7 +24,7 @@ export async function middleware(request: NextRequest) {
       new URL("/admin/login", request.url)
     );
 
-    response.cookies.delete("arkvium_admin_session");
+    response.cookies.delete(ADMIN_SESSION_COOKIE);
 
     return response;
   }

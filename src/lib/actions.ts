@@ -2,9 +2,8 @@
 
 import { randomUUID } from "crypto";
 import nodemailer from "nodemailer";
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { verifyUserSessionToken } from "./auth";
+import { getAdminSession, getUserSession } from "./session";
 import {
   saveRecord,
   saveFinderMessage,
@@ -49,21 +48,42 @@ type CreateFinderMessageInput = {
   message: string;
 };
 
+/**
+ * Server Action'lar sayfa korumasından bağımsız, herkese açık HTTP uçlarıdır.
+ * Bu yüzden sahiplik ve yetki kontrolü sayfada değil, action'ın kendi içinde
+ * yapılmak zorundadır.
+ */
+async function requireRecordAccess(recordId: string): Promise<void> {
+  const adminSession = await getAdminSession();
+
+  if (adminSession) {
+    return;
+  }
+
+  const userSession = await getUserSession();
+
+  if (!userSession) {
+    throw new Error("Bu işlem için giriş yapmanız gerekiyor.");
+  }
+
+  const record = await getRecordById(recordId);
+
+  if (!record || record.userId !== userSession.userId) {
+    throw new Error("Bu kayıt üzerinde işlem yapma yetkiniz yok.");
+  }
+}
+
 export async function createRecord(
   data: CreateRecordInput
 ): Promise<ItemRecord> {
-  const cookieStore = await cookies();
-  const sessionToken = cookieStore.get("arkvium_user_session")?.value;
+  const adminSession = await getAdminSession();
+  const userSession = await getUserSession();
 
-  let userId: string | undefined;
-
-  if (sessionToken) {
-    const session = await verifyUserSessionToken(sessionToken);
-
-    if (session) {
-      userId = session.userId;
-    }
+  if (!adminSession && !userSession) {
+    throw new Error("Kayıt oluşturmak için giriş yapmanız gerekiyor.");
   }
+
+  const userId = userSession?.userId;
 
   const record: ItemRecord = {
     id: randomUUID(),
@@ -85,6 +105,8 @@ export async function editRecord(
   recordId: string,
   data: UpdateRecordInput
 ): Promise<ItemRecord | null> {
+  await requireRecordAccess(recordId);
+
   const updatedRecord = await updateRecord(recordId, data);
 
   revalidatePath("/admin");
@@ -194,6 +216,12 @@ export async function changeFinderMessageStatus(
   messageId: string,
   status: FinderMessageStatus
 ): Promise<FinderMessage | null> {
+  const adminSession = await getAdminSession();
+
+  if (!adminSession) {
+    throw new Error("Bu işlem için yönetici girişi gerekiyor.");
+  }
+
   const updatedMessage = await updateFinderMessageStatus(
     messageId,
     status
@@ -209,6 +237,8 @@ export async function changeRecordStatus(
   recordId: string,
   status: ItemRecordStatus
 ): Promise<ItemRecord | null> {
+  await requireRecordAccess(recordId);
+
   const updatedRecord = await updateRecordStatus(
     recordId,
     status

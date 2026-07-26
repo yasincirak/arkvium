@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { createUserSessionToken } from "@/lib/auth";
+import {
+  USER_SESSION_COOKIE,
+  createUserSessionToken,
+  sessionCookieOptions,
+} from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
@@ -54,13 +58,11 @@ export async function POST(request: Request) {
       },
     });
 
-    response.cookies.set("arkvium_user_session", sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7,
-      path: "/",
-    });
+    response.cookies.set(
+      USER_SESSION_COOKIE,
+      sessionToken,
+      sessionCookieOptions
+    );
 
     return response;
   } catch (error) {
