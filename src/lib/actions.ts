@@ -2,8 +2,10 @@
 
 import { randomUUID } from "crypto";
 import nodemailer from "nodemailer";
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getAdminSession, getUserSession } from "./session";
+import { hizSiniriKontrol, istemciIpAdresi } from "./rate-limit";
 import {
   saveRecord,
   saveFinderMessage,
@@ -38,6 +40,14 @@ type UpdateRecordInput = {
   description: string;
   category: string;
 };
+
+/** Aşırı uzun girdilerin veritabanına ve e-posta metnine yazılmasını engeller. */
+const ALAN_UZUNLUK_SINIRI = {
+  ad: 100,
+  konum: 200,
+  eposta: 254,
+  mesaj: 2000,
+} as const;
 
 type CreateFinderMessageInput = {
   recordId: string;
@@ -127,14 +137,41 @@ export async function createFinderMessage(
   const finderEmail = data.finderEmail?.trim();
   const messageText = data.message?.trim();
 
+  // Bu uç herkese açıktır; kötüye kullanıma karşı IP başına sınırlanır.
+  const istekBasliklari = await headers();
+
+  const siniri = await hizSiniriKontrol({
+    kapsam: "buluntu-bildirimi-ip",
+    tanimlayici: istemciIpAdresi(istekBasliklari),
+    limit: 5,
+    pencereSaniye: 60 * 60,
+  });
+
+  if (!siniri.izinli) {
+    throw new Error(
+      `Çok fazla bildirim gönderildi. Lütfen ${Math.ceil(
+        siniri.bekleSaniye / 60
+      )} dakika sonra tekrar deneyin.`
+    );
+  }
+
   if (!finderName || !finderPhone || !location) {
     throw new Error("Ad soyad, telefon ve konum zorunludur.");
   }
 
+  if (
+    finderName.length > ALAN_UZUNLUK_SINIRI.ad ||
+    location.length > ALAN_UZUNLUK_SINIRI.konum ||
+    (finderEmail?.length ?? 0) > ALAN_UZUNLUK_SINIRI.eposta ||
+    (messageText?.length ?? 0) > ALAN_UZUNLUK_SINIRI.mesaj
+  ) {
+    throw new Error("Girilen bilgiler izin verilen uzunluğu aşıyor.");
+  }
+
   const normalizedPhone = finderPhone.replace(/\D/g, "");
 
-  if (normalizedPhone.length < 7) {
-    throw new Error("Telefon numarası en az 7 rakam olmalıdır.");
+  if (normalizedPhone.length < 7 || normalizedPhone.length > 15) {
+    throw new Error("Geçerli bir telefon numarası giriniz.");
   }
 
   if (finderEmail) {
@@ -144,6 +181,12 @@ export async function createFinderMessage(
     if (!hasAt || !hasDot) {
       throw new Error("Geçerli bir e-posta adresi giriniz.");
     }
+  }
+
+  const record = await getRecordById(data.recordId);
+
+  if (!record) {
+    throw new Error("Kayıt bulunamadı.");
   }
 
   const message: FinderMessage = {
@@ -162,9 +205,7 @@ export async function createFinderMessage(
   await saveFinderMessage(message);
   revalidatePath("/admin/notifications");
 
-  const record = await getRecordById(data.recordId);
-
-  if (record?.email) {
+  if (record.email) {
     try {
       const transporter = nodemailer.createTransport({
         service: "gmail",

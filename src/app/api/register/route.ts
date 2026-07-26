@@ -1,9 +1,35 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { hizSiniriKontrol, istemciIpAdresi } from "@/lib/rate-limit";
+
+// Aynı IP'den toplu sahte hesap açılmasını sınırlar.
+const IP_LIMIT = 5;
+const PENCERE_SANIYE = 60 * 60;
 
 export async function POST(request: Request) {
   try {
+    const ipSiniri = await hizSiniriKontrol({
+      kapsam: "kayit-ip",
+      tanimlayici: istemciIpAdresi(request.headers),
+      limit: IP_LIMIT,
+      pencereSaniye: PENCERE_SANIYE,
+    });
+
+    if (!ipSiniri.izinli) {
+      return NextResponse.json(
+        {
+          error: `Çok fazla kayıt denemesi yapıldı. Lütfen ${Math.ceil(
+            ipSiniri.bekleSaniye / 60
+          )} dakika sonra tekrar deneyin.`,
+        },
+        {
+          status: 429,
+          headers: { "Retry-After": String(ipSiniri.bekleSaniye) },
+        }
+      );
+    }
+
     const body = await request.json();
 
     const fullName = String(body.fullName || "").trim();

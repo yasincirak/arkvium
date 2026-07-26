@@ -50,3 +50,21 @@ model FinderMessage {
 
   record ItemRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
 }
+
+/// Hız sınırlama sayaçları.
+///
+/// Vercel birden fazla sunucu örneği çalıştırdığı için bellek içi sayaç
+/// güvenilir değildir; sayaçlar tüm örneklerin paylaştığı veritabanında tutulur.
+///
+/// `key` alanı ham IP veya e-posta İÇERMEZ; kişisel veri saklamamak için
+/// değerin HMAC-SHA256 özeti kullanılır.
+model RateLimitEntry {
+  key          String    @id
+  count        Int       @default(0)
+  windowEnd    DateTime
+  blockedUntil DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([windowEnd])
+}

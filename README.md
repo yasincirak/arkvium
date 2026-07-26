@@ -154,7 +154,7 @@ Uygulamadan önce:
 
 ### Mevcut modeller
 
-`User`, `ItemRecord`, `FinderMessage`
+`User`, `ItemRecord`, `FinderMessage`, `RateLimitEntry`
 
 ---
 
@@ -225,6 +225,25 @@ Canlıya almadan önce:
 - **Server Action'lar kendi içlerinde yetki kontrolü yapar.** Server Action'lar sayfa korumasından bağımsız, herkese açık HTTP uçlarıdır; sahiplik kontrolünü yalnızca sayfa katmanında yapmak yeterli değildir.
 - Middleware `/admin/*` ve `/account/*` yollarını korur.
 - Kişiye özel sayfalar `robots.txt` ve sayfa bazlı `noindex` ile arama motorlarına kapalıdır.
+- Kullanıcı bulunamadığında da bcrypt karşılaştırması yapılır; yanıt süresinden hangi e-postaların kayıtlı olduğu anlaşılamaz.
+
+### Hız sınırlama (rate limiting)
+
+Sayaçlar **veritabanında** (`RateLimitEntry` tablosu) tutulur. Bellek içi sayaç kullanılmaz: Vercel birden fazla sunucu örneği çalıştırır ve her örnek kendi sayacını tutarsa sınır pratikte örnek sayısı kadar büyür.
+
+| Uç | Kapsam | Limit |
+|---|---|---|
+| `POST /api/login` | IP | 10 / 15 dk |
+| `POST /api/login` | E-posta | 5 / 15 dk |
+| `POST /api/admin/login` | IP | 5 / 15 dk |
+| `POST /api/register` | IP | 5 / saat |
+| Buluntu bildirimi (Server Action) | IP | 5 / saat |
+
+Sınır aşıldığında `429` ve `Retry-After` başlığı döner. Başarılı girişten sonra ilgili sayaçlar sıfırlanır.
+
+**Gizlilik:** `RateLimitEntry.key` alanı ham IP veya e-posta **içermez**; değerin HMAC-SHA256 özeti saklanır. Süresi dolan satırlar kendiliğinden temizlenir.
+
+**Production notu:** Bu yaklaşım her kontrolde bir veritabanı sorgusu yapar. Trafik arttığında Upstash Redis gibi bir sayaç servisine geçmek daha uygun olur; `src/lib/rate-limit.ts` içindeki `hizSiniriKontrol` fonksiyonu bu geçiş için tek değişim noktasıdır.
 
 **Middleware konumu (kritik)**
 
@@ -263,8 +282,8 @@ Bu bölüm kasıtlı olarak açıktır; aşağıdaki özellikler **henüz uygula
 - E-posta doğrulama
 - Şifre değiştirme
 - Hesap silme
-- Giriş denemeleri için rate limiting / brute-force koruması
 - Audit log
+- Kayıt ekranında e-posta numaralandırma koruması (var olan e-postada "zaten kayıtlı" mesajı döner; IP başına saat başı 5 kayıt sınırı bunu kısmen dengeler)
 
 **Etiket ve ürün**
 - Ayrı `Tag` modeli, etiket aktivasyonu ve tahmin edilmesi zor public token
