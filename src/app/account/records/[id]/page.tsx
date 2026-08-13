@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import TagPanel from "@/components/account/TagPanel";
+import TransferPanel from "@/components/account/TransferPanel";
 import { getUserSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { etiketAdresi, etiketKoduBicimle } from "@/lib/tags";
@@ -42,6 +43,18 @@ export default async function AccountRecordDetailPage({
         orderBy: { createdAt: "desc" },
       })
     : [];
+
+  // Süresi geçmiş pending kayıtlar aktif davet sayılmaz.
+  const aktifDavet = await prisma.ownershipTransfer.findFirst({
+    where: {
+      itemRecordId: record.id,
+      status: "pending",
+      expiresAt: { gt: new Date() },
+    },
+    // Token ve tokenHash istemciye gönderilmez.
+    select: { id: true, toEmail: true, expiresAt: true },
+    orderBy: { createdAt: "desc" },
+  });
 
   const tabanAdres = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
@@ -131,6 +144,19 @@ export default async function AccountRecordDetailPage({
               </Link>
             </div>
           )}
+
+          <TransferPanel
+            itemRecordId={record.id}
+            aktifDavet={
+              aktifDavet
+                ? {
+                    id: aktifDavet.id,
+                    toEmail: aktifDavet.toEmail,
+                    expiresAt: aktifDavet.expiresAt.toISOString(),
+                  }
+                : null
+            }
+          />
 
           <div className="mt-8 flex flex-wrap gap-3">
             <Link

@@ -161,3 +161,35 @@ Dijital Sahiplik Platformu
     `.trim(),
   };
 }
+
+/**
+ * Ürün sahipliği devri daveti.
+ * Devir yalnızca alıcı bu bağlantıdan onay verirse gerçekleşir.
+ */
+export function devirDavetiEpostasi(
+  gonderenAdSoyad: string | null,
+  urunAdi: string,
+  baglanti: string,
+  gecerlilikSaat: number
+): Omit<EpostaIcerigi, "alici"> {
+  return {
+    konu: "ARKVIUM ürün sahipliği devri daveti",
+    metin: `
+Merhaba,
+
+${gonderenAdSoyad || "Bir ARKVIUM kullanıcısı"} "${urunAdi}" adlı ürünün sahipliğini size devretmek istiyor.
+
+Daveti incelemek ve onaylamak için aşağıdaki bağlantıyı kullanın:
+
+${baglanti}
+
+Bu bağlantı ${gecerlilikSaat} saat boyunca geçerlidir ve yalnızca bir kez kullanılabilir.
+Ürün, siz onaylamadan hesabınıza geçmez.
+
+Bu daveti beklemiyorsanız bu e-postayı yok sayabilirsiniz.
+
+ARKVIUM
+Dijital Sahiplik Platformu
+    `.trim(),
+  };
+}

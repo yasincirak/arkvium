@@ -3,6 +3,25 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 
+/**
+ * Giriş sonrası dönülecek adres.
+ *
+ * Yalnızca uygulama içi, `/` ile başlayan göreli yollar kabul edilir.
+ * `//host`, `/\host`, `http://...` gibi değerler açık yönlendirme (open
+ * redirect) açığına yol açacağı için reddedilir ve `/account` kullanılır.
+ */
+function guvenliDonusAdresi(deger: string | null): string {
+  if (!deger || !deger.startsWith("/")) {
+    return "/account";
+  }
+
+  if (deger.startsWith("//") || deger.startsWith("/\\")) {
+    return "/account";
+  }
+
+  return deger;
+}
+
 export default function LoginPage() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,7 +52,9 @@ export default function LoginPage() {
       return;
     }
 
-    window.location.href = "/account";
+    const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+
+    window.location.href = guvenliDonusAdresi(returnTo);
   }
 
   return (

@@ -34,6 +34,10 @@ model User {
   passwordResetTokens     PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
   tags                    Tag[]
+
+  /// Bu kullanıcının başlattığı ve kendisine gönderilen sahiplik devirleri.
+  sentTransfers     OwnershipTransfer[] @relation("TransferFromUser")
+  receivedTransfers OwnershipTransfer[] @relation("TransferToUser")
 }
 
 /// Şifre sıfırlama tokenları.
@@ -89,6 +93,8 @@ model ItemRecord {
   /// Bu ürüne bağlı etiket. Eski (legacy) kayıtlarda etiket bulunmaz;
   /// onlar /item/<kayıt-id> adresinden erişilmeye devam eder.
   tag Tag?
+
+  ownershipTransfers OwnershipTransfer[]
 }
 
 /// Fiziksel QR/NFC etiketi.
@@ -157,6 +163,58 @@ model TagEvent {
 
   @@index([tagId])
   @@index([createdAt])
+}
+
+enum OwnershipTransferStatus {
+  pending
+  accepted
+  cancelled
+  expired
+}
+
+/// Ürün sahipliğinin başka bir kullanıcıya devri.
+///
+/// Akış: mevcut sahip bir davet oluşturur, davet e-posta ile karşı tarafa
+/// gider ve yalnızca karşı taraf kabul ederse ürün el değiştirir.
+///
+/// Token düz metin saklanmaz; PasswordResetToken'da olduğu gibi yalnızca
+/// SHA-256 özeti tutulur. Davet tek kullanımlıktır, `expiresAt` ile sürelidir
+/// ve kabul edilmeden önce gönderen tarafından iptal edilebilir.
+model OwnershipTransfer {
+  id String @id @default(cuid())
+
+  itemRecordId String
+  itemRecord   ItemRecord @relation(fields: [itemRecordId], references: [id], onDelete: Cascade)
+
+  /// Daveti başlatan mevcut sahip.
+  fromUserId String
+  fromUser   User   @relation("TransferFromUser", fields: [fromUserId], references: [id], onDelete: Cascade)
+
+  /// Davet edilen kullanıcı. Davet anında hesabı yoksa null kalır ve
+  /// kabul sırasında doldurulur.
+  toUserId String?
+  toUser   User?   @relation("TransferToUser", fields: [toUserId], references: [id], onDelete: SetNull)
+
+  /// Davetin gönderildiği e-posta adresi.
+  toEmail String
+
+  tokenHash String @unique
+
+  status OwnershipTransferStatus @default(pending)
+
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  cancelledAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([itemRecordId])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([toEmail])
+  @@index([status])
+  @@index([expiresAt])
 }
 
 model FinderMessage {
