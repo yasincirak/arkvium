@@ -46,13 +46,13 @@ Son güncelleme: 2026-08-13 · Dal: `arkvium/production-hazirlik`
 - Ownership Transfer — uçtan uca manuel doğrulama TAMAMLANDI (2026-08-13, test veritabanı + gerçek e-posta):
   davet → e-posta → alıcı hesabıyla giriş → kabul → sahiplik değişimi → aynı davetin ikinci kez reddi.
   Test DB'de doğrulandı: transfer `accepted`, `acceptedAt` dolu, ürün yeni sahibe geçti, `TagEvent(type: "transferred")` yazıldı.
+  Özellik `5b3e25f` commit'iyle tamamlandı.
 
 ## Bilinen açık/yarım işler
-- Ownership Transfer çalışması henüz commit edilmedi (çalışma alanında bekliyor)
 - `TagEvent.type` şema yorumunda `transfer_requested` listelenmiyor (şema kasıtlı olarak değiştirilmedi)
 - Test kapsamı yalnızca auth tarafında doğrulandı (`f88140d`); diğer modüllerin test durumu belirsiz
 - Production hazırlık dalı henüz `main`'e birleştirilmedi
 - `docs/DECISIONS.md` henüz oluşturulmadı
 
 ## Sıradaki geliştirme adımı
-- Ownership Transfer değişikliklerini `arkvium/production-hazirlik` dalına commit etmek.
+- `arkvium/production-hazirlik` dalını `main` dalına birleştirmek.
