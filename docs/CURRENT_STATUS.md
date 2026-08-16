@@ -136,9 +136,9 @@ Not: Meta Cloud API **kullanılmıyor**; bunlar yalnızca wa.me bağlantısı, m
 - (kapandı) `docs/DECISIONS.md` oluşturuldu — "neden böyle yapıldı" kararları orada
 
 ## Sıradaki geliştirme adımı (kullanıcı onaylı sıra)
-1. ~~wa.me bağlantıları~~ — tamamlandı (yukarı bakınız).
-2. **Tarama bildirimi** — etiket okunduğunda sahibe e-posta; mail seli olmaması için hız sınırı şart.
-3. **WhatsApp Cloud API** — gerçek WhatsApp bildirimi. Meta Business hesabı, işletme doğrulaması, onaylı şablon
-   ve konuşma başına ücret gerektirir; hesap tarafı kullanıcıda.
-4. **Baskı ince ayarı** — fiziksel çıktı denendikten sonra kart boyutu/ızgara.
-5. **Kalan test kapsamı** — Server Action sarmalayıcıları ve diğer modüller.
+1. ~~wa.me bağlantıları~~ — TAMAMLANDI (`4de5e12`).
+2. ~~Tarama bildirimi~~ — TAMAMLANDI (`4663a1f`): etiket okunduğunda sahibe e-posta, hız sınırı ile.
+3. **WhatsApp Cloud API** — ENGELLİ: Meta Business hesabı, işletme doğrulaması, onaylı şablon ve konuşma başına
+   ücret gerektirir; hesap tarafı kullanıcıda.
+4. **Baskı ince ayarı** — ENGELLİ: fiziksel baskı denemesine bağlı (kart boyutu/ızgara).
+5. **Kalan test kapsamı** — SIRADAKİ GÖREV: Server Action sarmalayıcıları ve diğer modüller.
