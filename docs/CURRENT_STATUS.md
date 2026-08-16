@@ -71,12 +71,17 @@ admin girişi → **Etiket Üretimi sayfası** (`/admin/tags`, yeni) → etiket 
 ürüne bağlama → QR adresinin açılması → "eşyayı buldum" bildirimi → sahibe bildirim e-postası.
 Production'a ayrıca `ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH_B64`, `ADMIN_SESSION_SECRET` eklendi.
 
+Ownership Transfer canlı ortamda da doğrulandı (2026-08-16): iki gerçek hesap arasında davet → e-posta → kabul →
+sahiplik değişimi tamamlandı (`accepted`, `acceptedAt` dolu, `ItemRecord.userId` yeni sahibe geçti). Etiketsiz (legacy)
+ürün üzerinden test edildi; etiketli üründe devir yalnızca test veritabanında denendi.
+
 ## Bilinen açık/yarım işler
 - Preview ortamında `GMAIL_APP_PASSWORD` hâlâ eski (Production doğru). Canlı siteyi etkilemez.
-- Ownership Transfer canlı ortamda henüz denenmedi (test veritabanında doğrulanmıştı)
+- Etiketli ürünün canlıda devri denenmedi (`Tag.userId` + `TagEvent("transferred")` yolu)
 - `TagEvent.type` şema yorumunda `transfer_requested` listelenmiyor (şema kasıtlı olarak değiştirilmedi)
 - Test kapsamı yalnızca auth tarafında doğrulandı (`f88140d`); diğer modüllerin test durumu belirsiz
 - `docs/DECISIONS.md` henüz oluşturulmadı
 
 ## Sıradaki geliştirme adımı
-- Preview ortamındaki `GMAIL_APP_PASSWORD` değerini güncellemek.
+- Kabul ekranında hangi hesapla giriş yapıldığının gösterilmesi. Testte en çok vakit kaybettiren nokta buydu:
+  davet yanlış hesapla açıldığında "Davet geçersiz veya süresi dolmuş." deniyor ve kullanıcı nedeni anlayamıyor.
