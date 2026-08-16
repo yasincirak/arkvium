@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getAdminSession, getUserSession } from "./session";
 import { hizSiniriKontrol, istemciIpAdresi } from "./rate-limit";
+import { whatsappBaglantisi } from "./telefon";
 import {
   saveRecord,
   saveFinderMessage,
@@ -206,6 +207,13 @@ export async function createFinderMessage(
   revalidatePath("/admin/notifications");
 
   if (record.email) {
+    // Sahibi bulan kişiye tek dokunuşla ulaşabilsin diye hazır WhatsApp
+    // bağlantısı eklenir. Numara çözülemezse satır hiç yazılmaz.
+    const whatsappAdresi = whatsappBaglantisi(
+      data.finderPhone,
+      `Merhaba ${data.finderName}, ARKVIUM üzerinden "${record.assetName}" için bildiriminizi aldım.`
+    );
+
     try {
       const transporter = nodemailer.createTransport({
         service: "gmail",
@@ -229,7 +237,11 @@ Telefon: ${data.finderPhone}
 E-posta: ${data.finderEmail || "Belirtilmedi"}
 Konum: ${data.location || "Belirtilmedi"}
 Mesaj: ${data.message || "Mesaj bırakılmadı"}
-
+${
+  whatsappAdresi
+    ? `\nWhatsApp'tan hemen yazmak için: ${whatsappAdresi}\n`
+    : ""
+}
 ARKVIUM
 Dijital Sahiplik Platformu
         `.trim(),

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import WhatsappBaglantisi from "@/components/WhatsappBaglantisi";
 import { changeRecordStatus } from "@/lib/actions";
 import {
   getFinderMessagesByRecordId,
@@ -243,7 +244,7 @@ export default async function RecordDetailPage({
                       </div>
 
                       <p className="mt-1 text-sm text-white/50">
-                        {message.finderPhone}
+                        <WhatsappBaglantisi telefon={message.finderPhone} />
                       </p>
                     </div>
 

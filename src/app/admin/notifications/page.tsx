@@ -1,3 +1,4 @@
+import WhatsappBaglantisi from "@/components/WhatsappBaglantisi";
 import { changeFinderMessageStatus } from "@/lib/actions";
 import { getFinderMessages, getRecordById } from "@/lib/store";
 
@@ -79,7 +80,7 @@ export default async function NotificationsPage() {
                 <div className="mt-5 grid gap-3 text-sm text-white/70 sm:grid-cols-2">
                   <div>
                     <span className="text-white/40">Telefon:</span>{" "}
-                    {message.finderPhone}
+                    <WhatsappBaglantisi telefon={message.finderPhone} />
                   </div>
 
                   <div>

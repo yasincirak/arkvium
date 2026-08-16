@@ -114,15 +114,29 @@ yalnızca arayüzü eksikti. Durum etiketleri iki sayfada kopyalanmıştı; `ITE
 Doğrulandı: `tests/integration/etiket.test.mts` içinde 4 test (kayıp uyarısının çıkması, normal üründe çıkmaması,
 legacy adreste de çıkması, işaret kaldırılınca kaybolması).
 
+## WhatsApp bağlantıları (2026-08-16)
+`src/lib/telefon.ts` — `whatsappNumarasi` / `whatsappBaglantisi`. Kullanıcıların farklı yazdığı numaraları
+(`0555…`, `+90 555…`, `0090…`, `555…`) wa.me'nin istediği biçime çevirir; ülke kodu yoksa Türkiye (90) varsayılır.
+Çözemezse `null` döner ve bağlantı hiç gösterilmez — bozuk wa.me adresi üretilmez. 10 birim testi var
+(`tests/unit/telefon.test.mts`).
+
+Kullanıldığı yerler: bulan kişi bildirimi e-postasına "WhatsApp'tan hemen yazmak için" satırı
+(`src/lib/actions.ts`), admin bildirimler ve kayıt detay sayfalarında telefonun tıklanabilir olması
+(`src/components/WhatsappBaglantisi.tsx`).
+
+Not: Meta Cloud API **kullanılmıyor**; bunlar yalnızca wa.me bağlantısı, maliyeti ve kurulumu yok.
+
 ## Bilinen açık/yarım işler
+- `createFinderMessage` e-postayı `src/lib/email.ts` üzerinden değil kendi nodemailer çağrısıyla gönderiyor;
+  bu yüzden `EPOSTA_GONDERIMI_KAPALI` anahtarını atlıyor. Bugün tetiklenmiyor (hiçbir test bu yolu çağırmıyor)
+  ama bulan-kişi akışına test yazılırsa gerçek mail gitme riski var.
 - `TagEvent.type` şema yorumunda `transfer_requested` listelenmiyor (şema kasıtlı olarak değiştirilmedi)
 - Server Action sarmalayıcıları (oturum + hız sınırlama katmanı) hâlâ test dışı; yalnızca altlarındaki servis test ediliyor
 - Test kapsamı: auth (`f88140d`), etiket ve sahiplik devri doğrulandı; kalan modüllerin durumu belirsiz
 - (kapandı) `docs/DECISIONS.md` oluşturuldu — "neden böyle yapıldı" kararları orada
 
 ## Sıradaki geliştirme adımı (kullanıcı onaylı sıra)
-1. **wa.me bağlantıları** — bulan kişi bildirimi e-postasına "WhatsApp'tan yaz" düğmesi (bulan kişinin numarasına).
-   Not: `ItemFinderSection` içinde destek numarasına giden bir wa.me düğmesi zaten var (`NEXT_PUBLIC_SUPPORT_WHATSAPP`).
+1. ~~wa.me bağlantıları~~ — tamamlandı (yukarı bakınız).
 2. **Tarama bildirimi** — etiket okunduğunda sahibe e-posta; mail seli olmaması için hız sınırı şart.
 3. **WhatsApp Cloud API** — gerçek WhatsApp bildirimi. Meta Business hesabı, işletme doğrulaması, onaylı şablon
    ve konuşma başına ücret gerektirir; hesap tarafı kullanıcıda.
