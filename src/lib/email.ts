@@ -166,6 +166,35 @@ Dijital Sahiplik Platformu
  * Ürün sahipliği devri daveti.
  * Devir yalnızca alıcı bu bağlantıdan onay verirse gerçekleşir.
  */
+/**
+ * Kayıp olarak işaretli bir eşyanın etiketi okutulduğunda sahibine gider.
+ * Bulan kişi form doldurmasa bile sahibi haberdar olur.
+ */
+export function taramaBildirimiEpostasi(
+  adSoyad: string | null,
+  urunAdi: string,
+  zaman: string
+): Omit<EpostaIcerigi, "alici"> {
+  return {
+    konu: `ARKVIUM: "${urunAdi}" etiketiniz okutuldu`,
+    metin: `
+Merhaba ${adSoyad || ""},
+
+Kayıp olarak işaretlediğiniz "${urunAdi}" adlı eşyanızın QR etiketi az önce okutuldu.
+
+Okutulma zamanı: ${zaman}
+
+Eşyayı bulan kişi iletişim formunu doldurursa bilgileri ayrı bir e-posta ile size ulaşacaktır.
+Bu bildirim yalnızca etiketin okutulduğunu gösterir; eşyanın kesin konumunu içermez.
+
+Aynı eşya için bu bildirim saatte en fazla bir kez gönderilir.
+
+ARKVIUM
+Dijital Sahiplik Platformu
+    `.trim(),
+  };
+}
+
 export function devirDavetiEpostasi(
   gonderenAdSoyad: string | null,
   urunAdi: string,

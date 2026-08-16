@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import ItemFinderSection from "@/components/ItemFinderSection";
 import KayipUyarisi from "@/components/KayipUyarisi";
 import { prisma } from "@/lib/prisma";
+import { getUserSession } from "@/lib/session";
+import { taramaBildirimiGonder } from "@/lib/tarama-bildirimi";
 import type { TagDurumu } from "@/lib/tags";
 import { ITEM_DURUM_ETIKETLERI } from "@/lib/types";
 
@@ -113,6 +115,11 @@ export default async function TagPage({ params }: Props) {
       />
     );
   }
+
+  // Kayıp eşyalarda sahibine "etiketiniz okutuldu" bildirimi gider.
+  const oturum = await getUserSession();
+
+  await taramaBildirimiGonder(record, oturum?.userId ?? null);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#0a0a0f] p-6 text-white">

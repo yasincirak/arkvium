@@ -1024,3 +1024,90 @@ describe("kayıp modu", () => {
     );
   });
 });
+
+describe("tarama bildirimi", () => {
+  /**
+   * Bildirimin gerçekten gönderilip gönderilmediği testte gözlenemez
+   * (e-posta gönderimi kapalıdır). Gözlenebilir iz, hız sınırı sayacıdır:
+   * bildirim yolu çalıştıysa "tarama-bildirimi" kapsamında bir satır oluşur.
+   */
+  async function bildirimSayaci() {
+    const sonuc = await db.query(
+      `SELECT count, key FROM "RateLimitEntry" WHERE key LIKE 'tarama-bildirimi:%'`
+    );
+
+    return sonuc.rows;
+  }
+
+  async function kayipEtiket(eposta: string, kayitId: string) {
+    const cerez = await kullaniciOlustur(eposta);
+    const userId = await kullaniciIdAl(eposta);
+
+    await urunOlustur(kayitId, userId, "Kayıp Anahtarlık");
+
+    const etiket = await etiketEkle("active", {
+      userId,
+      itemRecordId: kayitId,
+    });
+
+    await db.query('UPDATE "ItemRecord" SET status=$1 WHERE id=$2', [
+      "lost",
+      kayitId,
+    ]);
+
+    return { cerez, etiket };
+  }
+
+  test("kayıp eşyanın etiketi okutulunca bildirim yolu çalışır", async () => {
+    const { etiket } = await kayipEtiket("tarama@test.invalid", "tarama-kayit");
+
+    assert.equal((await bildirimSayaci()).length, 0, "başlangıçta sayaç olmamalı");
+
+    const { yanit } = await sayfa(`/t/${etiket.publicToken}`);
+
+    assert.equal(yanit.status, 200);
+    assert.equal((await bildirimSayaci()).length, 1, "bildirim tetiklenmeliydi");
+  });
+
+  test("kayıp olmayan eşyada bildirim gönderilmez", async () => {
+    const cerez = await kullaniciOlustur("normaltarama@test.invalid");
+    const userId = await kullaniciIdAl("normaltarama@test.invalid");
+
+    await urunOlustur("normal-tarama", userId, "Normal Çanta");
+
+    const etiket = await etiketEkle("active", {
+      userId,
+      itemRecordId: "normal-tarama",
+    });
+
+    assert.ok(cerez);
+    assert.equal((await sayfa(`/t/${etiket.publicToken}`)).yanit.status, 200);
+    assert.equal((await bildirimSayaci()).length, 0);
+  });
+
+  test("aynı eşya için saatte tek bildirim gönderilir", async () => {
+    const { etiket } = await kayipEtiket("selkontrol@test.invalid", "sel-kayit");
+
+    await sayfa(`/t/${etiket.publicToken}`);
+    await sayfa(`/t/${etiket.publicToken}`);
+    await sayfa(`/t/${etiket.publicToken}`);
+
+    const satirlar = await bildirimSayaci();
+
+    assert.equal(satirlar.length, 1, "tek sayaç satırı olmalı");
+    // Sayaç sınıra takıldığı için ilk bildirimden sonra artmaz.
+    assert.equal(satirlar[0].count, 1, "yalnızca bir bildirim gönderilmeli");
+  });
+
+  test("sahibi kendi ürün sayfasını açınca bildirim gitmez", async () => {
+    const { cerez, etiket } = await kayipEtiket("sahibitarama@test.invalid", "sahip-kayit");
+
+    const yanit = await fetch(sunucu.taban + `/t/${etiket.publicToken}`, {
+      headers: { Cookie: cerez },
+      redirect: "manual",
+    });
+
+    assert.equal(yanit.status, 200);
+    assert.equal((await bildirimSayaci()).length, 0, "sahibine bildirim gitmemeli");
+  });
+});

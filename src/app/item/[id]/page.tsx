@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { getRecordById } from "@/lib/store";
 import ItemFinderSection from "@/components/ItemFinderSection";
 import KayipUyarisi from "@/components/KayipUyarisi";
+import { getUserSession } from "@/lib/session";
+import { taramaBildirimiGonder } from "@/lib/tarama-bildirimi";
 import { ITEM_DURUM_ETIKETLERI } from "@/lib/types";
 import { notFound } from "next/navigation";
 
@@ -44,6 +46,14 @@ export default async function ItemPage({ params }: Props) {
   if (!record) {
     notFound();
   }
+
+  // Kayıp eşyalarda sahibine "etiketiniz okutuldu" bildirimi gider.
+  const oturum = await getUserSession();
+
+  await taramaBildirimiGonder(
+    { ...record, email: record.email ?? "" },
+    oturum?.userId ?? null
+  );
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#0a0a0f] p-6 text-white">
