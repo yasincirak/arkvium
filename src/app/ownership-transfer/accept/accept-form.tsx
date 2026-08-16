@@ -50,7 +50,12 @@ export default function AcceptForm({ token }: { token: string }) {
     <div className="space-y-5">
       {hata && (
         <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-          {hata}
+          <p>{hata}</p>
+
+          <p className="mt-2 text-red-300/70">
+            En sık nedeni: davetin gönderildiği hesaptan farklı bir hesapla
+            giriş yapılmış olmasıdır. Yukarıdaki hesabı kontrol edin.
+          </p>
         </div>
       )}
 

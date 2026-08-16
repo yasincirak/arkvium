@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getUserSession } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
 import AcceptForm from "./accept-form";
 
 /**
@@ -19,14 +20,22 @@ export default async function OwnershipTransferAcceptPage({
   const token = (searchParams.token ?? "").trim();
   const session = await getUserSession();
 
-  if (!session) {
-    // Girişten sonra kullanıcı aynı davet bağlantısına geri döner.
-    const donusAdresi = token
-      ? `/ownership-transfer/accept?token=${encodeURIComponent(token)}`
-      : "/ownership-transfer/accept";
+  // Girişten sonra kullanıcı aynı davet bağlantısına geri döner.
+  const donusAdresi = token
+    ? `/ownership-transfer/accept?token=${encodeURIComponent(token)}`
+    : "/ownership-transfer/accept";
 
+  if (!session) {
     redirect(`/login?returnTo=${encodeURIComponent(donusAdresi)}`);
   }
+
+  // Davet, gönderildiği adresin sahibi dışında kimse tarafından kabul edilemez.
+  // Hangi hesapta olunduğu gösterilmezse, yanlış hesapla açan kullanıcı
+  // "davet geçersiz" mesajının nedenini anlayamıyor.
+  const kullanici = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { email: true },
+  });
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#09090f] px-4 py-12 text-white">
@@ -49,7 +58,28 @@ export default async function OwnershipTransferAcceptPage({
         </div>
 
         {token ? (
-          <AcceptForm token={token} />
+          <>
+            <div className="mb-5 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm">
+              <p className="text-white/50">Şu anda giriş yapan hesap</p>
+
+              <p className="mt-1 break-all font-medium text-white">
+                {kullanici?.email ?? session.email}
+              </p>
+
+              <p className="mt-3 text-white/50">
+                Davet başka bir e-posta adresine gönderildiyse bu hesapla kabul
+                edilemez.{" "}
+                <Link
+                  href={`/login?returnTo=${encodeURIComponent(donusAdresi)}`}
+                  className="font-medium text-indigo-400 hover:text-indigo-300"
+                >
+                  Farklı hesapla giriş yap
+                </Link>
+              </p>
+            </div>
+
+            <AcceptForm token={token} />
+          </>
         ) : (
           <div className="space-y-5">
             <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
