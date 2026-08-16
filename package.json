@@ -10,7 +10,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "node --test \"tests/unit/**/*.test.mts\"",
-    "test:integration": "NEXT_DIST_DIR=.next-test next build && NEXT_DIST_DIR=.next-test node --test --test-concurrency=1 --test-timeout=180000 \"tests/integration/**/*.test.mts\"",
+    "test:integration": "NEXT_DIST_DIR=.next-test next build && NEXT_DIST_DIR=.next-test node --import ./tests/helpers/alias-cozucu.mjs --test --test-concurrency=1 --test-timeout=180000 \"tests/integration/**/*.test.mts\"",
     "test:all": "npm run test && npm run test:integration",
     "test:db:migrate": "node scripts/test-db-migrate.mjs",
     "hash-password": "node scripts/hash-password.mjs",

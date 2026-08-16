@@ -89,12 +89,23 @@ yoksa `window.location.origin`'e düşer. Basılan etikette yanlış adresin ger
 
 Doğrulanmadı: baskının kâğıttaki gerçek görünümü (kart boyutu/ızgara) henüz fiziksel olarak denenmedi.
 
+## Sahiplik devri testleri (2026-08-16)
+`tests/integration/sahiplik-devri.test.mts` — 19 test. Server Action'lar HTTP üzerinden çağrılamadığı için
+altlarındaki servis katmanı (`devirDavetiOlustur` / `devirDavetiIptal` / `devirDavetiKabulEt`) test veritabanına
+doğrudan bağlanarak sınanıyor: sahiplik kontrolü, kendine devir engeli, tek bekleyen davet kuralı, süre dolumu,
+tek kullanımlık token, yanlış hesapla kabul reddi, iptal yarışı, ürün + `Tag` sahipliğinin taşınması ve
+`TagEvent` zinciri. Mevcut mantıkta hata bulunmadı; testler ilk çalıştırmada geçti.
+
+`tests/helpers/alias-cozucu.mjs` (yeni): Node, uygulama kodundaki `@/...` takma adını ve Prisma'nın ürettiği
+uzantısız göreli importları çözemiyor. Bu kanca yalnızca `test:integration` çalıştırmasına `--import` ile
+ekleniyor; uygulama derlemesini etkilemiyor.
+
 ## Bilinen açık/yarım işler
-- Ownership Transfer için otomatik test yok (Server Action olduğu için mevcut entegrasyon süiti çağıramıyor)
 - `TagEvent.type` şema yorumunda `transfer_requested` listelenmiyor (şema kasıtlı olarak değiştirilmedi)
-- Test kapsamı yalnızca auth tarafında doğrulandı (`f88140d`); diğer modüllerin test durumu belirsiz
+- Server Action sarmalayıcıları (oturum + hız sınırlama katmanı) hâlâ test dışı; yalnızca altlarındaki servis test ediliyor
+- Test kapsamı: auth (`f88140d`), etiket ve sahiplik devri doğrulandı; kalan modüllerin durumu belirsiz
 - `docs/DECISIONS.md` henüz oluşturulmadı
 
 ## Sıradaki geliştirme adımı
 - Etiket baskı sayfasının fiziksel çıktısını denemek (kart boyutu/ızgara ayarı).
-- Muhtemel adaylar: `docs/DECISIONS.md`, test kapsamının genişletilmesi.
+- Muhtemel adaylar: `docs/DECISIONS.md`, kalan modüller için test.
