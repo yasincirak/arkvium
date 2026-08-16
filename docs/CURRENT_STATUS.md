@@ -72,16 +72,18 @@ admin girişi → **Etiket Üretimi sayfası** (`/admin/tags`, yeni) → etiket 
 Production'a ayrıca `ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH_B64`, `ADMIN_SESSION_SECRET` eklendi.
 
 Ownership Transfer canlı ortamda da doğrulandı (2026-08-16): iki gerçek hesap arasında davet → e-posta → kabul →
-sahiplik değişimi tamamlandı (`accepted`, `acceptedAt` dolu, `ItemRecord.userId` yeni sahibe geçti). Etiketsiz (legacy)
-ürün üzerinden test edildi; etiketli üründe devir yalnızca test veritabanında denendi.
+sahiplik değişimi tamamlandı. **Etiketli ürün** üzerinden: `ItemRecord.userId` ve `Tag.userId` yeni sahibe geçti,
+`TagEvent` zinciri `activated → transfer_requested → transferred` olarak yazıldı.
+
+Kabul ekranında artık giriş yapılan hesabın e-postası ve "Farklı hesapla giriş yap" bağlantısı gösteriliyor
+(testte en çok vakit kaybettiren nokta buydu).
 
 ## Bilinen açık/yarım işler
-- Preview ortamında `GMAIL_APP_PASSWORD` hâlâ eski (Production doğru). Canlı siteyi etkilemez.
-- Etiketli ürünün canlıda devri denenmedi (`Tag.userId` + `TagEvent("transferred")` yolu)
+- Ownership Transfer için otomatik test yok (Server Action olduğu için mevcut entegrasyon süiti çağıramıyor)
 - `TagEvent.type` şema yorumunda `transfer_requested` listelenmiyor (şema kasıtlı olarak değiştirilmedi)
 - Test kapsamı yalnızca auth tarafında doğrulandı (`f88140d`); diğer modüllerin test durumu belirsiz
 - `docs/DECISIONS.md` henüz oluşturulmadı
 
 ## Sıradaki geliştirme adımı
-- Kabul ekranında hangi hesapla giriş yapıldığının gösterilmesi. Testte en çok vakit kaybettiren nokta buydu:
-  davet yanlış hesapla açıldığında "Davet geçersiz veya süresi dolmuş." deniyor ve kullanıcı nedeni anlayamıyor.
+- Bekleyen iş yok; tüm ana akışlar canlıda doğrulandı. Yeni özellik kararı kullanıcıdan gelecek.
+  (Muhtemel adaylar: etiket baskısı için QR görseli üretimi, `docs/DECISIONS.md`, test kapsamının genişletilmesi.)
