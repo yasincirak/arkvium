@@ -28,6 +28,14 @@ export default function Sidebar() {
         </Link>
 
         <Link
+          href="/admin/tags"
+          className="mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-white/5"
+        >
+          <span>🏷️</span>
+          <span>Etiketler</span>
+        </Link>
+
+        <Link
           href="/admin/notifications"
           className="mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-white/5"
         >
