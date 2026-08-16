@@ -100,12 +100,31 @@ tek kullanımlık token, yanlış hesapla kabul reddi, iptal yarışı, ürün +
 uzantısız göreli importları çözemiyor. Bu kanca yalnızca `test:integration` çalıştırmasına `--import` ile
 ekleniyor; uygulama derlemesini etkilemiyor.
 
+## Kayıp modu (2026-08-16)
+Kullanıcı ürün sayfasında ("/account/records/<id>") eşyasını **kayıp** olarak işaretleyebiliyor
+(`src/components/account/DurumPanel.tsx`). Kayıp işaretliyken QR kodunu okutan kişi, hem yeni (`/t/<token>`)
+hem eski (`/item/<id>`) sayfada belirgin bir uyarı görüyor (`src/components/KayipUyarisi.tsx`).
+"Eşyamı buldum" ile durum `active`'e döner.
+
+Yeni Server Action yazılmadı: mevcut `changeRecordStatus` (`src/lib/actions.ts`) kullanıldı, yetki kontrolü
+zaten `requireRecordAccess` içinde. Veritabanı değişikliği yok — `lost`/`found` durumları şemada zaten vardı,
+yalnızca arayüzü eksikti. Durum etiketleri iki sayfada kopyalanmıştı; `ITEM_DURUM_ETIKETLERI` olarak
+`src/lib/types.ts` içinde tek yere alındı.
+
+Doğrulandı: `tests/integration/etiket.test.mts` içinde 4 test (kayıp uyarısının çıkması, normal üründe çıkmaması,
+legacy adreste de çıkması, işaret kaldırılınca kaybolması).
+
 ## Bilinen açık/yarım işler
 - `TagEvent.type` şema yorumunda `transfer_requested` listelenmiyor (şema kasıtlı olarak değiştirilmedi)
 - Server Action sarmalayıcıları (oturum + hız sınırlama katmanı) hâlâ test dışı; yalnızca altlarındaki servis test ediliyor
 - Test kapsamı: auth (`f88140d`), etiket ve sahiplik devri doğrulandı; kalan modüllerin durumu belirsiz
 - (kapandı) `docs/DECISIONS.md` oluşturuldu — "neden böyle yapıldı" kararları orada
 
-## Sıradaki geliştirme adımı
-- Etiket baskı sayfasının fiziksel çıktısını denemek (kart boyutu/ızgara ayarı).
-- Muhtemel adaylar: kalan modüller için test, Server Action katmanının testi.
+## Sıradaki geliştirme adımı (kullanıcı onaylı sıra)
+1. **wa.me bağlantıları** — bulan kişi bildirimi e-postasına "WhatsApp'tan yaz" düğmesi (bulan kişinin numarasına).
+   Not: `ItemFinderSection` içinde destek numarasına giden bir wa.me düğmesi zaten var (`NEXT_PUBLIC_SUPPORT_WHATSAPP`).
+2. **Tarama bildirimi** — etiket okunduğunda sahibe e-posta; mail seli olmaması için hız sınırı şart.
+3. **WhatsApp Cloud API** — gerçek WhatsApp bildirimi. Meta Business hesabı, işletme doğrulaması, onaylı şablon
+   ve konuşma başına ücret gerektirir; hesap tarafı kullanıcıda.
+4. **Baskı ince ayarı** — fiziksel çıktı denendikten sonra kart boyutu/ızgara.
+5. **Kalan test kapsamı** — Server Action sarmalayıcıları ve diğer modüller.

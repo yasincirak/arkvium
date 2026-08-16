@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import DurumPanel from "@/components/account/DurumPanel";
 import TagPanel from "@/components/account/TagPanel";
 import TransferPanel from "@/components/account/TransferPanel";
 import { getUserSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { etiketAdresi, etiketKoduBicimle } from "@/lib/tags";
+import { ITEM_DURUM_ETIKETLERI } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -78,8 +80,14 @@ export default async function AccountRecordDetailPage({
               </p>
             </div>
 
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/60">
-              {record.status}
+            <span
+              className={`rounded-full border px-3 py-1 text-xs ${
+                record.status === "lost"
+                  ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+                  : "border-white/10 bg-white/5 text-white/60"
+              }`}
+            >
+              {ITEM_DURUM_ETIKETLERI[record.status] ?? record.status}
             </span>
           </div>
 
@@ -115,6 +123,8 @@ export default async function AccountRecordDetailPage({
               {record.description || "Açıklama bulunmuyor."}
             </p>
           </div>
+
+          <DurumPanel itemRecordId={record.id} durum={record.status} />
 
           {record.tag ? (
             <TagPanel

@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ItemFinderSection from "@/components/ItemFinderSection";
+import KayipUyarisi from "@/components/KayipUyarisi";
 import { prisma } from "@/lib/prisma";
 import type { TagDurumu } from "@/lib/tags";
+import { ITEM_DURUM_ETIKETLERI } from "@/lib/types";
 
 /**
  * Etiket genel erişim sayfası (yeni akış).
@@ -29,13 +31,6 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
-
-const durumEtiketleri: Record<string, string> = {
-  active: "Aktif",
-  lost: "Kayıp",
-  found: "Bulundu",
-  inactive: "Pasif",
-};
 
 function BilgiKutusu({
   baslik,
@@ -122,6 +117,8 @@ export default async function TagPage({ params }: Props) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#0a0a0f] p-6 text-white">
       <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-white/5 p-8">
+        {record.status === "lost" && <KayipUyarisi />}
+
         <h1 className="text-3xl font-bold">{record.assetName}</h1>
 
         <p className="mt-3 text-white/60">
@@ -138,7 +135,7 @@ export default async function TagPage({ params }: Props) {
 
           <div>
             <span className="text-white/40">Durum</span>
-            <p>{durumEtiketleri[record.status] ?? "Aktif"}</p>
+            <p>{ITEM_DURUM_ETIKETLERI[record.status] ?? "Aktif"}</p>
           </div>
 
           {record.description && (

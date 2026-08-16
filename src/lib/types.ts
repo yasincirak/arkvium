@@ -4,6 +4,14 @@ export type ItemRecordStatus =
   | "found"
   | "inactive";
 
+/** Ürün durumunun kullanıcıya gösterilen karşılığı. */
+export const ITEM_DURUM_ETIKETLERI: Record<string, string> = {
+  active: "Aktif",
+  lost: "Kayıp",
+  found: "Bulundu",
+  inactive: "Pasif",
+};
+
 export type ItemRecord = {
   id: string;
   assetName: string;

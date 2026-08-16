@@ -949,3 +949,78 @@ describe("toplu etiket üretimi (yönetici)", () => {
     assert.equal(yanit.status, 401);
   });
 });
+
+describe("kayıp modu", () => {
+  const KAYIP_METNI = "Bu eşya kayıp olarak bildirildi";
+
+  async function kayipUrunEtiketi(eposta: string, kayitId: string) {
+    await kullaniciOlustur(eposta);
+    const userId = await kullaniciIdAl(eposta);
+
+    await urunOlustur(kayitId, userId, "Kayıp Cüzdan");
+
+    const etiket = await etiketEkle("active", {
+      userId,
+      itemRecordId: kayitId,
+    });
+
+    return { userId, etiket };
+  }
+
+  test("kayıp işaretli üründe QR sayfası uyarı gösterir", async () => {
+    const { etiket } = await kayipUrunEtiketi("kayip@test.invalid", "kayip-kayit");
+
+    await db.query('UPDATE "ItemRecord" SET status=$1 WHERE id=$2', [
+      "lost",
+      "kayip-kayit",
+    ]);
+
+    const { yanit, icerik } = await sayfa(`/t/${etiket.publicToken}`);
+
+    assert.equal(yanit.status, 200);
+    assert.ok(icerik.includes(KAYIP_METNI), "kayıp uyarısı görünmeli");
+    assert.ok(icerik.includes("Kayıp Cüzdan"));
+  });
+
+  test("normal üründe kayıp uyarısı çıkmaz", async () => {
+    const { etiket } = await kayipUrunEtiketi("normal@test.invalid", "normal-kayit");
+
+    const { icerik } = await sayfa(`/t/${etiket.publicToken}`);
+
+    assert.ok(!icerik.includes(KAYIP_METNI), "uyarı yalnızca kayıpta çıkmalı");
+  });
+
+  test("eski (legacy) /item adresinde de uyarı gösterilir", async () => {
+    await kayipUrunEtiketi("legacykayip@test.invalid", "legacy-kayip");
+
+    await db.query('UPDATE "ItemRecord" SET status=$1 WHERE id=$2', [
+      "lost",
+      "legacy-kayip",
+    ]);
+
+    const { yanit, icerik } = await sayfa("/item/legacy-kayip");
+
+    assert.equal(yanit.status, 200);
+    assert.ok(icerik.includes(KAYIP_METNI), "kayıp uyarısı görünmeli");
+  });
+
+  test("kayıp işareti kaldırılınca uyarı kaybolur", async () => {
+    const { etiket } = await kayipUrunEtiketi("bulundu@test.invalid", "bulundu-kayit");
+
+    await db.query('UPDATE "ItemRecord" SET status=$1 WHERE id=$2', [
+      "lost",
+      "bulundu-kayit",
+    ]);
+
+    assert.ok((await sayfa(`/t/${etiket.publicToken}`)).icerik.includes(KAYIP_METNI));
+
+    await db.query('UPDATE "ItemRecord" SET status=$1 WHERE id=$2', [
+      "active",
+      "bulundu-kayit",
+    ]);
+
+    assert.ok(
+      !(await sayfa(`/t/${etiket.publicToken}`)).icerik.includes(KAYIP_METNI)
+    );
+  });
+});
