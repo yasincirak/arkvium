@@ -33,8 +33,26 @@ function dosyayaTamamla(mutlakYol) {
   return mutlakYol;
 }
 
+/**
+ * Yalnızca test çalıştırmasında geçerli modül karşılıkları.
+ *
+ * `next/headers` ve `next/cache` Next.js istek bağlamına bağlıdır ve Node
+ * test çalıştırıcısında çözülemez. Server Action sarmalayıcılarını test
+ * edebilmek için bunlar `next-taklit.mjs` ile karşılanır. Uygulama kodu
+ * ve derlemesi bundan etkilenmez.
+ */
+const NEXT_KARSILIKLARI = new Set(["next/headers", "next/cache"]);
+
+const nextTaklitUrl = pathToFileURL(
+  path.join(import.meta.dirname, "next-taklit.mjs")
+).href;
+
 registerHooks({
   resolve(belirtec, baglam, sonraki) {
+    if (NEXT_KARSILIKLARI.has(belirtec)) {
+      return { url: nextTaklitUrl, shortCircuit: true };
+    }
+
     if (belirtec.startsWith("@/")) {
       const hedef = dosyayaTamamla(path.join(kokDizin, "src", belirtec.slice(2)));
 
