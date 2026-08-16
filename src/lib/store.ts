@@ -175,6 +175,29 @@ export async function getFinderMessagesByRecordId(
   return messages.map(mapFinderMessage);
 }
 
+/**
+ * Bir ürüne gelen bulan kişi mesajlarını, YALNIZCA kaydın sahibine döndürür.
+ *
+ * Hesap sayfası bu mesajları gösterirken kullanılır. Kayıt başka bir
+ * kullanıcıya aitse ya da hiçbir hesaba bağlı değilse boş dizi döner;
+ * böylece bulan kişinin adı, telefonu ve konumu yabancıya sızmaz.
+ */
+export async function getFinderMessagesForOwner(
+  recordId: string,
+  userId: string
+): Promise<FinderMessage[]> {
+  const record = await prisma.itemRecord.findFirst({
+    where: { id: recordId, userId },
+    select: { id: true },
+  });
+
+  if (!record) {
+    return [];
+  }
+
+  return getFinderMessagesByRecordId(recordId);
+}
+
 export async function saveFinderMessage(
   message: FinderMessage
 ): Promise<FinderMessage> {

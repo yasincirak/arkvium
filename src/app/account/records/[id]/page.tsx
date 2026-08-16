@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import BildirimListesi from "@/components/account/BildirimListesi";
 import DurumPanel from "@/components/account/DurumPanel";
 import TagPanel from "@/components/account/TagPanel";
 import TransferPanel from "@/components/account/TransferPanel";
 import { getUserSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { getFinderMessagesForOwner } from "@/lib/store";
 import { etiketAdresi, etiketKoduBicimle } from "@/lib/tags";
 import { ITEM_DURUM_ETIKETLERI } from "@/lib/types";
 
@@ -57,6 +59,9 @@ export default async function AccountRecordDetailPage({
     select: { id: true, toEmail: true, expiresAt: true },
     orderBy: { createdAt: "desc" },
   });
+
+  // Bulan kişi mesajları: sahiplik yeniden doğrulanır, yabancıya boş döner.
+  const bildirimler = await getFinderMessagesForOwner(record.id, session.userId);
 
   const tabanAdres = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
@@ -125,6 +130,8 @@ export default async function AccountRecordDetailPage({
           </div>
 
           <DurumPanel itemRecordId={record.id} durum={record.status} />
+
+          <BildirimListesi mesajlar={bildirimler} />
 
           {record.tag ? (
             <TagPanel
