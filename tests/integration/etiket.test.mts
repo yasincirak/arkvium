@@ -923,6 +923,103 @@ describe("etiket yönetimi", () => {
 
     assert.equal(yanit.status, 404);
   });
+
+  // İptal ve taşıma için yetki matrisinin eksik kalan hücreleri.
+  // (Pasife almanın üç senaryosu yukarıda ayrıca test ediliyor.)
+
+  test("oturumsuz iptal reddedilir", async () => {
+    const { etiket } = await aktifEtiketHazirla("iptal-oturumsuz@test.invalid");
+
+    const { yanit } = await istek(`/api/tags/${etiket.id}`, {
+      govde: { islem: "iptal" },
+    });
+
+    assert.equal(yanit.status, 401);
+
+    const kontrol = await db.query(
+      'SELECT status, "revokedAt" FROM "Tag" WHERE id=$1',
+      [etiket.id]
+    );
+
+    assert.equal(kontrol.rows[0].status, "active", "durum değişmemeli");
+    assert.equal(kontrol.rows[0].revokedAt, null);
+  });
+
+  test("başka kullanıcı etiketi iptal edemez", async () => {
+    const { etiket } = await aktifEtiketHazirla("iptal-sahibi@test.invalid");
+    const yabanciCerez = await kullaniciOlustur("iptal-yabanci@test.invalid");
+
+    const { yanit } = await istek(`/api/tags/${etiket.id}`, {
+      cerez: yabanciCerez,
+      govde: { islem: "iptal" },
+    });
+
+    assert.equal(yanit.status, 404, "sahip olmayan 404 almalı");
+
+    const kontrol = await db.query(
+      'SELECT status, "revokedAt" FROM "Tag" WHERE id=$1',
+      [etiket.id]
+    );
+
+    assert.equal(kontrol.rows[0].status, "active", "durum değişmemeli");
+    assert.equal(kontrol.rows[0].revokedAt, null);
+  });
+
+  test("oturumsuz taşıma reddedilir", async () => {
+    const { userId, etiket, itemRecordId } = await aktifEtiketHazirla(
+      "tasima-oturumsuz@test.invalid"
+    );
+
+    await urunOlustur("oturumsuz-hedef", userId, "Hedef Ürün");
+
+    const { yanit } = await istek(`/api/tags/${etiket.id}`, {
+      govde: { islem: "tasi", itemRecordId: "oturumsuz-hedef" },
+    });
+
+    assert.equal(yanit.status, 401);
+
+    const kontrol = await db.query(
+      'SELECT "itemRecordId" FROM "Tag" WHERE id=$1',
+      [etiket.id]
+    );
+
+    assert.equal(
+      kontrol.rows[0].itemRecordId,
+      itemRecordId,
+      "bağlantı değişmemeli"
+    );
+  });
+
+  test("başka kullanıcı etiketi kendi ürününe taşıyamaz", async () => {
+    const { etiket, itemRecordId } = await aktifEtiketHazirla(
+      "tasima-etiket-sahibi@test.invalid"
+    );
+
+    const yabanciCerez = await kullaniciOlustur(
+      "tasima-etiket-yabanci@test.invalid"
+    );
+    const yabanciId = await kullaniciIdAl("tasima-etiket-yabanci@test.invalid");
+
+    await urunOlustur("yabancinin-hedefi", yabanciId, "Yabancının Ürünü");
+
+    const { yanit } = await istek(`/api/tags/${etiket.id}`, {
+      cerez: yabanciCerez,
+      govde: { islem: "tasi", itemRecordId: "yabancinin-hedefi" },
+    });
+
+    assert.equal(yanit.status, 404, "sahip olmayan 404 almalı");
+
+    const kontrol = await db.query(
+      'SELECT "itemRecordId" FROM "Tag" WHERE id=$1',
+      [etiket.id]
+    );
+
+    assert.equal(
+      kontrol.rows[0].itemRecordId,
+      itemRecordId,
+      "bağlantı değişmemeli"
+    );
+  });
 });
 
 describe("toplu etiket üretimi (yönetici)", () => {
