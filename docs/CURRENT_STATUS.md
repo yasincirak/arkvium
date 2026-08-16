@@ -78,6 +78,17 @@ sahiplik değişimi tamamlandı. **Etiketli ürün** üzerinden: `ItemRecord.use
 Kabul ekranında artık giriş yapılan hesabın e-postası ve "Farklı hesapla giriş yap" bağlantısı gösteriliyor
 (testte en çok vakit kaybettiren nokta buydu).
 
+## Etiket baskı sayfası (2026-08-16)
+`/admin/tags` içinde üretilen etiketler artık yazdırılabiliyor: `src/components/admin/TagPrintSheet.tsx`
+her etiket için QR + etiket kodu kartı basar (isteğe bağlı olarak aktivasyon kodu da), `window.print()` ile
+tarayıcının yazdır/PDF penceresi açılır. Baskı ızgarası ekranda gizlidir; yalnızca `globals.css` içindeki
+`@media print` bloğu sayesinde kâğıda çıkar. Yeni paket eklenmedi (mevcut `qrcode.react`).
+
+QR adresi artık `NEXT_PUBLIC_APP_URL` üzerinden kuruluyor (CSV'deki "QR Adresi" sütunu dahil); ortam değişkeni
+yoksa `window.location.origin`'e düşer. Basılan etikette yanlış adresin geri dönüşü olmadığı için bilinçli tercih.
+
+Doğrulanmadı: baskının kâğıttaki gerçek görünümü (kart boyutu/ızgara) henüz fiziksel olarak denenmedi.
+
 ## Bilinen açık/yarım işler
 - Ownership Transfer için otomatik test yok (Server Action olduğu için mevcut entegrasyon süiti çağıramıyor)
 - `TagEvent.type` şema yorumunda `transfer_requested` listelenmiyor (şema kasıtlı olarak değiştirilmedi)
@@ -85,5 +96,5 @@ Kabul ekranında artık giriş yapılan hesabın e-postası ve "Farklı hesapla 
 - `docs/DECISIONS.md` henüz oluşturulmadı
 
 ## Sıradaki geliştirme adımı
-- Bekleyen iş yok; tüm ana akışlar canlıda doğrulandı. Yeni özellik kararı kullanıcıdan gelecek.
-  (Muhtemel adaylar: etiket baskısı için QR görseli üretimi, `docs/DECISIONS.md`, test kapsamının genişletilmesi.)
+- Etiket baskı sayfasının fiziksel çıktısını denemek (kart boyutu/ızgara ayarı).
+- Muhtemel adaylar: `docs/DECISIONS.md`, test kapsamının genişletilmesi.

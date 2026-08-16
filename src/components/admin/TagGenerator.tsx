@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import TagPrintSheet from "./TagPrintSheet";
 
 /**
  * Etiket üretim formu.
@@ -63,11 +64,16 @@ export default function TagGenerator() {
   }
 
   function csvIndir() {
+    // Baskıya giden adres, tarayıcının açık olduğu adrese göre değil
+    // uygulamanın gerçek adresine göre kurulur.
+    const taban = (
+      process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+    ).replace(/\/+$/, "");
+
     const satirlar = [
       "Etiket Kodu;Aktivasyon Kodu;QR Adresi",
       ...etiketler.map(
-        (e) =>
-          `${e.code};${e.activationCode};${window.location.origin}/t/${e.publicToken}`
+        (e) => `${e.code};${e.activationCode};${taban}/t/${e.publicToken}`
       ),
     ];
 
@@ -146,6 +152,10 @@ export default function TagGenerator() {
             >
               CSV olarak indir
             </button>
+          </div>
+
+          <div className="mt-4">
+            <TagPrintSheet etiketler={etiketler} />
           </div>
 
           <div className="mt-4 overflow-x-auto">

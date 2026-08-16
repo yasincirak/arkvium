@@ -25,3 +25,30 @@ body {
     text-wrap: balance;
   }
 }
+
+/*
+ * Etiket baskı sayfası (admin > Etiket Üretimi).
+ * Yazdırırken sayfadaki her şey gizlenir, yalnızca QR ızgarası kâğıda çıkar.
+ * Ekran görünümünü etkilemez.
+ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #etiket-baski-alani,
+  #etiket-baski-alani * {
+    visibility: visible;
+  }
+
+  #etiket-baski-alani {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+
+  @page {
+    margin: 12mm;
+  }
+}
