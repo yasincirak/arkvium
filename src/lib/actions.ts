@@ -1,11 +1,11 @@
 "use server";
 
 import { randomUUID } from "crypto";
-import nodemailer from "nodemailer";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getAdminSession, getUserSession } from "./session";
 import { hizSiniriKontrol, istemciIpAdresi } from "./rate-limit";
+import { epostaGonder } from "./email";
 import { whatsappBaglantisi } from "./telefon";
 import {
   saveRecord,
@@ -214,20 +214,12 @@ export async function createFinderMessage(
       `Merhaba ${data.finderName}, ARKVIUM üzerinden "${record.assetName}" için bildiriminizi aldım.`
     );
 
-    try {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.GMAIL_USER,
-          pass: process.env.GMAIL_APP_PASSWORD,
-        },
-      });
-
-      await transporter.sendMail({
-        from: `"ARKVIUM" <${process.env.GMAIL_USER}>`,
-        to: record.email,
-        subject: `ARKVIUM: ${record.assetName} için yeni bildirim`,
-        text: `
+    // Gönderim merkezi yardımcı üzerinden yapılır; testlerde
+    // EPOSTA_GONDERIMI_KAPALI anahtarı bu yolda kesin olarak uygulanır.
+    const gonderim = await epostaGonder({
+      alici: record.email,
+      konu: `ARKVIUM: ${record.assetName} için yeni bildirim`,
+      metin: `
 Merhaba ${record.ownerName},
 
 ARKVIUM sistemine kayıtlı "${record.assetName}" isimli eşyanız için yeni bir bulan kişi bildirimi aldınız.
@@ -244,21 +236,17 @@ ${
 }
 ARKVIUM
 Dijital Sahiplik Platformu
-        `.trim(),
-      });
+      `.trim(),
+    });
 
+    if (gonderim.gonderildi) {
       await updateFinderMessageDeliveryStatus(
         message.id,
         "sent",
         new Date().toISOString()
       );
-    } catch (error) {
-      console.error("E-posta gönderilemedi:", error);
-
-      await updateFinderMessageDeliveryStatus(
-        message.id,
-        "failed"
-      );
+    } else {
+      await updateFinderMessageDeliveryStatus(message.id, "failed");
     }
   }
 
