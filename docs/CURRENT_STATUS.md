@@ -66,8 +66,14 @@ Kalıcı notlar:
 - **Localhost ≠ production**: dev sunucusu test veritabanına bağlı çalıştırılabiliyor; orada yapılan şifre sıfırlama
   production hesabını değiştirmez.
 
+Canlı ortam doğrulaması (2026-08-16) — uçtan uca çalışıyor:
+admin girişi → **Etiket Üretimi sayfası** (`/admin/tags`, yeni) → etiket üretimi → müşteri hesabıyla aktivasyon →
+ürüne bağlama → QR adresinin açılması → "eşyayı buldum" bildirimi → sahibe bildirim e-postası.
+Production'a ayrıca `ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH_B64`, `ADMIN_SESSION_SECRET` eklendi.
+
 ## Bilinen açık/yarım işler
 - Preview ortamında `GMAIL_APP_PASSWORD` hâlâ eski (Production doğru). Canlı siteyi etkilemez.
+- Ownership Transfer canlı ortamda henüz denenmedi (test veritabanında doğrulanmıştı)
 - `TagEvent.type` şema yorumunda `transfer_requested` listelenmiyor (şema kasıtlı olarak değiştirilmedi)
 - Test kapsamı yalnızca auth tarafında doğrulandı (`f88140d`); diğer modüllerin test durumu belirsiz
 - `docs/DECISIONS.md` henüz oluşturulmadı
