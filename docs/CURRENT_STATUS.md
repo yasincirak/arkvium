@@ -48,11 +48,29 @@ Son güncelleme: 2026-08-13 · Dal: `arkvium/production-hazirlik`
   Test DB'de doğrulandı: transfer `accepted`, `acceptedAt` dolu, ürün yeni sahibe geçti, `TagEvent(type: "transferred")` yazıldı.
   Özellik `5b3e25f` commit'iyle tamamlandı.
 
+## Production ortamı (2026-08-16)
+Canlı adres: **https://www.arkvium.com** (Vercel projesi `arkvium/arkvium`; `arkvium.com` → `www`'ye yönleniyor).
+
+Bugün çözülen üç production sorunu — hepsi **kod hatası değil, Vercel ortam değişkeni** kaynaklıydı:
+1. **Giriş çalışmıyordu** (`POST /api/login` 500): `USER_SESSION_SECRET` production'da tanımlı değildi. Eklendi.
+2. **Hiçbir e-posta gitmiyordu** (`535 BadCredentials`): `GMAIL_APP_PASSWORD` eski, `GMAIL_USER` ise yanlış/eski bir adresti.
+   Doğru çift `arkvium@gmail.com` + yeni Google uygulama şifresi olarak ayarlandı.
+3. **Bağlantılar/QR kodları vercel.app'e gidiyordu**: `NEXT_PUBLIC_APP_URL` → `https://www.arkvium.com` yapıldı.
+
+Kalıcı notlar:
+- Ortam değişkeni değiştirince **redeploy şart** (`npx vercel redeploy <production-url>`); `NEXT_PUBLIC_*` değerleri build sırasında gömülür.
+- Vercel'de değerler `Sensitive` olduğu için okunamaz; yalnızca üzerine yazılır (`vercel env add <AD> <ortam> --force`).
+- E-posta gerçekten gitti mi kontrolü: `PasswordResetToken` satırında `usedAt` **boşsa** gönderilmiştir;
+  ~0,2 sn içinde dolmuşsa gönderim başarısız olmuştur (`/api/password/forgot` başarısız gönderimde tokenı hemen iptal eder).
+- `/api/password/forgot` hız sınırı: IP başına 5/saat (429) ve e-posta başına 3/saat (sessizce 200 döner, mail göndermez).
+- **Localhost ≠ production**: dev sunucusu test veritabanına bağlı çalıştırılabiliyor; orada yapılan şifre sıfırlama
+  production hesabını değiştirmez.
+
 ## Bilinen açık/yarım işler
+- Preview ortamında `GMAIL_APP_PASSWORD` hâlâ eski (Production doğru). Canlı siteyi etkilemez.
 - `TagEvent.type` şema yorumunda `transfer_requested` listelenmiyor (şema kasıtlı olarak değiştirilmedi)
 - Test kapsamı yalnızca auth tarafında doğrulandı (`f88140d`); diğer modüllerin test durumu belirsiz
-- Production hazırlık dalı henüz `main`'e birleştirilmedi
 - `docs/DECISIONS.md` henüz oluşturulmadı
 
 ## Sıradaki geliştirme adımı
-- `arkvium/production-hazirlik` dalını `main` dalına birleştirmek.
+- Preview ortamındaki `GMAIL_APP_PASSWORD` değerini güncellemek.

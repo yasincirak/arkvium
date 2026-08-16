@@ -44,3 +44,4 @@ next-env.d.ts
 # entegrasyon testleri icin ayri build klasoru
 .next-test/
 .next-build/
+.env*
