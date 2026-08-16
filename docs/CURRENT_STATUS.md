@@ -104,8 +104,8 @@ ekleniyor; uygulama derlemesini etkilemiyor.
 - `TagEvent.type` şema yorumunda `transfer_requested` listelenmiyor (şema kasıtlı olarak değiştirilmedi)
 - Server Action sarmalayıcıları (oturum + hız sınırlama katmanı) hâlâ test dışı; yalnızca altlarındaki servis test ediliyor
 - Test kapsamı: auth (`f88140d`), etiket ve sahiplik devri doğrulandı; kalan modüllerin durumu belirsiz
-- `docs/DECISIONS.md` henüz oluşturulmadı
+- (kapandı) `docs/DECISIONS.md` oluşturuldu — "neden böyle yapıldı" kararları orada
 
 ## Sıradaki geliştirme adımı
 - Etiket baskı sayfasının fiziksel çıktısını denemek (kart boyutu/ızgara ayarı).
-- Muhtemel adaylar: `docs/DECISIONS.md`, kalan modüller için test.
+- Muhtemel adaylar: kalan modüller için test, Server Action katmanının testi.
