@@ -3,10 +3,31 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 
+/**
+ * Kayıt sonrası dönülecek adres.
+ *
+ * Login sayfasındaki `guvenliDonusAdresi` ile aynı kuraldır: yalnızca
+ * uygulama içi, `/` ile başlayan göreli yollar kabul edilir. `//host`,
+ * `/\host`, `http://...` gibi değerler açık yönlendirme (open redirect)
+ * açığına yol açacağı için reddedilir ve `/account` kullanılır.
+ */
+function guvenliDonusAdresi(deger: string | null): string {
+  if (!deger || !deger.startsWith("/")) {
+    return "/account";
+  }
+
+  if (deger.startsWith("//") || deger.startsWith("/\\")) {
+    return "/account";
+  }
+
+  return deger;
+}
+
 export default function RegisterPage() {
   const [error, setError] = useState("");
   const [basariMesaji, setBasariMesaji] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [girisAdresi, setGirisAdresi] = useState("/login");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,6 +56,16 @@ export default function RegisterPage() {
       setIsSubmitting(false);
       return;
     }
+
+    // Kayıt oturum açmaz; kullanıcı önce giriş yapar. returnTo adresi giriş
+    // bağlantısına taşınır, böylece QR'dan gelen kullanıcı kaydını
+    // tamamladıktan sonra aynı aktivasyon sayfasına döner.
+    const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+    const hedef = guvenliDonusAdresi(returnTo);
+
+    setGirisAdresi(
+      hedef === "/account" ? "/login" : `/login?returnTo=${encodeURIComponent(hedef)}`
+    );
 
     // Kullanıcı, doğrulama e-postasının gönderilip gönderilmediğini görmeden
     // yönlendirilmemelidir.
@@ -68,7 +99,7 @@ export default function RegisterPage() {
             <p>{basariMesaji}</p>
 
             <Link
-              href="/login"
+              href={girisAdresi}
               className="mt-3 inline-block font-medium text-green-100 underline"
             >
               Giriş yap

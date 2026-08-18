@@ -12,11 +12,28 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function ActivateTagPage() {
+type ActivateTagPageProps = {
+  searchParams?: {
+    /** QR sayfasından gelen etiket kodu; forma başlangıç değeri olur. */
+    kod?: string;
+  };
+};
+
+export default async function ActivateTagPage({
+  searchParams,
+}: ActivateTagPageProps) {
   const session = await getUserSession();
 
+  const etiketKodu =
+    typeof searchParams?.kod === "string" ? searchParams.kod.trim() : "";
+
   if (!session) {
-    redirect("/login");
+    // Giriş sonrası kullanıcı aynı etiketle bu sayfaya geri döner.
+    const donusAdresi = etiketKodu
+      ? `/account/tags/activate?kod=${encodeURIComponent(etiketKodu)}`
+      : "/account/tags/activate";
+
+    redirect(`/login?returnTo=${encodeURIComponent(donusAdresi)}`);
   }
 
   // Yalnızca henüz etiketi olmayan ürünler seçilebilir.
@@ -44,7 +61,10 @@ export default async function ActivateTagPage() {
           </p>
         </div>
 
-        <ActivateTagForm etiketsizUrunler={etiketsizUrunler} />
+        <ActivateTagForm
+          etiketsizUrunler={etiketsizUrunler}
+          etiketKodu={etiketKodu}
+        />
       </div>
     </main>
   );

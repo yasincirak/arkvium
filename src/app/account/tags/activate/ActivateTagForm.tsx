@@ -10,6 +10,8 @@ type Urun = {
 
 type Props = {
   etiketsizUrunler: Urun[];
+  /** QR sayfasından gelen etiket kodu. Boşsa alan boş açılır. */
+  etiketKodu?: string;
 };
 
 type Sonuc = {
@@ -17,7 +19,10 @@ type Sonuc = {
   itemRecordId: string;
 };
 
-export default function ActivateTagForm({ etiketsizUrunler }: Props) {
+export default function ActivateTagForm({
+  etiketsizUrunler,
+  etiketKodu = "",
+}: Props) {
   const [hedef, setHedef] = useState<"yeni" | "mevcut">(
     etiketsizUrunler.length > 0 ? "mevcut" : "yeni"
   );
@@ -107,6 +112,7 @@ export default function ActivateTagForm({ etiketsizUrunler }: Props) {
         <input
           id="tagCode"
           name="tagCode"
+          defaultValue={etiketKodu}
           required
           autoComplete="off"
           spellCheck={false}

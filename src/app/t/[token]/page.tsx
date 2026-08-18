@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import ItemFinderSection from "@/components/ItemFinderSection";
 import KayipUyarisi from "@/components/KayipUyarisi";
 import { prisma } from "@/lib/prisma";
 import { getUserSession } from "@/lib/session";
 import { taramaBildirimiGonder } from "@/lib/tarama-bildirimi";
-import type { TagDurumu } from "@/lib/tags";
+import { etiketKoduBicimle, type TagDurumu } from "@/lib/tags";
 import { ITEM_DURUM_ETIKETLERI } from "@/lib/types";
 
 /**
@@ -38,10 +39,13 @@ function BilgiKutusu({
   baslik,
   aciklama,
   ton,
+  eylem,
 }: {
   baslik: string;
   aciklama: string;
   ton: "notr" | "uyari";
+  /** Açıklamanın altında gösterilecek bağlantı; yalnızca gereken durumlarda verilir. */
+  eylem?: React.ReactNode;
 }) {
   const sinif =
     ton === "uyari"
@@ -53,6 +57,8 @@ function BilgiKutusu({
       <div className={`w-full max-w-xl rounded-2xl border p-8 ${sinif}`}>
         <h1 className="text-2xl font-bold">{baslik}</h1>
         <p className="mt-4 leading-7">{aciklama}</p>
+
+        {eylem && <div className="mt-6">{eylem}</div>}
 
         <p className="mt-8 text-sm opacity-70">
           ARKVIUM — Dijital Sahiplik Platformu
@@ -90,6 +96,16 @@ export default async function TagPage({ params }: Props) {
         ton="notr"
         baslik="Bu etiket henüz etkinleştirilmemiş"
         aciklama="Bu etiket bir ürüne bağlanmamış. Etiket sizin elinizdeyse ARKVIUM hesabınızdan etkinleştirebilirsiniz."
+        eylem={
+          <Link
+            href={`/account/tags/activate?kod=${encodeURIComponent(
+              etiketKoduBicimle(tag.code)
+            )}`}
+            className="inline-flex rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-500"
+          >
+            Bu etiketi etkinleştir
+          </Link>
+        }
       />
     );
   }
