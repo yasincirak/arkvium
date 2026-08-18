@@ -25,24 +25,32 @@ const SLAYTLAR = [
     kod: "esyalar",
     baslik: "Eşyalar",
     aciklama: "Değer verdiklerin sana geri dönebilsin.",
+    metin:
+      "Çanta, anahtar, valiz ve günlük eşyalarını ARKVIUM QR ürünleriyle güvenli iletişim sistemine bağla.",
     Illustrasyon: EsyalarIllustrasyonu,
   },
   {
     kod: "araclar",
     baslik: "Araçlar",
     aciklama: "Aracına dokunmadan sana güvenle ulaşsınlar.",
+    metin:
+      "Uygunsuz park, açık kalan far veya aracınla ilgili önemli bir durumda telefon numaran görünmeden mesaj al.",
     Illustrasyon: AraclarIllustrasyonu,
   },
   {
     kod: "evcil-hayvanlar",
     baslik: "Evcil Hayvanlar",
     aciklama: "Kaybolduğunda bulan kişi sana güvenle ulaşsın.",
+    metin:
+      "QR künyeyi okutan kişi iletişim bilgilerini görmeden ARKVIUM üzerinden sana mesaj göndersin.",
     Illustrasyon: EvcilHayvanlarIllustrasyonu,
   },
   {
     kod: "guvenli-iletisim",
     baslik: "Güvenli İletişim",
     aciklama: "Telefon numaran görünmeden mesaj al.",
+    metin:
+      "QR kodunu okutan kişi mesajını ARKVIUM üzerinden göndersin; telefon numaran doğrudan gösterilmesin.",
     Illustrasyon: GuvenliIletisimIllustrasyonu,
   },
 ];
@@ -148,9 +156,7 @@ export default function HeroCarousel() {
                   </Baslik>
 
                   <p className="mt-6 max-w-xl text-lg text-slate-600 md:mx-0">
-                    ARKVIUM, eşyalarına QR kodlu dijital kimlik kazandırır.
-                    Bulan kişi QR kodu okutur ve kişisel bilgilerin korunurken
-                    sana güvenli şekilde ulaşır.
+                    {slayt.metin}
                   </p>
 
                   <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row md:justify-start">
