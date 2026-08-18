@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import FinderForm from "@/components/FinderForm";
+import { whatsappBaglantisi } from "@/lib/telefon";
 
 type ItemFinderSectionProps = {
   recordId: string;
@@ -21,11 +22,9 @@ Kayıt No: ${recordId}
 
 Eşya hakkında bilgi vermek istiyorum.`;
 
-  const whatsappUrl = whatsappNumber
-    ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-        whatsappMessage
-      )}`
-    : null;
+  // Adres merkezi yardımcıyla kurulur; numara çözülemezse null döner ve
+  // buton gösterilmez.
+  const whatsappUrl = whatsappBaglantisi(whatsappNumber, whatsappMessage);
 
   return (
     <div className="mt-10 space-y-4">
