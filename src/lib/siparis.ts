@@ -16,15 +16,35 @@
  */
 export const SIPARIS_WHATSAPP_NUMARASI = "905076046894";
 
-/** Tüm ürünlerde gösterilen kargo notu. */
-export const KARGO_NOTU = "Kargo ücreti ayrıca hesaplanır.";
+/**
+ * Kuruş tutarını görünen metne çevirir: 19900 → "199,00 TL".
+ *
+ * Para tutarları her yerde kuruş TAMSAYISI olarak taşınır; kayan noktalı
+ * hesap yapılmaz, biçimlendirme yalnızca gösterim anında uygulanır.
+ */
+export function fiyatBicimle(kurus: number): string {
+  const lira = Math.trunc(kurus / 100);
+  const kalan = Math.abs(kurus % 100);
+
+  return `${lira},${String(kalan).padStart(2, "0")} TL`;
+}
+
+/**
+ * Tüm ürünlerde gösterilen kargo notu.
+ *
+ * Kargo tutarı henüz kesinleşmedi (kargo firması ve gerçek maliyet
+ * doğrulanmadı). Tutar belirlenince tek bir sunucu taraflı sabitten
+ * yönetilecek ve bu not o sabitten üretilecektir.
+ */
+export const KARGO_NOTU = "Kargo ücreti ödeme adımında gösterilir.";
 
 export type SiparisUrunu = {
   /** React listesi ve sipariş mesajı için sabit kimlik. */
   kod: string;
   ad: string;
   aciklama: string;
-  fiyat: string;
+  /** Birim fiyat, kuruş cinsinden. Sipariş toplamı bu değerden hesaplanır. */
+  fiyatKurus: number;
   /** WhatsApp sohbetine önceden yazılan sipariş mesajı. */
   siparisMesaji: string;
 };
@@ -35,7 +55,7 @@ export const SIPARIS_URUNLERI: SiparisUrunu[] = [
     ad: "3'lü QR Sticker Seti",
     aciklama:
       "Değer verdiğiniz eşyaları ARKVIUM'un güvenli iletişim sistemine bağlayın.",
-    fiyat: "199 TL",
+    fiyatKurus: 19900,
     siparisMesaji:
       "Merhaba, 3'lü ARKVIUM QR Sticker Seti sipariş etmek istiyorum.",
   },
@@ -44,7 +64,7 @@ export const SIPARIS_URUNLERI: SiparisUrunu[] = [
     ad: "Araç İletişim QR Sticker'ı",
     aciklama:
       "Aracınızın camına yapıştırın. Uygunsuz park, açık kalan far veya araçla ilgili başka bir durumda telefon numaranız görünmeden güvenli bildirim alın.",
-    fiyat: "249 TL",
+    fiyatKurus: 24900,
     siparisMesaji:
       "Merhaba, ARKVIUM Araç İletişim QR Sticker'ı sipariş etmek istiyorum.",
   },
@@ -53,7 +73,7 @@ export const SIPARIS_URUNLERI: SiparisUrunu[] = [
     ad: "Metal QR Anahtarlık",
     aciklama:
       "Anahtarlarınızı ARKVIUM'un güvenli buluntu iletişim sistemine bağlayan dayanıklı metal etiket.",
-    fiyat: "349 TL",
+    fiyatKurus: 34900,
     siparisMesaji:
       "Merhaba, ARKVIUM Metal QR Anahtarlık sipariş etmek istiyorum.",
   },
@@ -62,7 +82,7 @@ export const SIPARIS_URUNLERI: SiparisUrunu[] = [
     ad: "Evcil Hayvan QR Künyesi",
     aciklama:
       "Evcil dostunuzu bulan kişi, kişisel iletişim bilgileriniz açıkça gösterilmeden size mesaj gönderebilsin.",
-    fiyat: "449 TL",
+    fiyatKurus: 44900,
     siparisMesaji:
       "Merhaba, ARKVIUM Evcil Hayvan QR Künyesi sipariş etmek istiyorum.",
   },
@@ -71,7 +91,7 @@ export const SIPARIS_URUNLERI: SiparisUrunu[] = [
     ad: "QR Valiz Etiketi",
     aciklama:
       "Valiziniz kaybolduğunda bulan kişinin güvenli biçimde size ulaşmasını sağlayın.",
-    fiyat: "299 TL",
+    fiyatKurus: 29900,
     siparisMesaji:
       "Merhaba, ARKVIUM QR Valiz Etiketi sipariş etmek istiyorum.",
   },

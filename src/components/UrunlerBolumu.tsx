@@ -1,4 +1,5 @@
 import {
+  fiyatBicimle,
   KARGO_NOTU,
   SIPARIS_URUNLERI,
   SIPARIS_WHATSAPP_NUMARASI,
@@ -40,7 +41,9 @@ export default function UrunlerBolumu() {
                 <p className="mt-3 flex-1 leading-relaxed text-slate-600">{urun.aciklama}</p>
 
                 <div className="mt-6">
-                  <div className="text-2xl font-bold">{urun.fiyat}</div>
+                  <div className="text-2xl font-bold">
+                    {fiyatBicimle(urun.fiyatKurus)}
+                  </div>
                   <div className="mt-1 text-sm text-slate-500">{KARGO_NOTU}</div>
                 </div>
 

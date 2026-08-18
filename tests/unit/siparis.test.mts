@@ -10,7 +10,7 @@ import { describe, test } from "node:test";
  * burada doğrulanır.
  */
 
-const { SIPARIS_URUNLERI, SIPARIS_WHATSAPP_NUMARASI, KARGO_NOTU } =
+const { SIPARIS_URUNLERI, SIPARIS_WHATSAPP_NUMARASI, KARGO_NOTU, fiyatBicimle } =
   await import("../../src/lib/siparis.ts");
 
 const { whatsappBaglantisi, whatsappNumarasi } = await import(
@@ -30,7 +30,10 @@ describe("sipariş yapılandırması", () => {
     for (const urun of SIPARIS_URUNLERI) {
       assert.ok(urun.ad.length > 0, `${urun.kod}: ad boş`);
       assert.ok(urun.aciklama.length > 0, `${urun.kod}: açıklama boş`);
-      assert.match(urun.fiyat, /^\d+ TL$/, `${urun.kod}: fiyat biçimi`);
+      assert.ok(
+        Number.isInteger(urun.fiyatKurus) && urun.fiyatKurus > 0,
+        `${urun.kod}: birim fiyat pozitif kuruş tamsayısı olmalı`
+      );
       assert.ok(
         urun.siparisMesaji.startsWith("Merhaba,"),
         `${urun.kod}: sipariş mesajı`
@@ -38,8 +41,18 @@ describe("sipariş yapılandırması", () => {
     }
   });
 
-  test("kargo notu tüm ürünler için tanımlı", () => {
+  test("kargo notu tanımlı ve tutar içermez", () => {
     assert.match(KARGO_NOTU, /kargo/i);
+    assert.ok(
+      !/\d/.test(KARGO_NOTU),
+      "kargo tutarı kesinleşmeden notta rakam gösterilmemeli"
+    );
+  });
+
+  test("fiyat biçimlendirme kuruşu iki haneyle yazar", () => {
+    assert.equal(fiyatBicimle(19900), "199,00 TL");
+    assert.equal(fiyatBicimle(14990), "149,90 TL");
+    assert.equal(fiyatBicimle(5), "0,05 TL");
   });
 });
 
