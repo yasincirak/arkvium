@@ -1,8 +1,8 @@
 /**
  * Telefon numarasını WhatsApp bağlantısı için hazırlar.
  *
- * wa.me adresi numarayı ülke kodlu ve yalnızca rakamlardan oluşan biçimde
- * ister: `https://wa.me/905551112233`. Kullanıcılar numarayı çok farklı
+ * WhatsApp adresi numarayı ülke kodlu ve yalnızca rakamlardan oluşan biçimde
+ * ister: `?phone=905551112233`. Kullanıcılar numarayı çok farklı
  * yazar ("0555 111 22 33", "+90 555 111 22 33", "00905551112233"), bu yüzden
  * tek bir yerde normalleştirilir.
  *
@@ -17,7 +17,7 @@ const EN_AZ_HANE = 10;
 const EN_COK_HANE = 15;
 
 /**
- * Numarayı wa.me'nin beklediği biçime çevirir.
+ * Numarayı WhatsApp'ın beklediği biçime çevirir.
  * Anlamlı bir numara çıkaramazsa `null` döner — bu durumda arayüzde
  * WhatsApp düğmesi hiç gösterilmez, bozuk bağlantı üretilmez.
  */
@@ -64,7 +64,9 @@ export function whatsappBaglantisi(
     return null;
   }
 
-  const adres = `https://wa.me/${numara}`;
+  // Resmi `api.whatsapp.com/send` adresi kullanılır: kısaltma olan wa.me
+  // Safari'de sertifika uyarısı verebiliyor.
+  const adres = `https://api.whatsapp.com/send?phone=${numara}`;
 
-  return mesaj ? `${adres}?text=${encodeURIComponent(mesaj)}` : adres;
+  return mesaj ? `${adres}&text=${encodeURIComponent(mesaj)}` : adres;
 }

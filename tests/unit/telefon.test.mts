@@ -51,17 +51,17 @@ describe("WhatsApp numarası normalleştirme", () => {
 });
 
 describe("WhatsApp bağlantısı", () => {
-  test("wa.me adresi üretir", () => {
+  test("resmi WhatsApp adresi üretir", () => {
     assert.equal(
       whatsappBaglantisi("0555 111 22 33"),
-      "https://wa.me/905551112233"
+      "https://api.whatsapp.com/send?phone=905551112233"
     );
   });
 
   test("mesaj metni adres olarak kodlanır", () => {
     const baglanti = whatsappBaglantisi("05551112233", "Merhaba, eşyam için");
 
-    assert.ok(baglanti?.startsWith("https://wa.me/905551112233?text="));
+    assert.ok(baglanti?.startsWith("https://api.whatsapp.com/send?phone=905551112233&text="));
     // Boşluk ve Türkçe karakterler ham hâlde adrese girmemeli.
     assert.doesNotMatch(baglanti ?? "", /[ şğıçöü]/);
   });

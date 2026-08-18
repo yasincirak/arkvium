@@ -57,7 +57,7 @@ describe("sipariş WhatsApp bağlantısı", () => {
 
     assert.ok(
       whatsappNumarasi(SIPARIS_WHATSAPP_NUMARASI),
-      "sipariş numarası wa.me biçimine çevrilemiyor; sipariş butonu hiç görünmez"
+      "sipariş numarası WhatsApp biçimine çevrilemiyor; sipariş butonu hiç görünmez"
     );
   });
 
@@ -67,7 +67,7 @@ describe("sipariş WhatsApp bağlantısı", () => {
 
       assert.ok(adres, `${urun.kod}: bağlantı üretilmedi`);
       assert.ok(
-        adres.startsWith(`https://wa.me/${ORNEK_NUMARA}`),
+        adres.startsWith(`https://api.whatsapp.com/send?phone=${ORNEK_NUMARA}`),
         `${urun.kod}: bağlantı sipariş numarasına gitmiyor`
       );
 
@@ -78,7 +78,7 @@ describe("sipariş WhatsApp bağlantısı", () => {
   });
 
   test("çözülemeyen numarada bozuk bağlantı üretilmez", () => {
-    // Yer tutucu duruyorken kartta buton hiç gösterilmez; bozuk wa.me adresi
+    // Yer tutucu duruyorken kartta buton hiç gösterilmez; bozuk bir WhatsApp adresi
     // üretmek yerine sipariş butonunu gizlemek bilinçli tercihtir.
     assert.equal(whatsappBaglantisi(YER_TUTUCU, "Merhaba"), null);
   });
