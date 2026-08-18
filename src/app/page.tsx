@@ -1,5 +1,5 @@
 import HeroCarousel from "@/components/hero/HeroCarousel";
-import Logo from "@/components/Logo";
+import Logo, { ArkviumTamLogo } from "@/components/Logo";
 import UrunlerBolumu from "@/components/UrunlerBolumu";
 
 export default function Home() {
@@ -15,7 +15,7 @@ export default function Home() {
 
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
-          <Logo yaziSinifi="text-lg sm:text-2xl" isaretBoyutu={28} />
+          <Logo yaziSinifi="text-base sm:text-xl" amblemYuksekligi={30} />
 
           <div className="hidden gap-6 text-sm text-slate-600 md:flex">
             <a href="#urunler" className="transition hover:text-indigo-600">
@@ -126,10 +126,9 @@ export default function Home() {
 
       <footer className="border-t border-slate-200 bg-slate-50 px-6 py-10 text-center text-sm text-slate-500">
         <div className="flex justify-center">
-          <Logo yaziSinifi="text-lg" isaretBoyutu={26} />
+          <ArkviumTamLogo genislik={170} />
         </div>
-        <div className="mt-3">Dijital Sahiplik Platformu</div>
-        <div className="mt-4">© 2026 ARKVIUM. Tüm hakları saklıdır.</div>
+        <div className="mt-5">© 2026 ARKVIUM. Tüm hakları saklıdır.</div>
       </footer>
     </main>
   );
