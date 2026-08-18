@@ -14,7 +14,7 @@
  * Biçim: ülke kodu ile, `+`, boşluk ve baştaki sıfır olmadan (örn. 90 ile
  * başlayan 12 haneli). Yayına almadan önce gerçek numarayla değiştirilmelidir.
  */
-export const SIPARIS_WHATSAPP_NUMARASI = "90XXXXXXXXXX";
+export const SIPARIS_WHATSAPP_NUMARASI = "905076046894";
 
 /** Tüm ürünlerde gösterilen kargo notu. */
 export const KARGO_NOTU = "Kargo ücreti ayrıca hesaplanır.";
