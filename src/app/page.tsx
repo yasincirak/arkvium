@@ -1,3 +1,4 @@
+import HeroCarousel from "@/components/hero/HeroCarousel";
 import UrunlerBolumu from "@/components/UrunlerBolumu";
 
 export default function Home() {
@@ -42,49 +43,7 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="relative overflow-hidden px-6 py-28 text-center">
-        <div className="absolute left-1/2 top-0 h-96 w-96 -translate-x-1/2 rounded-full bg-indigo-600/20 blur-3xl" />
-
-        <div className="relative mx-auto max-w-4xl">
-          <div className="mb-6 inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/60">
-            Dijital Sahiplik Platformu
-          </div>
-
-          <h1 className="text-4xl font-bold leading-tight sm:text-6xl">
-            Eşyaların kaybolsa bile{" "}
-            <span className="text-indigo-400">sana geri dönsün</span>
-          </h1>
-
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-white/60">
-            ARKVIUM, eşyalarına QR kodlu dijital kimlik kazandırır. Bulan kişi QR
-            kodu okutur ve kişisel bilgilerin korunurken sana güvenli şekilde
-            ulaşır.
-          </p>
-
-          <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
-            <a
-              href="#urunler"
-              className="rounded-xl bg-emerald-600 px-8 py-4 font-semibold hover:bg-emerald-500"
-            >
-              Sipariş Ver
-            </a>
-
-            <a
-              href="/register"
-              className="rounded-xl bg-indigo-500 px-8 py-4 font-semibold hover:bg-indigo-600"
-            >
-              Ücretsiz Başla
-            </a>
-
-            <a
-              href="#nasil"
-              className="rounded-xl border border-white/15 bg-white/5 px-8 py-4 font-semibold hover:bg-white/10"
-            >
-              Nasıl Çalışır?
-            </a>
-          </div>
-        </div>
-      </section>
+      <HeroCarousel />
 
       <section id="ozellikler" className="mx-auto max-w-6xl px-6 py-20">
         <h2 className="text-center text-3xl font-bold">Neden ARKVIUM?</h2>
