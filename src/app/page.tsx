@@ -1,3 +1,5 @@
+import UrunlerBolumu from "@/components/UrunlerBolumu";
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#0a0a0f] text-white">
@@ -8,6 +10,9 @@ export default function Home() {
           </div>
 
           <div className="hidden gap-6 text-sm text-white/60 md:flex">
+            <a href="#urunler" className="hover:text-white">
+              Ürünler
+            </a>
             <a href="#ozellikler" className="hover:text-white">
               Özellikler
             </a>
@@ -57,6 +62,13 @@ export default function Home() {
           </p>
 
           <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
+            <a
+              href="#urunler"
+              className="rounded-xl bg-emerald-600 px-8 py-4 font-semibold hover:bg-emerald-500"
+            >
+              Sipariş Ver
+            </a>
+
             <a
               href="/register"
               className="rounded-xl bg-indigo-500 px-8 py-4 font-semibold hover:bg-indigo-600"
@@ -132,6 +144,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <UrunlerBolumu />
 
       <section id="guvenlik" className="mx-auto max-w-6xl px-6 py-24">
         <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-indigo-600/20 to-white/5 p-10 text-center">
