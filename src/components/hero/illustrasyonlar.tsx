@@ -1,15 +1,15 @@
 /**
  * Hero carousel illüstrasyonları.
  *
- * Fotoğraf kullanılmaz: sade çizgi SVG'ler sayfanın mevcut koyu zemin +
- * indigo vurgu diline uyar, ek istek yapmaz ve her ekranda net kalır.
- * Renkler `currentColor` ve indigo tonlarıyla verilir; her illüstrasyon
+ * Fotoğraf kullanılmaz: sade çizgi SVG'ler sayfanın açık zemin +
+ * mor vurgu diline uyar, ek istek yapmaz ve her ekranda net kalır.
+ * Renkler koyu lacivert ve mor tonlarıyla verilir; her illüstrasyon
  * kendi kapsayıcısını doldurur.
  */
 
-const CIZGI = "stroke-white/40";
-const VURGU = "stroke-indigo-400";
-const DOLGU = "fill-white/[0.04]";
+const CIZGI = "stroke-[#101a3d]/45";
+const VURGU = "stroke-indigo-600";
+const DOLGU = "fill-white";
 
 /** Tüm illüstrasyonların ortak sarmalayıcısı. */
 function Cerceve({ children }: { children: React.ReactNode }) {
@@ -47,7 +47,7 @@ function QrIsareti({
         width={b}
         height={b}
         rx={k * 0.8}
-        className={`${VURGU} fill-indigo-500/15`}
+        className={`${VURGU} fill-indigo-100`}
       />
       <rect x={k} y={k} width={k * 1.6} height={k * 1.6} className={VURGU} />
       <rect
@@ -110,7 +110,7 @@ export function AraclarIllustrasyonu() {
       />
       <path d="M40 176h160" className={CIZGI} />
       {/* Ön cam */}
-      <path d="M74 96h92l14 44H60z" className={`${CIZGI} fill-white/[0.06]`} />
+      <path d="M74 96h92l14 44H60z" className={`${CIZGI} fill-white`} />
       <path d="M120 96v44" className={CIZGI} />
       {/* Farlar ve tekerlekler */}
       <path d="M52 152h18M170 152h18" className={CIZGI} />
@@ -123,7 +123,7 @@ export function AraclarIllustrasyonu() {
       {/* Güvenli bildirim balonu */}
       <path
         d="M232 44h56a12 12 0 0 1 12 12v36a12 12 0 0 1-12 12h-30l-14 14v-14h-12a12 12 0 0 1-12-12V56a12 12 0 0 1 12-12z"
-        className={`${VURGU} fill-indigo-500/10`}
+        className={`${VURGU} fill-indigo-50`}
       />
       <path d="M248 68h24M248 82h16" className={`${CIZGI} opacity-80`} />
     </Cerceve>
@@ -144,10 +144,10 @@ export function EvcilHayvanlarIllustrasyonu() {
         className={`${CIZGI} ${DOLGU}`}
       />
       <circle cx="94" cy="98" r="34" className={`${CIZGI} ${DOLGU}`} />
-      <circle cx="82" cy="92" r="3" className="fill-white/60 stroke-none" />
-      <circle cx="106" cy="92" r="3" className="fill-white/60 stroke-none" />
+      <circle cx="82" cy="92" r="3" className="fill-[#101a3d]/70 stroke-none" />
+      <circle cx="106" cy="92" r="3" className="fill-[#101a3d]/70 stroke-none" />
       <ellipse cx="94" cy="116" rx="17" ry="12" className={CIZGI} />
-      <ellipse cx="94" cy="110" rx="5" ry="4" className="fill-white/60 stroke-none" />
+      <ellipse cx="94" cy="110" rx="5" ry="4" className="fill-[#101a3d]/70 stroke-none" />
       <path d="M94 116v6M94 122c-4 5-9 5-12 1M94 122c4 5 9 5 12 1" className={CIZGI} />
       {/* Tasma + künye */}
       <path d="M68 146h52" className={VURGU} />
@@ -158,13 +158,13 @@ export function EvcilHayvanlarIllustrasyonu() {
       <path d="M204 78l-6-28 26 14" className={`${CIZGI} ${DOLGU}`} />
       <path d="M248 78l6-28-26 14" className={`${CIZGI} ${DOLGU}`} />
       <circle cx="226" cy="100" r="32" className={`${CIZGI} ${DOLGU}`} />
-      <circle cx="214" cy="94" r="3" className="fill-white/60 stroke-none" />
-      <circle cx="238" cy="94" r="3" className="fill-white/60 stroke-none" />
-      <path d="M226 110l-6 6h12z" className="fill-white/60 stroke-none" />
+      <circle cx="214" cy="94" r="3" className="fill-[#101a3d]/70 stroke-none" />
+      <circle cx="238" cy="94" r="3" className="fill-[#101a3d]/70 stroke-none" />
+      <path d="M226 110l-6 6h12z" className="fill-[#101a3d]/70 stroke-none" />
       <path d="M226 116v5M226 121c-4 5-9 5-11 1M226 121c4 5 9 5 11 1" className={CIZGI} />
       <path
         d="M196 108h-18M196 118h-16M256 108h18M256 118h16"
-        className="stroke-white/25"
+        className="stroke-[#101a3d]/25"
       />
       <path d="M202 144h48" className={VURGU} />
       <path d="M226 144v8" className={VURGU} />
@@ -186,7 +186,7 @@ export function GuvenliIletisimIllustrasyonu() {
         width="80"
         height="112"
         rx="10"
-        className="stroke-white/15 fill-white/[0.03]"
+        className="stroke-slate-200 fill-white"
       />
       <QrIsareti x={72} y={88} boyut={48} />
       {/* Tarama çerçevesi */}
@@ -199,19 +199,19 @@ export function GuvenliIletisimIllustrasyonu() {
       {/* Mesaj balonu */}
       <path
         d="M186 60h86a14 14 0 0 1 14 14v50a14 14 0 0 1-14 14h-52l-20 18v-18h-14a14 14 0 0 1-14-14V74a14 14 0 0 1 14-14z"
-        className={`${VURGU} fill-indigo-500/10`}
+        className={`${VURGU} fill-indigo-50`}
       />
       <path d="M204 88h50M204 106h34" className={`${CIZGI} opacity-80`} />
 
       {/* Gizlenen numara: kalkan */}
       <path
         d="M236 168l32 12v24c0 18-13 30-32 36-19-6-32-18-32-36v-24z"
-        className={`${CIZGI} fill-white/[0.04]`}
+        className={`${CIZGI} fill-white`}
       />
       <path d="M222 202h28" className={VURGU} />
-      <circle cx="230" cy="192" r="3" className="fill-white/40 stroke-none" />
-      <circle cx="242" cy="192" r="3" className="fill-white/40 stroke-none" />
-      <circle cx="254" cy="192" r="3" className="fill-white/40 stroke-none" />
+      <circle cx="230" cy="192" r="3" className="fill-[#101a3d]/60 stroke-none" />
+      <circle cx="242" cy="192" r="3" className="fill-[#101a3d]/60 stroke-none" />
+      <circle cx="254" cy="192" r="3" className="fill-[#101a3d]/60 stroke-none" />
     </Cerceve>
   );
 }

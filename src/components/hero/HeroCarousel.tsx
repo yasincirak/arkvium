@@ -102,8 +102,8 @@ export default function HeroCarousel() {
     : "transition-opacity duration-700";
 
   return (
-    <section className="relative overflow-hidden px-6 py-20 sm:py-24">
-      <div className="absolute left-1/2 top-0 h-96 w-96 -translate-x-1/2 rounded-full bg-indigo-600/20 blur-3xl" />
+    <section className="relative overflow-hidden px-6 py-12 sm:py-20">
+      <div className="absolute left-1/2 top-0 h-96 w-96 -translate-x-1/2 rounded-full bg-indigo-200/40 blur-3xl" />
 
       <div
         role="region"
@@ -115,7 +115,7 @@ export default function HeroCarousel() {
         onMouseLeave={() => setDuraklatildi(false)}
         onFocus={() => setDuraklatildi(true)}
         onBlur={() => setDuraklatildi(false)}
-        className="relative mx-auto max-w-6xl rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
+        className="relative mx-auto max-w-6xl rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60"
       >
         <div className="relative">
           {SLAYTLAR.map((slayt, sira) => {
@@ -136,10 +136,10 @@ export default function HeroCarousel() {
                   acikMi
                     ? "relative opacity-100"
                     : "pointer-events-none absolute inset-0 opacity-0"
-                } ${gecis} grid items-center gap-10 md:grid-cols-2`}
+                } ${gecis} grid items-center gap-8 md:grid-cols-2 md:gap-10`}
               >
                 <div className="text-center md:text-left">
-                  <div className="inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/60">
+                  <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600">
                     {slayt.baslik}
                   </div>
 
@@ -147,17 +147,17 @@ export default function HeroCarousel() {
                     {slayt.aciklama}
                   </Baslik>
 
-                  <p className="mt-6 max-w-xl text-lg text-white/60 md:mx-0">
+                  <p className="mt-6 max-w-xl text-lg text-slate-600 md:mx-0">
                     ARKVIUM, eşyalarına QR kodlu dijital kimlik kazandırır.
                     Bulan kişi QR kodu okutur ve kişisel bilgilerin korunurken
                     sana güvenli şekilde ulaşır.
                   </p>
 
-                  <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row md:justify-start">
+                  <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row md:justify-start">
                     <a
                       href="#urunler"
                       tabIndex={acikMi ? undefined : -1}
-                      className="rounded-xl bg-indigo-500 px-8 py-4 font-semibold hover:bg-indigo-600"
+                      className="rounded-xl bg-[#101a3d] px-8 py-4 font-semibold text-white transition hover:bg-[#1b2a5c]"
                     >
                       Ürünleri İncele
                     </a>
@@ -165,14 +165,14 @@ export default function HeroCarousel() {
                     <a
                       href="/account/tags/activate"
                       tabIndex={acikMi ? undefined : -1}
-                      className="rounded-xl border border-white/15 bg-white/5 px-8 py-4 font-semibold hover:bg-white/10"
+                      className="rounded-xl border border-indigo-200 bg-white px-8 py-4 font-semibold text-indigo-700 transition hover:bg-indigo-50"
                     >
                       Etiketini Etkinleştir
                     </a>
                   </div>
                 </div>
 
-                <div className="mx-auto w-full max-w-md rounded-3xl border border-white/10 bg-gradient-to-br from-indigo-600/15 to-white/[0.03] p-6">
+                <div className="mx-auto w-full max-w-md rounded-3xl border border-[#e5e0ff] bg-gradient-to-br from-[#f6f4ff] to-white p-6">
                   <div className="aspect-[4/3]">
                     <Illustrasyon />
                   </div>
@@ -182,12 +182,12 @@ export default function HeroCarousel() {
           })}
         </div>
 
-        <div className="mt-10 flex items-center justify-center gap-4">
+        <div className="mt-8 flex items-center justify-center gap-4">
           <button
             type="button"
             onClick={() => git(-1)}
             aria-label="Önceki slayt"
-            className="rounded-full border border-white/10 bg-white/5 p-3 text-white/70 transition hover:bg-white/10 hover:text-white"
+            className="rounded-full border border-slate-200 bg-white p-3 text-slate-500 transition hover:bg-slate-50 hover:text-[#101a3d]"
           >
             <svg
               viewBox="0 0 24 24"
@@ -215,8 +215,8 @@ export default function HeroCarousel() {
                 aria-current={sira === etkin}
                 className={`h-2.5 rounded-full transition-all ${
                   sira === etkin
-                    ? "w-8 bg-indigo-400"
-                    : "w-2.5 bg-white/25 hover:bg-white/50"
+                    ? "w-8 bg-indigo-600"
+                    : "w-2.5 bg-slate-300 hover:bg-slate-400"
                 }`}
               />
             ))}
@@ -226,7 +226,7 @@ export default function HeroCarousel() {
             type="button"
             onClick={() => git(1)}
             aria-label="Sonraki slayt"
-            className="rounded-full border border-white/10 bg-white/5 p-3 text-white/70 transition hover:bg-white/10 hover:text-white"
+            className="rounded-full border border-slate-200 bg-white p-3 text-slate-500 transition hover:bg-slate-50 hover:text-[#101a3d]"
           >
             <svg
               viewBox="0 0 24 24"
