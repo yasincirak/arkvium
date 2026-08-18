@@ -81,33 +81,62 @@ export default function Home() {
 
       <section id="nasil" className="border-y border-slate-200 bg-slate-50">
         <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
-          <h2 className="text-center text-3xl font-bold">Üç adımda çalışır</h2>
+          <h2 className="text-center text-3xl font-bold">
+            Fiziksel ARKVIUM ürününü dört adımda kullan
+          </h2>
 
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-white p-8">
+          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-7">
               <div className="text-4xl font-bold text-indigo-600">01</div>
-              <h3 className="mt-4 text-xl font-semibold">Eşyanı kaydet</h3>
+              <h3 className="mt-4 text-xl font-semibold">Ürününü seç</h3>
               <p className="mt-3 text-slate-600">
-                Çanta, anahtar, valiz, laptop veya başka bir eşyanı sisteme ekle.
+                İhtiyacına uygun QR sticker, anahtarlık, künye veya valiz
+                etiketini seç.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-8">
+            <div className="rounded-2xl border border-slate-200 bg-white p-7">
               <div className="text-4xl font-bold text-indigo-600">02</div>
-              <h3 className="mt-4 text-xl font-semibold">QR etiketi yapıştır</h3>
+              <h3 className="mt-4 text-xl font-semibold">
+                WhatsApp&apos;tan sipariş ver
+              </h3>
               <p className="mt-3 text-slate-600">
-                Oluşan QR kodu etikete dönüştürüp eşyanın üzerine yapıştır.
+                Hazır sipariş mesajını gönder; ödeme ve teslimat bilgilerini
+                WhatsApp üzerinden tamamla.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-8">
+            <div className="rounded-2xl border border-slate-200 bg-white p-7">
               <div className="text-4xl font-bold text-indigo-600">03</div>
-              <h3 className="mt-4 text-xl font-semibold">Bulan kişi ulaşsın</h3>
+              <h3 className="mt-4 text-xl font-semibold">
+                Etiketini etkinleştir
+              </h3>
               <p className="mt-3 text-slate-600">
-                QR okutulduğunda güvenli iletişim sayfası açılır.
+                Ürün eline ulaştığında ARKVIUM hesabına giriş yap ve QR etiketini
+                hesabına bağla.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-7">
+              <div className="text-4xl font-bold text-indigo-600">04</div>
+              <h3 className="mt-4 text-xl font-semibold">Güvenle mesaj al</h3>
+              <p className="mt-3 text-slate-600">
+                QR kodunu bulan kişi okutsun ve kişisel bilgilerin görünmeden
+                sana mesaj göndersin.
               </p>
             </div>
           </div>
+
+          <p className="mt-8 text-center text-slate-600">
+            Fiziksel ürün istemiyor musun?{" "}
+            <a
+              href="/register"
+              className="font-semibold text-indigo-600 underline-offset-4 transition hover:text-indigo-700 hover:underline"
+            >
+              Ücretsiz hesap oluştur
+            </a>
+            arak dijital QR kodunu kendin oluşturabilirsin.
+          </p>
         </div>
       </section>
 
