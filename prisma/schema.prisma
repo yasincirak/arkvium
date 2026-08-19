@@ -38,6 +38,10 @@ model User {
   /// Bu kullanıcının başlattığı ve kendisine gönderilen sahiplik devirleri.
   sentTransfers     OwnershipTransfer[] @relation("TransferFromUser")
   receivedTransfers OwnershipTransfer[] @relation("TransferToUser")
+
+  /// Üye olarak verilen siparişler. Misafir siparişler hiçbir kullanıcıya
+  /// bağlı değildir (bkz. Order.userId).
+  orders Order[]
 }
 
 /// Şifre sıfırlama tokenları.
@@ -135,6 +139,10 @@ model Tag {
   itemRecord   ItemRecord? @relation(fields: [itemRecordId], references: [id], onDelete: SetNull)
 
   events TagEvent[]
+
+  /// Bu etiket bir siparişe ayrıldıysa rezervasyon kaydı. Rezervasyon
+  /// SAHİPLİK DEĞİLDİR: status "unused" kalır ve userId yazılmaz.
+  orderTag OrderTag?
 
   @@index([status])
   @@index([userId])
@@ -249,4 +257,273 @@ model RateLimitEntry {
   updatedAt    DateTime  @updatedAt
 
   @@index([windowEnd])
+}
+/// Sipariş durumu.
+///
+/// `stok_bekliyor` gibi bir ara durum YOKTUR: QR etiketleri ödeme
+/// başlatılmadan önce rezerve edildiği için, ödeme alındıktan sonra stok
+/// tükenmesi mümkün değildir. Stok yetmiyorsa sipariş hiç oluşmaz.
+enum OrderStatus {
+  pending
+  paid
+  preparing
+  shipped
+  cancelled
+  failed
+}
+
+/// Tek bir ödeme denemesinin durumu. Sipariş durumundan ayrıdır:
+/// bir siparişte başarısız denemelerin ardından başarılı bir deneme olabilir.
+enum PaymentStatus {
+  pending
+  succeeded
+  failed
+  cancelled
+}
+
+/// Müşteri siparişi.
+///
+/// MİSAFİR SİPARİŞ desteklenir: sipariş bir kullanıcı hesabına bağlı olmak
+/// zorunda değildir. QR aktivasyonundaki kayıt/giriş zorunluluğu ayrıdır ve
+/// bu modelden etkilenmez.
+///
+/// Sipariş SİLİNMEZ; iptal `cancelled` durumuyla yapılır. Ödeme ve denetim
+/// kayıtları bu yüzden Cascade ile bağlanmaz.
+model Order {
+  id String @id @default(cuid())
+
+  /// Müşteriye ve yöneticiye gösterilen kısa numara.
+  orderNumber String @unique
+
+  /// Sipariş takip adresi için kriptografik token. Tahmin edilemez ve
+  /// veritabanı ID'si içermez (Tag.publicToken ile aynı kalıp).
+  publicToken String @unique
+
+  /// Üye sipariş verdiyse dolar; misafir siparişte null kalır.
+  /// Hesap silinirse sipariş kaydı korunur, yalnızca bağ kopar.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  /// Sipariş anındaki iletişim ve teslimat bilgileri (anlık kopya).
+  /// Yalnızca kargo ve sipariş bildirimi için gereken alanlar tutulur;
+  /// kimlik numarası, doğum tarihi ve kart verisi SAKLANMAZ.
+  fullName    String
+  email       String
+  phone       String
+  addressLine String
+  district    String
+  city        String
+  postalCode  String?
+
+  /// Tutarlar kuruş TAMSAYISIDIR; kayan noktalı para hesabı yapılmaz.
+  /// Hepsi sunucuda src/lib/siparis.ts kaynağından hesaplanır; istemciden
+  /// gelen hiçbir tutar kabul edilmez.
+  ///
+  /// Negatif değer ve toplam tutarlılığı veritabanı CHECK kısıtlarıyla
+  /// korunur; Prisma şema dili CHECK ifade edemediği için bu kısıtlar
+  /// migration SQL'ine elle eklenir.
+  subtotalKurus Int
+  shippingKurus Int
+  totalKurus    Int
+  currency      String @default("TRY")
+
+  status OrderStatus @default(pending)
+
+  paidAt      DateTime?
+  shippedAt   DateTime?
+  cancelledAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items    OrderItem[]
+  payments Payment[]
+  tags     OrderTag[]
+  events   OrderEvent[]
+  consents OrderConsent[]
+
+  @@index([status])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([email])
+}
+
+/// Sipariş kalemi.
+///
+/// Ürün tablosu yoktur; ad, seçenek, birim fiyat ve QR adedi sipariş anında
+/// src/lib/siparis.ts kaynağından kopyalanır. Ürün tanımı sonradan değişse
+/// veya listeden kalksa bile geçmiş sipariş bozulmaz.
+model OrderItem {
+  id String @id @default(cuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productKod String
+  productAdi String
+
+  /// Ürün seçeneği. Mevcut beş üründe seçenek yoktur, bugün null kalır.
+  secenek String?
+
+  quantity Int
+
+  /// Bir adet üründe kaç benzersiz QR etiketi bulunduğu (anlık kopya).
+  /// Rezerve edilecek etiket sayısı: quantity * qrAdedi.
+  qrAdedi Int
+
+  unitPriceKurus Int
+  lineTotalKurus Int
+
+  createdAt DateTime @default(now())
+
+  orderTags OrderTag[]
+
+  @@index([orderId])
+}
+
+/// Ödeme denemesi.
+///
+/// Kart bilgisi ARKVIUM sunucusuna hiç gelmez ve hiçbir alanda tutulmaz.
+/// Mali kayıt olduğu için sipariş silinerek yok edilemez (onDelete: Restrict).
+model Payment {
+  id String @id @default(cuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  provider String
+
+  /// IDEMPOTENCY (başlatma tarafı): ödeme başlatılırken bizim ürettiğimiz
+  /// tekil referans. Sağlayıcıya gönderilir, dönüşte eşleştirme bununla
+  /// yapılır. Unique kısıt aynı denemenin iki kez oluşmasını engeller.
+  providerConversationId String @unique
+
+  /// Sağlayıcının kendi ödeme kimliği. Başlatma anında bilinmediği için
+  /// opsiyoneldir; geldiğinde tekildir (PostgreSQL birden çok NULL'a izin verir).
+  providerRef String? @unique
+
+  status PaymentStatus @default(pending)
+
+  amountKurus Int
+  currency    String @default("TRY")
+
+  createdAt   DateTime  @default(now())
+  confirmedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  events PaymentEvent[]
+
+  @@index([orderId])
+  @@index([status])
+}
+
+/// Sağlayıcıdan gelen ödeme bildirimi kaydı.
+model PaymentEvent {
+  id String @id @default(cuid())
+
+  paymentId String?
+  payment   Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  /// IDEMPOTENCY (webhook tarafı): tekrar gelen aynı bildirimin ikinci kez
+  /// işlenmesini ENGELLEYEN tek kısıt. Değer, iyzico entegrasyonunda
+  /// DOĞRULANAN webhook alanlarının kararlı birleşiminden türetilir;
+  /// sağlayıcının bağımsız bir olay kimliği verdiği VARSAYILMAZ.
+  eventKey String @unique
+
+  /// Sağlayıcıdan gelen durum metni. Ham gövde SAKLANMAZ ve LOGLANMAZ.
+  eventType String
+
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+
+  @@index([paymentId])
+}
+
+/// Bir siparişe ayrılan QR etiketi (rezervasyon).
+///
+/// REZERVASYON SAHİPLİK DEĞİLDİR: Tag.status "unused" kalır ve Tag.userId
+/// yazılmaz. Sahiplik yalnızca aktivasyonda, aktivasyon kodu doğrulandıktan
+/// sonra kurulur (src/app/api/tags/activate/route.ts değişmez).
+///
+/// Etiketler ödeme BAŞLATILMADAN ÖNCE tek transaction içinde rezerve edilir.
+/// Rezervasyon serbest bırakılırken bu satır SİLİNİR; iz OrderEvent'te kalır.
+/// "releasedAt" gibi bir alan yoktur: işaretli satır, tagId unique kısıtı
+/// yüzünden etiketi kalıcı olarak kilitlerdi.
+model OrderTag {
+  id String @id @default(cuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  /// Etiketin hangi sipariş kalemine ait olduğu. Hazırlık ve baskı bu bağ
+  /// olmadan yapılamaz (bir siparişte birden çok ürün bulunabilir).
+  orderItemId String
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  /// AYNI QR İKİ SİPARİŞE AYRILAMAZ kuralının tek gerçek garantisi.
+  /// Uygulama mantığı değil, veritabanı kısıtı sağlar.
+  /// Rezerve bir etiket silinemez.
+  tagId String @unique
+  tag   Tag    @relation(fields: [tagId], references: [id], onDelete: Restrict)
+
+  reservedAt DateTime @default(now())
+
+  /// Rezervasyonun son geçerlilik anı (OwnershipTransfer.expiresAt kalıbı).
+  /// Süresi geçmiş rezervasyon yok sayılır ve yeni rezervasyon
+  /// transaction'ının ilk adımında silinir; ayrı zamanlanmış görev gerekmez.
+  ///
+  /// Süre değeri koda gömülmez: doğrulanmış iyzico ödeme oturumu süresinden
+  /// veya doğrulanmış sunucu ayarından üretilir.
+  reservationExpiresAt DateTime
+
+  @@index([orderId])
+  @@index([orderItemId])
+  @@index([reservationExpiresAt])
+}
+
+/// Sipariş denetim izi. TagEvent ile aynı kalıptadır.
+/// Denetim kaydı olduğu için sipariş silinerek yok edilemez.
+model OrderEvent {
+  id String @id @default(cuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  /// created | payment_started | paid | payment_failed | tags_reserved |
+  /// tags_released | preparing | shipped | cancelled
+  type String
+
+  /// Yönetici işlemlerinde dolar; otomatik işlemlerde null.
+  actorAdminEmail String?
+
+  /// Kısa açıklama. Kişisel veri, kart bilgisi veya anahtar İÇERMEZ.
+  note String?
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([createdAt])
+}
+
+/// Sipariş sırasında onaylanan hukuki metinlerin kaydı.
+///
+/// Yalnızca hangi belgenin hangi sürümünün ne zaman onaylandığı tutulur;
+/// metinlerin kendisi burada üretilmez. Hukuki kanıt olduğu için sipariş
+/// silinerek yok edilemez.
+model OrderConsent {
+  id String @id @default(cuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  /// mesafeli_satis | on_bilgilendirme | kvkk_aydinlatma | iade_kosullari
+  belge String
+
+  /// Onaylanan metnin sürümü.
+  surum String
+
+  onaylandiAt DateTime @default(now())
+
+  @@unique([orderId, belge])
+  @@index([orderId])
 }
