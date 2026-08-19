@@ -1,14 +1,25 @@
 import { randomBytes } from "crypto";
 import { prisma } from "./prisma";
 import { sepetHesapla, type SepetGirdisi } from "./sepet";
+import {
+  kalemIcinEtiketAyir,
+  REZERVASYON_CAKISMASI_MESAJI,
+  StokHatasi,
+  stoktakiEtiketSayisi,
+  STOK_YETERSIZ_MESAJI,
+  suresiDolanRezervasyonlariTemizle,
+} from "./qr-rezervasyon";
 import { publicTokenUret } from "./tags";
 
 /**
  * Sipariş oluşturma servisi.
  *
- * Bu katman ÖDEME YAPMAZ ve QR ETİKETİ AYIRMAZ: yalnızca `pending` durumda
- * sipariş kaydı üretir. QR rezervasyonu (`OrderTag`) ve ödeme (`Payment`)
- * sonraki aşamalara aittir; bu dosya `Tag` kayıtlarına hiç dokunmaz.
+ * Bu katman ÖDEME YAPMAZ: yalnızca `pending` durumda sipariş kaydı üretir
+ * ve gereken QR etiketlerini ödeme başlatılmadan ÖNCE rezerve eder.
+ * `Payment` kaydı sonraki aşamaya aittir.
+ *
+ * Rezervasyon `Tag` kayıtlarını değiştirmez (bkz. qr-rezervasyon.ts):
+ * etiketler `unused` ve sahipsiz kalır, sahiplik yalnızca aktivasyonda kurulur.
  *
  * GÜVENLİK:
  * - İstemciden yalnızca ürün kodu, adet ve teslimat bilgisi kabul edilir.
@@ -34,6 +45,13 @@ export type SiparisOlusturGirdisi = {
   teslimat: TeslimatBilgisi;
   /** Oturum açmış kullanıcı varsa kimliği; misafir siparişte null. */
   userId?: string | null;
+  /**
+   * Rezervasyonun son geçerlilik anı.
+   *
+   * Süre değeri koda gömülmez: doğrulanmış ödeme oturumu süresinden veya
+   * doğrulanmış sunucu ayarından üretilip buraya verilir.
+   */
+  rezervasyonSonGecerlilik: Date;
 };
 
 export type OlusturulanSiparis = {
@@ -44,7 +62,7 @@ export type OlusturulanSiparis = {
   shippingKurus: number;
   totalKurus: number;
   kalemSayisi: number;
-  /** Sonraki aşamada rezerve edilecek toplam etiket sayısı. */
+  /** Bu sipariş için rezerve edilen toplam etiket sayısı. */
   toplamQrAdedi: number;
 };
 
@@ -127,11 +145,14 @@ function siparisNumarasiUret(): string {
 }
 
 /**
- * Siparişi oluşturur.
+ * Siparişi oluşturur ve gereken QR etiketlerini rezerve eder.
  *
- * `Order`, `OrderItem` satırları ve `OrderEvent(type: "created")` tek bir
- * iç içe yazma ile üretilir; Prisma bunu tek transaction'da çalıştırır.
- * Doğrulama hatasında hiçbir kayıt yazılmaz, kısmi sipariş kalmaz.
+ * Tamamı tek `Serializable` transaction içindedir (ownership-transfer.ts ile
+ * aynı kalıp): süresi dolmuş rezervasyonların temizliği, stok kontrolü,
+ * `Order` + `OrderItem` yazımı, etiket ayırma ve olay kayıtları ya hep
+ * birlikte gerçekleşir ya da hiçbiri kalmaz.
+ *
+ * Stok yetersizse sipariş HİÇ oluşmaz; ön sipariş alınmaz.
  */
 export async function siparisOlustur(
   girdi: SiparisOlusturGirdisi
@@ -140,6 +161,11 @@ export async function siparisOlustur(
   const toplam = sepetHesapla(girdi?.sepet);
   const teslimat = teslimatDogrula(girdi?.teslimat);
   const userId = girdi?.userId ?? null;
+  const sonGecerlilik = girdi?.rezervasyonSonGecerlilik;
+
+  if (!(sonGecerlilik instanceof Date) || Number.isNaN(sonGecerlilik.getTime())) {
+    throw new Error("Rezervasyon süresi belirtilmedi.");
+  }
 
   const toplamQrAdedi = toplam.kalemler.reduce(
     (say, kalem) => say + kalem.adet * kalem.qrAdedi,
@@ -148,38 +174,74 @@ export async function siparisOlustur(
 
   for (let deneme = 1; deneme <= EN_FAZLA_DENEME; deneme += 1) {
     try {
-      const siparis = await prisma.order.create({
-        data: {
-          orderNumber: siparisNumarasiUret(),
-          publicToken: publicTokenUret(),
-          userId,
-          fullName: teslimat.fullName,
-          email: teslimat.email,
-          phone: teslimat.phone,
-          addressLine: teslimat.addressLine,
-          district: teslimat.district,
-          city: teslimat.city,
-          postalCode: teslimat.postalCode ?? null,
-          subtotalKurus: toplam.subtotalKurus,
-          shippingKurus: toplam.shippingKurus,
-          totalKurus: toplam.totalKurus,
-          status: "pending",
-          items: {
-            create: toplam.kalemler.map((kalem) => ({
-              productKod: kalem.kod,
-              productAdi: kalem.ad,
-              quantity: kalem.adet,
-              qrAdedi: kalem.qrAdedi,
-              unitPriceKurus: kalem.unitPriceKurus,
-              lineTotalKurus: kalem.lineTotalKurus,
-            })),
-          },
-          events: {
-            create: { type: "created" },
-          },
+      const siparis = await prisma.$transaction(
+        async (islem) => {
+          // 1) Süresi dolmuş rezervasyonlar stoğa döner.
+          await suresiDolanRezervasyonlariTemizle(islem);
+
+          // 2) Stok kontrolü: yetmiyorsa hiçbir kayıt yazılmadan durulur.
+          const stok = await stoktakiEtiketSayisi(islem);
+
+          if (stok < toplamQrAdedi) {
+            throw new StokHatasi(STOK_YETERSIZ_MESAJI);
+          }
+
+          // 3) Sipariş başlığı.
+          const olusan = await islem.order.create({
+            data: {
+              orderNumber: siparisNumarasiUret(),
+              publicToken: publicTokenUret(),
+              userId,
+              fullName: teslimat.fullName,
+              email: teslimat.email,
+              phone: teslimat.phone,
+              addressLine: teslimat.addressLine,
+              district: teslimat.district,
+              city: teslimat.city,
+              postalCode: teslimat.postalCode ?? null,
+              subtotalKurus: toplam.subtotalKurus,
+              shippingKurus: toplam.shippingKurus,
+              totalKurus: toplam.totalKurus,
+              status: "pending",
+            },
+            select: { id: true, orderNumber: true, publicToken: true },
+          });
+
+          // 4) Kalemler ve her kalemin etiketleri.
+          for (const kalem of toplam.kalemler) {
+            const satir = await islem.orderItem.create({
+              data: {
+                orderId: olusan.id,
+                productKod: kalem.kod,
+                productAdi: kalem.ad,
+                quantity: kalem.adet,
+                qrAdedi: kalem.qrAdedi,
+                unitPriceKurus: kalem.unitPriceKurus,
+                lineTotalKurus: kalem.lineTotalKurus,
+              },
+              select: { id: true },
+            });
+
+            await kalemIcinEtiketAyir(islem, {
+              orderId: olusan.id,
+              orderItemId: satir.id,
+              adet: kalem.adet * kalem.qrAdedi,
+              sonGecerlilik,
+            });
+          }
+
+          // 5) Denetim izi.
+          await islem.orderEvent.createMany({
+            data: [
+              { orderId: olusan.id, type: "created" },
+              { orderId: olusan.id, type: "tags_reserved" },
+            ],
+          });
+
+          return olusan;
         },
-        select: { id: true, orderNumber: true, publicToken: true },
-      });
+        { isolationLevel: "Serializable" }
+      );
 
       return {
         id: siparis.id,
@@ -192,12 +254,35 @@ export async function siparisOlustur(
         toplamQrAdedi,
       };
     } catch (hata) {
-      // Sipariş numarası çakışması dışındaki hatalar yükseltilir.
-      const kod = (hata as { code?: string })?.code;
-
-      if (kod !== "P2002" || deneme === EN_FAZLA_DENEME) {
+      if (hata instanceof StokHatasi) {
         throw hata;
       }
+
+      const kod = (hata as { code?: string })?.code;
+      const hedef = String(
+        (hata as { meta?: { target?: unknown } })?.meta?.target ?? ""
+      );
+
+      // Sipariş numarası çakışması yeniden denenebilir.
+      if (kod === "P2002" && hedef.includes("orderNumber")) {
+        if (deneme === EN_FAZLA_DENEME) {
+          throw hata;
+        }
+
+        continue;
+      }
+
+      // Aynı etiketi iki siparişin ayırmaya çalışması (unique kısıt) veya
+      // Serializable seviyesinde yarışın kaybedilmesi. Veritabanı ayrıntısı
+      // kullanıcıya gösterilmez.
+      if (
+        (kod === "P2002" && hedef.includes("tagId")) ||
+        kod === "P2034"
+      ) {
+        throw new StokHatasi(REZERVASYON_CAKISMASI_MESAJI);
+      }
+
+      throw hata;
     }
   }
 

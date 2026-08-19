@@ -29,6 +29,9 @@ const { SIPARIS_URUNLERI, KARGO_UCRETI_KURUS } = await import(
   "../../src/lib/siparis.ts"
 );
 const { etiketUret } = await import("../../src/lib/tags.ts");
+const { rezervasyonuSerbestBirak } = await import(
+  "../../src/lib/qr-rezervasyon.ts"
+);
 
 const db: Client = await testVeritabaniIstemcisi();
 
@@ -37,8 +40,15 @@ after(async () => {
   await db?.end();
 });
 
+/** Testlerde kullanılan rezervasyon son geçerlilik anı (parametreli yaklaşım). */
+const SON_GECERLILIK = new Date(Date.now() + 15 * 60 * 1000);
+
+/** Varsayılan stok: çoğu test için fazlasıyla yeterli. */
+const VARSAYILAN_STOK = 20;
+
 beforeEach(async () => {
   await veritabaniniTemizle(db);
+  await etiketStoguOlustur(VARSAYILAN_STOK);
 });
 
 const STICKER = SIPARIS_URUNLERI.find((u) => u.kod === "sticker-seti")!;
@@ -61,6 +71,26 @@ async function kullaniciOlustur(eposta: string) {
   });
 }
 
+/** Rezervasyon süresini her çağrıda tekrarlamamak için ince sarmalayıcı. */
+async function siparisVer(
+  girdi: Omit<
+    Parameters<typeof siparisOlustur>[0],
+    "rezervasyonSonGecerlilik"
+  > & { rezervasyonSonGecerlilik?: Date }
+) {
+  return siparisOlustur({
+    rezervasyonSonGecerlilik: SON_GECERLILIK,
+    ...girdi,
+  });
+}
+
+/** Stoğa belirtilen sayıda kullanılmamış etiket ekler. */
+async function etiketStoguOlustur(adet: number) {
+  for (let i = 0; i < adet; i += 1) {
+    await etiketOlustur();
+  }
+}
+
 async function etiketOlustur() {
   const uretilen = etiketUret();
 
@@ -76,7 +106,7 @@ async function etiketOlustur() {
 
 describe("sipariş oluşturma", () => {
   test("misafir sipariş oluşur ve kullanıcıya bağlanmaz", async () => {
-    const sonuc = await siparisOlustur({
+    const sonuc = await siparisVer({
       sepet: [{ kod: STICKER.kod, adet: 1 }],
       teslimat: TESLIMAT,
     });
@@ -102,7 +132,7 @@ describe("sipariş oluşturma", () => {
   test("üye siparişi kullanıcıya bağlanır", async () => {
     const kullanici = await kullaniciOlustur("uye@test.invalid");
 
-    const sonuc = await siparisOlustur({
+    const sonuc = await siparisVer({
       sepet: [{ kod: ANAHTARLIK.kod, adet: 2 }],
       teslimat: TESLIMAT,
       userId: kullanici.id,
@@ -117,12 +147,12 @@ describe("sipariş oluşturma", () => {
   });
 
   test("sipariş numarası ve public token benzersizdir", async () => {
-    const birinci = await siparisOlustur({
+    const birinci = await siparisVer({
       sepet: [{ kod: STICKER.kod, adet: 1 }],
       teslimat: TESLIMAT,
     });
 
-    const ikinci = await siparisOlustur({
+    const ikinci = await siparisVer({
       sepet: [{ kod: STICKER.kod, adet: 1 }],
       teslimat: TESLIMAT,
     });
@@ -132,7 +162,7 @@ describe("sipariş oluşturma", () => {
   });
 
   test("tutarlar sunucudaki ürün kaynağından hesaplanır", async () => {
-    const sonuc = await siparisOlustur({
+    const sonuc = await siparisVer({
       sepet: [
         { kod: STICKER.kod, adet: 2 },
         { kod: ANAHTARLIK.kod, adet: 1 },
@@ -159,7 +189,7 @@ describe("sipariş oluşturma", () => {
   });
 
   test("istemciden gelen sahte fiyat yok sayılır", async () => {
-    const sonuc = await siparisOlustur({
+    const sonuc = await siparisVer({
       sepet: [
         {
           kod: STICKER.kod,
@@ -181,7 +211,7 @@ describe("sipariş oluşturma", () => {
   });
 
   test("kalem ve sipariş toplamları CHECK kısıtlarıyla tutarlıdır", async () => {
-    const sonuc = await siparisOlustur({
+    const sonuc = await siparisVer({
       sepet: [{ kod: ANAHTARLIK.kod, adet: 3 }],
       teslimat: TESLIMAT,
     });
@@ -217,7 +247,7 @@ describe("sipariş oluşturma", () => {
   });
 
   test("qrAdedi ürün tanımından kopyalanır", async () => {
-    const sonuc = await siparisOlustur({
+    const sonuc = await siparisVer({
       sepet: [
         { kod: STICKER.kod, adet: 2 },
         { kod: ANAHTARLIK.kod, adet: 1 },
@@ -241,7 +271,7 @@ describe("sipariş oluşturma", () => {
   });
 
   test("ürün adı sipariş anında kopyalanır", async () => {
-    const sonuc = await siparisOlustur({
+    const sonuc = await siparisVer({
       sepet: [{ kod: STICKER.kod, adet: 1 }],
       teslimat: TESLIMAT,
     });
@@ -255,8 +285,8 @@ describe("sipariş oluşturma", () => {
     assert.equal(kalem?.secenek, null, "bugün ürün seçeneği yok");
   });
 
-  test("her siparişte tek 'created' olayı yazılır", async () => {
-    const sonuc = await siparisOlustur({
+  test("her siparişte 'created' ve 'tags_reserved' olayları yazılır", async () => {
+    const sonuc = await siparisVer({
       sepet: [{ kod: STICKER.kod, adet: 1 }],
       teslimat: TESLIMAT,
     });
@@ -266,31 +296,286 @@ describe("sipariş oluşturma", () => {
       select: { type: true, actorAdminEmail: true },
     });
 
-    assert.equal(olaylar.length, 1);
-    assert.equal(olaylar[0].type, "created");
-    assert.equal(olaylar[0].actorAdminEmail, null);
+    assert.equal(olaylar.length, 2);
+    assert.deepEqual(
+      olaylar.map((o) => o.type).sort(),
+      ["created", "tags_reserved"]
+    );
+
+    for (const olay of olaylar) {
+      assert.equal(olay.actorAdminEmail, null, "otomatik işlemde yönetici yok");
+    }
   });
 
-  test("sipariş QR etiketi ayırmaz ve ödeme kaydı oluşturmaz", async () => {
-    const etiket = await etiketOlustur();
+  test("rezervasyon Tag kaydını değiştirmez ve ödeme oluşturmaz", async () => {
+    const oncekiEtiketler = await prisma.tag.findMany({
+      select: { id: true, status: true, userId: true, itemRecordId: true },
+      orderBy: { code: "asc" },
+    });
 
-    const sonuc = await siparisOlustur({
+    const sonuc = await siparisVer({
       sepet: [{ kod: STICKER.kod, adet: 1 }],
       teslimat: TESLIMAT,
     });
 
-    assert.equal(await prisma.orderTag.count(), 0, "rezervasyon yazılmamalı");
-    assert.equal(await prisma.payment.count(), 0, "ödeme kaydı olmamalı");
+    // Rezervasyon yapılmış olmalı (3'lü set → 3 etiket).
+    assert.equal(await prisma.orderTag.count({ where: { orderId: sonuc.id } }), 3);
 
-    const sonrakiEtiket = await prisma.tag.findUnique({
-      where: { id: etiket.id },
+    // Ama Tag kayıtları hiç değişmemeli.
+    const sonrakiEtiketler = await prisma.tag.findMany({
+      select: { id: true, status: true, userId: true, itemRecordId: true },
+      orderBy: { code: "asc" },
+    });
+
+    assert.deepEqual(
+      sonrakiEtiketler,
+      oncekiEtiketler,
+      "rezervasyon Tag kayıtlarına dokunmamalı"
+    );
+
+    assert.equal(await prisma.tagEvent.count(), 0, "TagEvent yazılmamalı");
+    assert.equal(await prisma.payment.count(), 0, "ödeme kaydı olmamalı");
+  });
+});
+
+describe("QR rezervasyonu", () => {
+  test("her kalem için adet × qrAdedi kadar etiket ayrılır", async () => {
+    const sonuc = await siparisVer({
+      sepet: [
+        { kod: STICKER.kod, adet: 2 },
+        { kod: ANAHTARLIK.kod, adet: 1 },
+      ],
+      teslimat: TESLIMAT,
+    });
+
+    // 2 * 3 + 1 * 1 = 7
+    assert.equal(sonuc.toplamQrAdedi, 7);
+    assert.equal(await prisma.orderTag.count({ where: { orderId: sonuc.id } }), 7);
+  });
+
+  test("her rezervasyon doğru sipariş kalemine bağlanır", async () => {
+    const sonuc = await siparisVer({
+      sepet: [
+        { kod: STICKER.kod, adet: 1 },
+        { kod: ANAHTARLIK.kod, adet: 2 },
+      ],
+      teslimat: TESLIMAT,
+    });
+
+    const kalemler = await prisma.orderItem.findMany({
+      where: { orderId: sonuc.id },
+      select: { id: true, productKod: true, orderTags: { select: { id: true } } },
+    });
+
+    const sticker = kalemler.find((k) => k.productKod === STICKER.kod);
+    const anahtarlik = kalemler.find((k) => k.productKod === ANAHTARLIK.kod);
+
+    assert.equal(sticker?.orderTags.length, 3, "1 set = 3 etiket");
+    assert.equal(anahtarlik?.orderTags.length, 2, "2 anahtarlık = 2 etiket");
+
+    const rezervasyonlar = await prisma.orderTag.findMany({
+      where: { orderId: sonuc.id },
+      select: { orderItemId: true, reservationExpiresAt: true },
+    });
+
+    for (const rezervasyon of rezervasyonlar) {
+      assert.ok(
+        kalemler.some((k) => k.id === rezervasyon.orderItemId),
+        "rezervasyon bu siparişin bir kalemine bağlı olmalı"
+      );
+      assert.equal(
+        rezervasyon.reservationExpiresAt.getTime(),
+        SON_GECERLILIK.getTime(),
+        "son geçerlilik parametreden gelmeli"
+      );
+    }
+  });
+
+  test("stok tam yeterliyse sipariş geçer", async () => {
+    await prisma.tag.deleteMany({});
+    await etiketStoguOlustur(3);
+
+    const sonuc = await siparisVer({
+      sepet: [{ kod: STICKER.kod, adet: 1 }],
+      teslimat: TESLIMAT,
+    });
+
+    assert.equal(await prisma.orderTag.count({ where: { orderId: sonuc.id } }), 3);
+    assert.equal(await prisma.tag.count(), 3);
+  });
+
+  test("stok bir eksikse hiçbir kayıt kalmaz", async () => {
+    await prisma.tag.deleteMany({});
+    await etiketStoguOlustur(2);
+
+    await assert.rejects(
+      () =>
+        siparisVer({
+          sepet: [{ kod: STICKER.kod, adet: 1 }],
+          teslimat: TESLIMAT,
+        }),
+      /yeterli QR etiketi bulunmuyor/i
+    );
+
+    assert.equal(await prisma.order.count(), 0);
+    assert.equal(await prisma.orderItem.count(), 0);
+    assert.equal(await prisma.orderEvent.count(), 0);
+    assert.equal(await prisma.orderTag.count(), 0);
+  });
+
+  test("hata mesajı veritabanı ayrıntısı içermez", async () => {
+    await prisma.tag.deleteMany({});
+
+    await assert.rejects(
+      () =>
+        siparisVer({
+          sepet: [{ kod: ANAHTARLIK.kod, adet: 1 }],
+          teslimat: TESLIMAT,
+        }),
+      (hata: Error) => {
+        assert.doesNotMatch(
+          hata.message,
+          /prisma|sql|constraint|OrderTag|Tag\b|P20/i,
+          "kullanıcıya sistem ayrıntısı gösterilmemeli"
+        );
+
+        return true;
+      }
+    );
+  });
+
+  test("zaten rezerve edilmiş etiketler yeniden ayrılamaz", async () => {
+    await prisma.tag.deleteMany({});
+    await etiketStoguOlustur(4);
+
+    await siparisVer({
+      sepet: [{ kod: STICKER.kod, adet: 1 }],
+      teslimat: TESLIMAT,
+    });
+
+    // Geriye 1 etiket kaldı; 3 gerektiren ikinci sipariş reddedilmeli.
+    await assert.rejects(
+      () =>
+        siparisVer({
+          sepet: [{ kod: STICKER.kod, adet: 1 }],
+          teslimat: TESLIMAT,
+        }),
+      /yeterli QR etiketi bulunmuyor/i
+    );
+
+    assert.equal(await prisma.order.count(), 1, "yalnızca ilk sipariş kalmalı");
+  });
+
+  test("aynı etiket iki siparişe ayrılamaz", async () => {
+    await prisma.tag.deleteMany({});
+    await etiketStoguOlustur(1);
+
+    const sonuclar = await Promise.allSettled([
+      siparisVer({
+        sepet: [{ kod: ANAHTARLIK.kod, adet: 1 }],
+        teslimat: TESLIMAT,
+      }),
+      siparisVer({
+        sepet: [{ kod: ANAHTARLIK.kod, adet: 1 }],
+        teslimat: TESLIMAT,
+      }),
+    ]);
+
+    const basarili = sonuclar.filter((s) => s.status === "fulfilled");
+
+    assert.equal(basarili.length, 1, "yalnızca bir sipariş başarılı olmalı");
+    assert.equal(await prisma.orderTag.count(), 1, "tek rezervasyon kalmalı");
+    assert.equal(await prisma.order.count(), 1);
+
+    const tagIdler = await prisma.orderTag.findMany({ select: { tagId: true } });
+
+    assert.equal(new Set(tagIdler.map((t) => t.tagId)).size, 1);
+  });
+
+  test("süresi dolmuş rezervasyon temizlenip yeniden kullanılır", async () => {
+    await prisma.tag.deleteMany({});
+    await etiketStoguOlustur(1);
+
+    const eski = await siparisVer({
+      sepet: [{ kod: ANAHTARLIK.kod, adet: 1 }],
+      teslimat: TESLIMAT,
+      rezervasyonSonGecerlilik: new Date(Date.now() - 60 * 1000),
+    });
+
+    assert.equal(await prisma.orderTag.count({ where: { orderId: eski.id } }), 1);
+
+    // Stokta başka etiket yok; yalnızca süresi dolan serbest kalırsa geçer.
+    const yeni = await siparisVer({
+      sepet: [{ kod: ANAHTARLIK.kod, adet: 1 }],
+      teslimat: TESLIMAT,
+    });
+
+    assert.equal(await prisma.orderTag.count({ where: { orderId: eski.id } }), 0);
+    assert.equal(await prisma.orderTag.count({ where: { orderId: yeni.id } }), 1);
+    assert.equal(await prisma.orderTag.count(), 1);
+  });
+
+  test("serbest bırakma rezervasyonu siler ve olay yazar", async () => {
+    const sonuc = await siparisVer({
+      sepet: [{ kod: STICKER.kod, adet: 1 }],
+      teslimat: TESLIMAT,
+    });
+
+    const silinen = await rezervasyonuSerbestBirak(sonuc.id, "ödeme başarısız");
+
+    assert.equal(silinen, 3);
+    assert.equal(await prisma.orderTag.count({ where: { orderId: sonuc.id } }), 0);
+
+    const olaylar = await prisma.orderEvent.findMany({
+      where: { orderId: sonuc.id, type: "tags_released" },
+      select: { note: true },
+    });
+
+    assert.equal(olaylar.length, 1);
+    assert.equal(olaylar[0].note, "ödeme başarısız");
+
+    // Etiketler tekrar stoğa döner.
+    const yeni = await siparisVer({
+      sepet: [{ kod: STICKER.kod, adet: 1 }],
+      teslimat: TESLIMAT,
+    });
+
+    assert.equal(await prisma.orderTag.count({ where: { orderId: yeni.id } }), 3);
+  });
+
+  test("serbest bırakma Tag kayıtlarını değiştirmez", async () => {
+    const sonuc = await siparisVer({
+      sepet: [{ kod: ANAHTARLIK.kod, adet: 1 }],
+      teslimat: TESLIMAT,
+    });
+
+    await rezervasyonuSerbestBirak(sonuc.id);
+
+    const etiketler = await prisma.tag.findMany({
       select: { status: true, userId: true, itemRecordId: true },
     });
 
-    assert.equal(sonrakiEtiket?.status, "unused", "etiket durumu değişmemeli");
-    assert.equal(sonrakiEtiket?.userId, null, "etiket sahiplenilmemeli");
-    assert.equal(sonrakiEtiket?.itemRecordId, null);
-    assert.ok(sonuc.id, "sipariş yine de oluşmuş olmalı");
+    for (const etiket of etiketler) {
+      assert.equal(etiket.status, "unused");
+      assert.equal(etiket.userId, null);
+      assert.equal(etiket.itemRecordId, null);
+    }
+
+    assert.equal(await prisma.tagEvent.count(), 0);
+  });
+
+  test("rezervasyon süresi verilmezse sipariş oluşmaz", async () => {
+    await assert.rejects(
+      () =>
+        siparisOlustur({
+          sepet: [{ kod: STICKER.kod, adet: 1 }],
+          teslimat: TESLIMAT,
+        } as never),
+      /Rezervasyon süresi/i
+    );
+
+    assert.equal(await prisma.order.count(), 0);
+    assert.equal(await prisma.orderTag.count(), 0);
   });
 });
 
@@ -304,7 +589,7 @@ describe("sipariş oluşturma — geçersiz girdi", () => {
   test("bilinmeyen ürün kodu reddedilir", async () => {
     await assert.rejects(
       () =>
-        siparisOlustur({
+        siparisVer({
           sepet: [{ kod: "olmayan-urun", adet: 1 }],
           teslimat: TESLIMAT,
         }),
@@ -317,7 +602,7 @@ describe("sipariş oluşturma — geçersiz girdi", () => {
   test("sıfır adet reddedilir", async () => {
     await assert.rejects(
       () =>
-        siparisOlustur({
+        siparisVer({
           sepet: [{ kod: STICKER.kod, adet: 0 }],
           teslimat: TESLIMAT,
         }),
@@ -330,7 +615,7 @@ describe("sipariş oluşturma — geçersiz girdi", () => {
   test("tam sayı olmayan adet reddedilir", async () => {
     await assert.rejects(
       () =>
-        siparisOlustur({
+        siparisVer({
           sepet: [{ kod: STICKER.kod, adet: 2.5 }],
           teslimat: TESLIMAT,
         }),
@@ -342,7 +627,7 @@ describe("sipariş oluşturma — geçersiz girdi", () => {
 
   test("boş sepet reddedilir", async () => {
     await assert.rejects(
-      () => siparisOlustur({ sepet: [], teslimat: TESLIMAT }),
+      () => siparisVer({ sepet: [], teslimat: TESLIMAT }),
       /boş/i
     );
 
@@ -352,7 +637,7 @@ describe("sipariş oluşturma — geçersiz girdi", () => {
   test("eksik teslimat alanı reddedilir", async () => {
     await assert.rejects(
       () =>
-        siparisOlustur({
+        siparisVer({
           sepet: [{ kod: STICKER.kod, adet: 1 }],
           teslimat: { ...TESLIMAT, city: "   " },
         }),
@@ -365,7 +650,7 @@ describe("sipariş oluşturma — geçersiz girdi", () => {
   test("geçersiz e-posta reddedilir", async () => {
     await assert.rejects(
       () =>
-        siparisOlustur({
+        siparisVer({
           sepet: [{ kod: STICKER.kod, adet: 1 }],
           teslimat: { ...TESLIMAT, email: "gecersiz-adres" },
         }),
@@ -378,7 +663,7 @@ describe("sipariş oluşturma — geçersiz girdi", () => {
   test("geçersiz telefon reddedilir", async () => {
     await assert.rejects(
       () =>
-        siparisOlustur({
+        siparisVer({
           sepet: [{ kod: STICKER.kod, adet: 1 }],
           teslimat: { ...TESLIMAT, phone: "123" },
         }),
@@ -391,7 +676,7 @@ describe("sipariş oluşturma — geçersiz girdi", () => {
   test("çok uzun adres reddedilir", async () => {
     await assert.rejects(
       () =>
-        siparisOlustur({
+        siparisVer({
           sepet: [{ kod: STICKER.kod, adet: 1 }],
           teslimat: { ...TESLIMAT, addressLine: "a".repeat(301) },
         }),
@@ -403,7 +688,7 @@ describe("sipariş oluşturma — geçersiz girdi", () => {
 
   test("var olmayan kullanıcıya sipariş yazılamaz", async () => {
     await assert.rejects(() =>
-      siparisOlustur({
+      siparisVer({
         sepet: [{ kod: STICKER.kod, adet: 1 }],
         teslimat: TESLIMAT,
         userId: randomUUID(),
