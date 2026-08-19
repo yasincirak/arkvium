@@ -52,6 +52,13 @@ export type SiparisUrunu = {
   aciklama: string;
   /** Birim fiyat, kuruş cinsinden. Sipariş toplamı bu değerden hesaplanır. */
   fiyatKurus: number;
+  /**
+   * Bir adet üründe kaç BENZERSİZ QR etiketi bulunduğu.
+   *
+   * Rezerve edilecek etiket sayısı `adet * qrAdedi` olarak sunucuda
+   * hesaplanır ve sipariş kalemine anlık kopya olarak yazılır.
+   */
+  qrAdedi: number;
   /** WhatsApp sohbetine önceden yazılan sipariş mesajı. */
   siparisMesaji: string;
 };
@@ -63,6 +70,7 @@ export const SIPARIS_URUNLERI: SiparisUrunu[] = [
     aciklama:
       "Değer verdiğiniz eşyaları ARKVIUM'un güvenli iletişim sistemine bağlayın.",
     fiyatKurus: 19900,
+    qrAdedi: 3,
     siparisMesaji:
       "Merhaba, 3'lü ARKVIUM QR Sticker Seti sipariş etmek istiyorum.",
   },
@@ -72,6 +80,7 @@ export const SIPARIS_URUNLERI: SiparisUrunu[] = [
     aciklama:
       "Aracınızın camına yapıştırın. Uygunsuz park, açık kalan far veya araçla ilgili başka bir durumda telefon numaranız görünmeden güvenli bildirim alın.",
     fiyatKurus: 24900,
+    qrAdedi: 1,
     siparisMesaji:
       "Merhaba, ARKVIUM Araç İletişim QR Sticker'ı sipariş etmek istiyorum.",
   },
@@ -81,6 +90,7 @@ export const SIPARIS_URUNLERI: SiparisUrunu[] = [
     aciklama:
       "Anahtarlarınızı ARKVIUM'un güvenli buluntu iletişim sistemine bağlayan dayanıklı metal etiket.",
     fiyatKurus: 34900,
+    qrAdedi: 1,
     siparisMesaji:
       "Merhaba, ARKVIUM Metal QR Anahtarlık sipariş etmek istiyorum.",
   },
@@ -90,6 +100,7 @@ export const SIPARIS_URUNLERI: SiparisUrunu[] = [
     aciklama:
       "Evcil dostunuzu bulan kişi, kişisel iletişim bilgileriniz açıkça gösterilmeden size mesaj gönderebilsin.",
     fiyatKurus: 44900,
+    qrAdedi: 1,
     siparisMesaji:
       "Merhaba, ARKVIUM Evcil Hayvan QR Künyesi sipariş etmek istiyorum.",
   },
@@ -99,6 +110,7 @@ export const SIPARIS_URUNLERI: SiparisUrunu[] = [
     aciklama:
       "Valiziniz kaybolduğunda bulan kişinin güvenli biçimde size ulaşmasını sağlayın.",
     fiyatKurus: 29900,
+    qrAdedi: 1,
     siparisMesaji:
       "Merhaba, ARKVIUM QR Valiz Etiketi sipariş etmek istiyorum.",
   },

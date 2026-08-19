@@ -27,6 +27,8 @@ export type SepetKalemi = {
   kod: string;
   ad: string;
   adet: number;
+  /** Ürün tanımından gelen QR adedi; sipariş kalemine kopyalanır. */
+  qrAdedi: number;
   unitPriceKurus: number;
   lineTotalKurus: number;
 };
@@ -84,6 +86,7 @@ export function sepetKalemiHesapla(girdi: SepetGirdisi): SepetKalemi {
     kod: urun.kod,
     ad: urun.ad,
     adet,
+    qrAdedi: urun.qrAdedi,
     unitPriceKurus: urun.fiyatKurus,
     lineTotalKurus,
   };
