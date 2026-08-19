@@ -30,11 +30,18 @@ export function fiyatBicimle(kurus: number): string {
 }
 
 /**
- * Tüm ürünlerde gösterilen kargo notu.
+ * Sabit kargo ücreti (kuruş).
  *
- * Kargo tutarı henüz kesinleşmedi (kargo firması ve gerçek maliyet
- * doğrulanmadı). Tutar belirlenince tek bir sunucu taraflı sabitten
- * yönetilecek ve bu not o sabitten üretilecektir.
+ * Kargo hizmeti Kargonomi üzerinden yönetilir. Tutarın TEK kaynağı burasıdır;
+ * istemciden gelen hiçbir kargo değeri kabul edilmez. Ücretsiz kargo eşiği
+ * yoktur; tutar değişince yalnızca bu satır güncellenir.
+ */
+export const KARGO_UCRETI_KURUS = 5500;
+
+/**
+ * Ürün kartlarında gösterilen kargo notu.
+ *
+ * Kesin tutar sepet ve ödeme adımında hesaplanıp gösterilir.
  */
 export const KARGO_NOTU = "Kargo ücreti ödeme adımında gösterilir.";
 
