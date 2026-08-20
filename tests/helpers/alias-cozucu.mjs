@@ -47,10 +47,25 @@ const nextTaklitUrl = pathToFileURL(
   path.join(import.meta.dirname, "next-taklit.mjs")
 ).href;
 
+/**
+ * Uzantısız çözülemeyen gerçek Next.js modülleri.
+ *
+ * `next/server` (NextResponse) Node ESM çözücüsünde yalnızca ".js" ekiyle
+ * bulunur. Modül TAKLİT EDİLMEZ; route handler'ları doğrudan test
+ * edebilmek için yalnızca yol tamamlanır.
+ */
+const NEXT_UZANTILI_KARSILIKLAR = new Map([["next/server", "next/server.js"]]);
+
 registerHooks({
   resolve(belirtec, baglam, sonraki) {
     if (NEXT_KARSILIKLARI.has(belirtec)) {
       return { url: nextTaklitUrl, shortCircuit: true };
+    }
+
+    const uzantiliKarsilik = NEXT_UZANTILI_KARSILIKLAR.get(belirtec);
+
+    if (uzantiliKarsilik) {
+      return sonraki(uzantiliKarsilik, baglam);
     }
 
     if (belirtec.startsWith("@/")) {
