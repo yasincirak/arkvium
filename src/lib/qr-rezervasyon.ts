@@ -22,6 +22,19 @@ export type IslemIstemcisi = Omit<
   "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends"
 >;
 
+/**
+ * Rezervasyon süresi (dakika).
+ *
+ * Ödeme oturumu bu süre içinde tamamlanmazsa etiketler stoğa döner.
+ * Değer kullanıcı tarafından kararlaştırıldı; tek yerden yönetilir.
+ */
+export const REZERVASYON_SURESI_DAKIKA = 15;
+
+/** Şimdiden itibaren rezervasyonun son geçerlilik anını üretir. */
+export function rezervasyonSonGecerliligi(simdi: Date = new Date()): Date {
+  return new Date(simdi.getTime() + REZERVASYON_SURESI_DAKIKA * 60 * 1000);
+}
+
 /** Rezervasyon çakışması ve stok yetersizliği için ortak hata sınıfı. */
 export class StokHatasi extends Error {
   constructor(mesaj: string) {
