@@ -222,3 +222,36 @@ Dijital Sahiplik Platformu
     `.trim(),
   };
 }
+
+/**
+ * Ödemesi tamamlanan siparişin müşteriye gönderilen onayı.
+ *
+ * Kart bilgisi, ödeme sağlayıcısı token'ı veya adres detayı İÇERMEZ:
+ * yalnızca sipariş numarası, tutar ve takip bağlantısı yer alır.
+ */
+export function siparisOnayEpostasi(
+  adSoyad: string | null,
+  siparisNumarasi: string,
+  tutarMetni: string,
+  takipAdresi: string | null
+): Omit<EpostaIcerigi, "alici"> {
+  return {
+    konu: `ARKVIUM siparişiniz alındı (${siparisNumarasi})`,
+    metin: `
+Merhaba ${adSoyad || ""},
+
+Ödemeniz alındı ve siparişiniz oluşturuldu.
+
+Sipariş numarası: ${siparisNumarasi}
+Toplam tutar: ${tutarMetni}
+
+Siparişiniz hazırlanıp kargoya verildiğinde bilgilendirileceksiniz.
+${takipAdresi ? `\nSipariş durumunuzu buradan izleyebilirsiniz:\n${takipAdresi}\n` : ""}
+Ürününüz elinize ulaştığında QR etiketini ARKVIUM hesabınızdan
+etkinleştirmeyi unutmayın.
+
+ARKVIUM
+Dijital Sahiplik Platformu
+    `.trim(),
+  };
+}

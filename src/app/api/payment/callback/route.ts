@@ -13,6 +13,8 @@ import { OdemeHatasi } from "@/lib/odeme-saglayici";
  * - Token değeri hiçbir log kaydına yazılmaz.
  * - Tekrarlanan çağrılar idempotenttir (`PaymentEvent.eventKey` unique).
  * - Sağlayıcı anahtarları ve ham yanıt hiçbir zaman yanıta yazılmaz.
+ * - İşleme bittikten SONRA kullanıcı sonuç sayfasına yönlendirilir; sayfa
+ *   yalnızca okur, hiçbir durumu değiştirmez.
  *
  * Hız sınırı uygulanmaz: bu uç sağlayıcı tarafından çağrılır ve meşru
  * bildirimlerin düşmemesi gerekir. Geçersiz token zaten doğrulamada elenir.
@@ -58,11 +60,20 @@ export async function POST(request: Request) {
 
     const sonuc = await odemeSonucunuIsle({ token });
 
+    if (sonuc.publicToken) {
+      // 303: tarayıcı POST'tan sonra sayfayı GET ile açar.
+      // Adres yalnızca siparişin kendi public token'ını taşır; ödeme
+      // sağlayıcısının token'ı adrese YAZILMAZ.
+      return NextResponse.redirect(
+        new URL(`/odeme/sonuc/${sonuc.publicToken}`, request.url),
+        { status: 303 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       durum: sonuc.durum,
       zatenIslenmis: sonuc.zatenIslenmis,
-      publicToken: sonuc.publicToken,
     });
   } catch (hata) {
     if (hata instanceof OdemeHatasi) {

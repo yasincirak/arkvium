@@ -21,6 +21,8 @@ const testVeritabani = testVeritabaniAdresi();
 
 process.env.DATABASE_URL = testVeritabani;
 process.env.DIRECT_URL = testVeritabani;
+// Bu dosyada hiçbir koşulda gerçek e-posta gönderilmez.
+process.env.EPOSTA_GONDERIMI_KAPALI = "1";
 
 const { prisma } = await import("../../src/lib/prisma.ts");
 const { siparisOlustur } = await import("../../src/lib/siparis-servisi.ts");
@@ -405,5 +407,150 @@ describe("ödeme sonucu — doğrulama", () => {
       () => odemeSonucunuIsle({ token: "   " }),
       /doğrulanamadı/i
     );
+  });
+});
+
+describe("sipariş onayı e-postası", () => {
+  /** Gönderilen içerikleri kaydeden sahte gönderici. */
+  function sahteGonderici(gonderildi = true) {
+    const gonderilenler: { alici: string; konu: string; metin: string }[] = [];
+
+    return {
+      gonderilenler,
+      fn: async (icerik: { alici: string; konu: string; metin: string }) => {
+        gonderilenler.push(icerik);
+
+        return { gonderildi };
+      },
+    };
+  }
+
+  test("ilk 'paid' geçişinde tek onay e-postası gider", async () => {
+    const { siparis, conversationId } = await odemeHazirla(1);
+    const posta = sahteGonderici();
+
+    await odemeSonucunuIsle({
+      token: "sahte-token",
+      dogrulayici: sahteDogrulayici({
+        conversationId,
+        paymentStatus: "SUCCESS",
+        paymentId: "iyz-mail-1",
+        paidPrice: BEKLENEN_TUTAR(1),
+        currency: "TRY",
+      }),
+      epostaGonderici: posta.fn as never,
+    });
+
+    assert.equal(posta.gonderilenler.length, 1);
+    assert.equal(posta.gonderilenler[0].alici, TESLIMAT.email);
+    assert.ok(posta.gonderilenler[0].konu.includes(siparis.orderNumber));
+    assert.doesNotMatch(
+      posta.gonderilenler[0].metin,
+      /kart|iyzico|signature/i,
+      "gizli veya sağlayıcı bilgisi içermemeli"
+    );
+  });
+
+  test("tekrarlanan callback ikinci e-posta göndermez", async () => {
+    const { conversationId } = await odemeHazirla(1);
+    const posta = sahteGonderici();
+
+    const dogrulayici = sahteDogrulayici({
+      conversationId,
+      paymentStatus: "SUCCESS",
+      paymentId: "iyz-mail-2",
+      paidPrice: BEKLENEN_TUTAR(1),
+      currency: "TRY",
+    });
+
+    await odemeSonucunuIsle({
+      token: "t",
+      dogrulayici,
+      epostaGonderici: posta.fn as never,
+    });
+
+    await odemeSonucunuIsle({
+      token: "t",
+      dogrulayici,
+      epostaGonderici: posta.fn as never,
+    });
+
+    assert.equal(posta.gonderilenler.length, 1, "tek e-posta gönderilmeli");
+  });
+
+  test("e-posta gönderilemezse ödeme ve rezervasyon bozulmaz", async () => {
+    const { siparis, conversationId } = await odemeHazirla(2);
+
+    const sonuc = await odemeSonucunuIsle({
+      token: "sahte-token",
+      dogrulayici: sahteDogrulayici({
+        conversationId,
+        paymentStatus: "SUCCESS",
+        paymentId: "iyz-mail-3",
+        paidPrice: BEKLENEN_TUTAR(2),
+        currency: "TRY",
+      }),
+      epostaGonderici: (async () => {
+        throw new Error("posta sunucusu erişilemedi");
+      }) as never,
+    });
+
+    assert.equal(sonuc.durum, "odendi");
+
+    const guncel = await prisma.order.findUnique({
+      where: { id: siparis.id },
+      select: { status: true, paidAt: true },
+    });
+
+    assert.equal(guncel?.status, "paid");
+    assert.ok(guncel?.paidAt, "paidAt korunmalı");
+    assert.equal(
+      await prisma.orderTag.count({ where: { orderId: siparis.id } }),
+      2,
+      "QR rezervasyonu korunmalı"
+    );
+  });
+
+  test("gönderim başarısızsa olay notuna güvenli not yazılır", async () => {
+    const { siparis, conversationId } = await odemeHazirla(1);
+    const posta = sahteGonderici(false);
+
+    await odemeSonucunuIsle({
+      token: "sahte-token",
+      dogrulayici: sahteDogrulayici({
+        conversationId,
+        paymentStatus: "SUCCESS",
+        paymentId: "iyz-mail-4",
+        paidPrice: BEKLENEN_TUTAR(1),
+        currency: "TRY",
+      }),
+      epostaGonderici: posta.fn as never,
+    });
+
+    const notlar = await prisma.orderEvent.findMany({
+      where: { orderId: siparis.id, type: "paid", note: { not: null } },
+      select: { note: true },
+    });
+
+    assert.equal(notlar.length, 1);
+    assert.match(notlar[0].note ?? "", /gönderilemedi/i);
+    assert.doesNotMatch(notlar[0].note ?? "", /token|anahtar|kart/i);
+  });
+
+  test("başarısız ödemede onay e-postası gönderilmez", async () => {
+    const { conversationId } = await odemeHazirla(1);
+    const posta = sahteGonderici();
+
+    await odemeSonucunuIsle({
+      token: "sahte-token",
+      dogrulayici: sahteDogrulayici({
+        conversationId,
+        paymentStatus: "FAILURE",
+        paymentId: "iyz-mail-5",
+      }),
+      epostaGonderici: posta.fn as never,
+    });
+
+    assert.equal(posta.gonderilenler.length, 0);
   });
 });

@@ -20,6 +20,7 @@ const {
   epostaDogrulamaEpostasi,
   taramaBildirimiEpostasi,
   devirDavetiEpostasi,
+  siparisOnayEpostasi,
 } = await import("../../src/lib/email.ts");
 
 const ONCEKI = { ...process.env };
@@ -153,6 +154,27 @@ describe("e-posta şablonları", () => {
     assert.ok(eposta.metin.includes("https://a.test/d"));
     assert.ok(eposta.metin.includes("24 saat"));
     assert.ok(!eposta.metin.includes("null"));
+  });
+
+  test("sipariş onayı numara, tutar ve takip adresini içerir", () => {
+    const eposta = siparisOnayEpostasi(
+      "Ayşe Yılmaz",
+      "ARK-2026-ABCD",
+      "404,00 TL",
+      "https://ornek.invalid/odeme/sonuc/tkn"
+    );
+
+    assert.ok(eposta.konu.includes("ARK-2026-ABCD"));
+    assert.ok(eposta.metin.includes("Ayşe Yılmaz"));
+    assert.ok(eposta.metin.includes("404,00 TL"));
+    assert.ok(eposta.metin.includes("https://ornek.invalid/odeme/sonuc/tkn"));
+  });
+
+  test("sipariş onayı kart veya ödeme sağlayıcı bilgisi içermez", () => {
+    const eposta = siparisOnayEpostasi(null, "ARK-2026-ABCD", "404,00 TL", null);
+
+    assert.doesNotMatch(eposta.metin, /kart|iyzico|token|cvv|signature/i);
+    assert.ok(!eposta.metin.includes("null"), "ad yoksa 'null' yazılmamalı");
   });
 
   test("devir daveti onaysız sahiplik geçmeyeceğini belirtir", () => {

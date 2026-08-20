@@ -11,6 +11,13 @@ import {
   type CfDogrulamaSonucu,
 } from "./odeme-saglayici";
 import { rezervasyonuSerbestBirak } from "./qr-rezervasyon";
+import {
+  epostaGonder,
+  siparisOnayEpostasi,
+  uygulamaAdresi,
+  type EpostaIcerigi,
+  type EpostaSonucu,
+} from "./email";
 
 /**
  * Ödeme başlatma servisi.
@@ -255,6 +262,8 @@ export async function odemeSonucunuIsle(girdi: {
   token: string;
   /** Testlerde gerçek sağlayıcıya çıkmamak için değiştirilebilir. */
   dogrulayici?: (token: string) => Promise<CfDogrulamaSonucu>;
+  /** Testlerde gerçek e-posta gönderilmemesi için değiştirilebilir. */
+  epostaGonderici?: (icerik: EpostaIcerigi) => Promise<EpostaSonucu>;
 }): Promise<OdemeSonucu> {
   const token = String(girdi?.token ?? "").trim();
 
@@ -276,7 +285,17 @@ export async function odemeSonucunuIsle(girdi: {
       status: true,
       amountKurus: true,
       currency: true,
-      order: { select: { id: true, status: true, publicToken: true } },
+      order: {
+        select: {
+          id: true,
+          status: true,
+          publicToken: true,
+          orderNumber: true,
+          fullName: true,
+          email: true,
+          totalKurus: true,
+        },
+      },
     },
   });
 
@@ -375,7 +394,7 @@ export async function odemeSonucunuIsle(girdi: {
 
   const simdi = new Date();
 
-  await prisma.$transaction(async (islem) => {
+  const gecisSayisi = await prisma.$transaction(async (islem) => {
     // Koşullu güncelleme: yalnızca hâlâ bekleyen kayıtlar ilerletilir.
     await islem.payment.updateMany({
       where: { id: odeme.id, status: "pending" },
@@ -386,7 +405,7 @@ export async function odemeSonucunuIsle(girdi: {
       },
     });
 
-    await islem.order.updateMany({
+    const siparisGuncelleme = await islem.order.updateMany({
       where: { id: odeme.order.id, status: "pending" },
       data: { status: "paid", paidAt: simdi },
     });
@@ -399,7 +418,25 @@ export async function odemeSonucunuIsle(girdi: {
       where: { eventKey: olayAnahtari },
       data: { processedAt: simdi },
     });
+
+    return siparisGuncelleme.count;
   });
+
+  // E-posta YALNIZCA sipariş ilk kez "paid" olduğunda gönderilir; koşullu
+  // güncellemenin saydığı satır sayısı bunun tek güvenilir ölçütüdür.
+  if (gecisSayisi === 1) {
+    await siparisOnayiGonder(
+      {
+        orderId: odeme.order.id,
+        orderNumber: odeme.order.orderNumber,
+        adSoyad: odeme.order.fullName,
+        eposta: odeme.order.email,
+        totalKurus: odeme.order.totalKurus,
+        publicToken: odeme.order.publicToken,
+      },
+      girdi.epostaGonderici
+    );
+  }
 
   // QR rezervasyonu KORUNUR: ödenmiş siparişin etiketleri serbest bırakılmaz.
   return {
@@ -408,4 +445,62 @@ export async function odemeSonucunuIsle(girdi: {
     publicToken: odeme.order.publicToken,
     zatenIslenmis: false,
   };
+}
+
+/**
+ * Sipariş onayı e-postasını gönderir.
+ *
+ * BİLDİRİM HATASI ÖDEMEYİ BOZMAZ: gönderim sonucu yalnızca `OrderEvent`
+ * notuna yazılır; hata fırlatılmaz. Sipariş `paid`, `paidAt` ve QR
+ * rezervasyonu her durumda korunur.
+ *
+ * `EPOSTA_GONDERIMI_KAPALI` anahtarı bu yolda da geçerlidir: kapalıysa
+ * `epostaGonder` hiçbir gönderim yapmadan `gonderildi: false` döner.
+ */
+async function siparisOnayiGonder(
+  siparis: {
+    orderId: string;
+    orderNumber: string;
+    adSoyad: string | null;
+    eposta: string;
+    totalKurus: number;
+    publicToken: string;
+  },
+  gonderici?: (icerik: EpostaIcerigi) => Promise<EpostaSonucu>
+): Promise<void> {
+  try {
+    const taban = uygulamaAdresi();
+
+    const takipAdresi = taban
+      ? `${taban}/odeme/sonuc/${siparis.publicToken}`
+      : null;
+
+    const icerik: EpostaIcerigi = {
+      alici: siparis.eposta,
+      ...siparisOnayEpostasi(
+        siparis.adSoyad,
+        siparis.orderNumber,
+        `${Math.trunc(siparis.totalKurus / 100)},${String(
+          siparis.totalKurus % 100
+        ).padStart(2, "0")} TL`,
+        takipAdresi
+      ),
+    };
+
+    const sonuc = await (gonderici ?? epostaGonder)(icerik);
+
+    // Yeni olay AÇILMAZ: not, siparişin mevcut "paid" olayına yazılır.
+    // Aksi hâlde sipariş başına iki "paid" olayı oluşurdu.
+    await prisma.orderEvent.updateMany({
+      where: { orderId: siparis.orderId, type: "paid" },
+      data: {
+        note: sonuc.gonderildi
+          ? "Sipariş onayı e-postası gönderildi."
+          : "Sipariş onayı e-postası gönderilemedi.",
+      },
+    });
+  } catch (hata) {
+    // Bildirim hatası ödeme sonucunu DEĞİŞTİRMEZ.
+    console.error("Sipariş onayı gönderilemedi:", (hata as Error)?.name);
+  }
 }
