@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "crypto";
 import Iyzipay from "iyzipay";
 
 /**
@@ -78,6 +79,26 @@ export function kurusuTutaraCevir(kurus: number): string {
   const kalan = kurus % 100;
 
   return `${lira}.${String(kalan).padStart(2, "0")}`;
+}
+
+/**
+ * Sağlayıcının ondalık tutar metnini kuruş tamsayısına çevirir.
+ *
+ * Biçim farkına dayanıklıdır: iyzico tam sayılarda "55.0", bazen "55.00"
+ * veya "55" gönderebilir. Metin karşılaştırması yerine sayısal karşılaştırma
+ * yapılabilmesi için kullanılır. Çözülemezse null döner.
+ */
+export function tutariKurusaCevir(metin: string): number | null {
+  const temiz = metin.trim();
+
+  if (!/^\d+(\.\d{1,2})?$/.test(temiz)) {
+    return null;
+  }
+
+  const [lira, kesir = ""] = temiz.split(".");
+  const kurus = Number(lira) * 100 + Number(kesir.padEnd(2, "0"));
+
+  return Number.isSafeInteger(kurus) ? kurus : null;
 }
 
 export type CfSepetKalemi = {
@@ -220,5 +241,147 @@ export async function checkoutFormBaslat(
         : undefined,
     paymentPageUrl:
       typeof yanit.paymentPageUrl === "string" ? yanit.paymentPageUrl : undefined,
+  };
+}
+
+export type CfDogrulamaSonucu = {
+  /** Sağlayıcı çağrısının kendisi başarılı mı (iş sonucundan bağımsız). */
+  basarili: boolean;
+  /** Ödemenin sağlayıcıdaki durumu; ham metin olarak taşınır. */
+  paymentStatus?: string;
+  /** Sağlayıcının ödeme kimliği. */
+  paymentId?: string;
+  /** Ödeme başlatılırken bizim ürettiğimiz referans. */
+  conversationId?: string;
+  /** Tahsil edilen tutar, sağlayıcının ondalık metin biçiminde. */
+  paidPrice?: string;
+  currency?: string;
+};
+
+/**
+ * İmzaya giren alanlar ve SIRASI. Sıra iyzico tarafından belirlenir ve
+ * değiştirilemez; tek bir alanın yeri değişirse imza tutmaz.
+ */
+const IMZA_ALANLARI = [
+  "paymentStatus",
+  "paymentId",
+  "currency",
+  "basketId",
+  "conversationId",
+  "paidPrice",
+  "price",
+  "token",
+] as const;
+
+/** İki hex özeti sabit zamanda karşılaştırır. */
+function sabitZamanliEsit(a: string, b: string): boolean {
+  const birinci = Buffer.from(a, "utf8");
+  const ikinci = Buffer.from(b, "utf8");
+
+  if (birinci.length !== ikinci.length) {
+    return false;
+  }
+
+  return timingSafeEqual(birinci, ikinci);
+}
+
+/**
+ * Checkout Form yanıtının imzasını doğrular.
+ *
+ * Alanlar sabit sırayla ":" ile birleştirilir ve gizli anahtarla
+ * HMAC-SHA256 üretilir; sonuç yanıttaki `signature` ile sabit zamanda
+ * karşılaştırılır.
+ *
+ * FAIL-CLOSED: imza yoksa, biçimi bozuksa veya tutmuyorsa `false` döner ve
+ * çağıran taraf hiçbir nihai değişiklik yapmaz. İmza ve gizli anahtar
+ * hiçbir zaman loglanmaz.
+ */
+export function cfImzaDogrula(
+  yanit: Record<string, unknown>,
+  secretKey: string
+): boolean {
+  const imza = yanit?.signature;
+
+  if (typeof imza !== "string" || !imza.trim() || !secretKey) {
+    return false;
+  }
+
+  const birlesik = IMZA_ALANLARI.map((ad) => {
+    const deger = yanit?.[ad];
+
+    return typeof deger === "string" || typeof deger === "number"
+      ? String(deger)
+      : "";
+  }).join(":");
+
+  const beklenen = createHmac("sha256", secretKey)
+    .update(birlesik)
+    .digest("hex");
+
+  return sabitZamanliEsit(beklenen, imza.trim());
+}
+
+function metinAlan(kaynak: Record<string, unknown>, ad: string) {
+  const deger = kaynak[ad];
+
+  return typeof deger === "string" ? deger : undefined;
+}
+
+/**
+ * Checkout Form sonucunu SAĞLAYICIDAN doğrular.
+ *
+ * Callback ile gelen istemci verisine güvenilmez: yalnızca `token` alınır ve
+ * ödemenin gerçek durumu bu çağrıyla iyzico'dan sorulur. Ham yanıt loglanmaz.
+ */
+export async function checkoutFormSonucuGetir(
+  token: string
+): Promise<CfDogrulamaSonucu> {
+  const yapilandirma = odemeYapilandirmasi();
+
+  const iyzipay = new Iyzipay({
+    apiKey: yapilandirma.apiKey,
+    secretKey: yapilandirma.secretKey,
+    uri: yapilandirma.baseUrl,
+  });
+
+  const yanit = await new Promise<Record<string, unknown>>(
+    (resolve, reject) => {
+      iyzipay.checkoutForm.retrieve(
+        { locale: Iyzipay.LOCALE.TR, token },
+        (hata: unknown, sonuc: Record<string, unknown>) => {
+          if (hata) {
+            reject(hata);
+            return;
+          }
+
+          resolve(sonuc);
+        }
+      );
+    }
+  );
+
+  if (yanit?.status !== "success") {
+    console.error(
+      "iyzico ödeme sorgusu başarısız:",
+      String(yanit?.errorCode ?? "bilinmeyen")
+    );
+
+    return { basarili: false };
+  }
+
+  // İmza doğrulanmadan hiçbir durum geçişi yapılamaz.
+  if (!cfImzaDogrula(yanit, yapilandirma.secretKey)) {
+    console.error("iyzico yanıt imzası doğrulanamadı.");
+
+    return { basarili: false };
+  }
+
+  return {
+    basarili: true,
+    paymentStatus: metinAlan(yanit, "paymentStatus"),
+    paymentId: metinAlan(yanit, "paymentId"),
+    conversationId: metinAlan(yanit, "conversationId"),
+    paidPrice: metinAlan(yanit, "paidPrice"),
+    currency: metinAlan(yanit, "currency"),
   };
 }

@@ -9,9 +9,15 @@ import { afterEach, beforeEach, describe, test } from "node:test";
  * kullanılmaz, hiçbir değer çıktıya yazılmaz.
  */
 
-const { odemeYapilandirmasi, kurusuTutaraCevir, OdemeHatasi } = await import(
-  "../../src/lib/odeme-saglayici.ts"
-);
+const {
+  odemeYapilandirmasi,
+  kurusuTutaraCevir,
+  tutariKurusaCevir,
+  cfImzaDogrula,
+  OdemeHatasi,
+} = await import("../../src/lib/odeme-saglayici.ts");
+
+const { createHmac } = await import("node:crypto");
 
 const ONCEKI = { ...process.env };
 
@@ -92,5 +98,121 @@ describe("tutar biçimlendirme", () => {
   test("geçersiz tutar reddedilir", () => {
     assert.throws(() => kurusuTutaraCevir(-1), OdemeHatasi);
     assert.throws(() => kurusuTutaraCevir(1.5), OdemeHatasi);
+  });
+});
+
+describe("tutar çözümleme", () => {
+  test("sağlayıcının farklı biçimleri aynı kuruşa çözülür", () => {
+    assert.equal(tutariKurusaCevir("55"), 5500);
+    assert.equal(tutariKurusaCevir("55.0"), 5500);
+    assert.equal(tutariKurusaCevir("55.00"), 5500);
+    assert.equal(tutariKurusaCevir(" 404.00 "), 40400);
+    assert.equal(tutariKurusaCevir("0.05"), 5);
+  });
+
+  test("geçersiz biçim çözülemez", () => {
+    assert.equal(tutariKurusaCevir(""), null);
+    assert.equal(tutariKurusaCevir("55,00"), null);
+    assert.equal(tutariKurusaCevir("abc"), null);
+    assert.equal(tutariKurusaCevir("-5.00"), null);
+    assert.equal(tutariKurusaCevir("5.123"), null);
+  });
+});
+
+describe("Checkout Form yanıt imzası", () => {
+  const GIZLI = "test-gizli-anahtar";
+
+  /** iyzico algoritması: alanlar sabit sırayla ":" ile birleşir. */
+  const ALAN_SIRASI = [
+    "paymentStatus",
+    "paymentId",
+    "currency",
+    "basketId",
+    "conversationId",
+    "paidPrice",
+    "price",
+    "token",
+  ];
+
+  const YANIT: Record<string, string> = {
+    paymentStatus: "SUCCESS",
+    paymentId: "iyz-123",
+    currency: "TRY",
+    basketId: "ARK-2026-ABCD",
+    conversationId: "ARK-2026-ABCD-1a2b3c4d",
+    paidPrice: "404.0",
+    price: "404.0",
+    token: "cf-token",
+  };
+
+  function imzala(yanit: Record<string, string>, anahtar = GIZLI): string {
+    return createHmac("sha256", anahtar)
+      .update(ALAN_SIRASI.map((ad) => yanit[ad] ?? "").join(":"))
+      .digest("hex");
+  }
+
+  test("geçerli imza kabul edilir", () => {
+    const yanit = { ...YANIT, signature: imzala(YANIT) };
+
+    assert.equal(cfImzaDogrula(yanit, GIZLI), true);
+  });
+
+  test("imza yoksa reddedilir (fail-closed)", () => {
+    assert.equal(cfImzaDogrula({ ...YANIT }, GIZLI), false);
+    assert.equal(cfImzaDogrula({ ...YANIT, signature: "" }, GIZLI), false);
+    assert.equal(cfImzaDogrula({ ...YANIT, signature: "   " }, GIZLI), false);
+  });
+
+  test("hatalı imza reddedilir", () => {
+    assert.equal(cfImzaDogrula({ ...YANIT, signature: "deadbeef" }, GIZLI), false);
+    assert.equal(
+      cfImzaDogrula({ ...YANIT, signature: imzala(YANIT, "baska-anahtar") }, GIZLI),
+      false
+    );
+  });
+
+  test("alanı değiştirilmiş yanıt reddedilir", () => {
+    const gecerliImza = imzala(YANIT);
+
+    for (const ad of ALAN_SIRASI) {
+      const bozulmus = { ...YANIT, [ad]: "degistirildi", signature: gecerliImza };
+
+      assert.equal(
+        cfImzaDogrula(bozulmus, GIZLI),
+        false,
+        `${ad} alanı değiştirilince imza tutmamalı`
+      );
+    }
+  });
+
+  test("tutarı düşürülmüş yanıt reddedilir", () => {
+    const saldiri = {
+      ...YANIT,
+      paidPrice: "1.0",
+      signature: imzala(YANIT),
+    };
+
+    assert.equal(cfImzaDogrula(saldiri, GIZLI), false);
+  });
+
+  test("alan sırası değişirse imza tutmaz", () => {
+    const tersSirali = createHmac("sha256", GIZLI)
+      .update([...ALAN_SIRASI].reverse().map((ad) => YANIT[ad]).join(":"))
+      .digest("hex");
+
+    assert.equal(cfImzaDogrula({ ...YANIT, signature: tersSirali }, GIZLI), false);
+  });
+
+  test("eksik alan varsa boş kabul edilir ve imza yine doğrulanır", () => {
+    const eksik: Record<string, string> = { ...YANIT };
+    delete eksik.paymentId;
+
+    const yanit = { ...eksik, signature: imzala(eksik) };
+
+    assert.equal(cfImzaDogrula(yanit, GIZLI), true);
+  });
+
+  test("gizli anahtar boşsa reddedilir", () => {
+    assert.equal(cfImzaDogrula({ ...YANIT, signature: imzala(YANIT) }, ""), false);
   });
 });
