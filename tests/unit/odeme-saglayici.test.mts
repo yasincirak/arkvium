@@ -157,6 +157,65 @@ describe("Checkout Form yanıt imzası", () => {
     assert.equal(cfImzaDogrula(yanit, GIZLI), true);
   });
 
+  test("iyzico ham tutar döndürse de imza tutar (trailingZero)", () => {
+    // İmza HER ZAMAN "404.0" üzerinden üretilir. iyzico yanıtta aynı tutarı
+    // "404.00", "404" veya sayı olarak döndürebilir; doğrulama bunlarda da
+    // geçmelidir. Bu normalizasyon olmadan callback akışı çöker.
+    const imza = imzala(YANIT);
+
+    for (const hamTutar of ["404.00", "404", "404.000"]) {
+      assert.equal(
+        cfImzaDogrula(
+          { ...YANIT, paidPrice: hamTutar, price: hamTutar, signature: imza },
+          GIZLI
+        ),
+        true,
+        `"${hamTutar}" biçimi kabul edilmeli`
+      );
+    }
+
+    // Sayı olarak gelen tutar da aynı imzayı vermeli.
+    assert.equal(
+      cfImzaDogrula(
+        {
+          ...YANIT,
+          paidPrice: 404 as unknown as string,
+          price: 404 as unknown as string,
+          signature: imza,
+        },
+        GIZLI
+      ),
+      true,
+      "sayı biçimi kabul edilmeli"
+    );
+  });
+
+  test("ondalıklı tutarda da normalize edilir", () => {
+    const ondalikli = { ...YANIT, paidPrice: "404.5", price: "404.5" };
+    const imza = imzala(ondalikli);
+
+    assert.equal(
+      cfImzaDogrula(
+        { ...ondalikli, paidPrice: "404.50", price: "404.50", signature: imza },
+        GIZLI
+      ),
+      true
+    );
+  });
+
+  test("normalizasyon farklı TUTARI kabul etmez", () => {
+    const imza = imzala(YANIT);
+
+    assert.equal(
+      cfImzaDogrula(
+        { ...YANIT, paidPrice: "405.0", price: "405.0", signature: imza },
+        GIZLI
+      ),
+      false,
+      "gerçekten farklı tutar reddedilmeli"
+    );
+  });
+
   test("imza yoksa reddedilir (fail-closed)", () => {
     assert.equal(cfImzaDogrula({ ...YANIT }, GIZLI), false);
     assert.equal(cfImzaDogrula({ ...YANIT, signature: "" }, GIZLI), false);

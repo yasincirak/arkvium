@@ -324,6 +324,31 @@ const IMZA_ALANLARI = [
   "token",
 ] as const;
 
+/** İmzada tutar biçimine çevrilmesi gereken alanlar. */
+const TUTAR_ALANLARI: ReadonlySet<string> = new Set(["paidPrice", "price"]);
+
+/**
+ * Tutarı iyzico'nun imzada kullandığı "trailingZero" biçimine çevirir.
+ *
+ * Kural sağlayıcının kendi biçimlendiricisiyle aynıdır: sayıya çevir, metne
+ * dök, nokta yoksa ".0" ekle. Örnek: "304.00" → "304.0", 304 → "304.0",
+ * "304.50" → "304.5".
+ *
+ * Sayıya çevrilemeyen değer olduğu gibi bırakılır; imza zaten tutmayacaktır
+ * ve doğrulama fail-closed davranır.
+ */
+function imzaTutarBicimi(deger: string | number): string {
+  const sayi = parseFloat(String(deger));
+
+  if (!Number.isFinite(sayi)) {
+    return String(deger);
+  }
+
+  const metin = sayi.toString();
+
+  return metin.includes(".") ? metin : `${metin}.0`;
+}
+
 /** İki hex özeti sabit zamanda karşılaştırır. */
 function sabitZamanliEsit(a: string, b: string): boolean {
   const birinci = Buffer.from(a, "utf8");
@@ -360,9 +385,14 @@ export function cfImzaDogrula(
   const birlesik = IMZA_ALANLARI.map((ad) => {
     const deger = yanit?.[ad];
 
-    return typeof deger === "string" || typeof deger === "number"
-      ? String(deger)
-      : "";
+    if (typeof deger !== "string" && typeof deger !== "number") {
+      return "";
+    }
+
+    // Tutar alanları imzada "trailingZero" biçimiyle yer alır: iyzico
+    // "304.00" veya 304 döndürse bile imza "304.0" üzerinden üretilmiştir.
+    // Ham değer kullanılırsa imza HİÇBİR ZAMAN tutmaz.
+    return TUTAR_ALANLARI.has(ad) ? imzaTutarBicimi(deger) : String(deger);
   }).join(":");
 
   const beklenen = createHmac("sha256", secretKey)
