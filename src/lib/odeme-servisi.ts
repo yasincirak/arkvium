@@ -189,16 +189,29 @@ export async function odemeBaslat(
       paymentPageUrl: sonuc.paymentPageUrl,
     };
   } catch (hata) {
+    // Sağlayıcıdan gelen hata kodu/mesajı. Yalnızca `errorCode` ve
+    // `errorMessage` taşınır; anahtar, token, imza ve kişisel veri içermez.
+    // Kullanıcıya dönen mesaj değişmez, bu ayrıntı yalnızca denetim ve log içindir.
+    const ayrinti =
+      hata instanceof OdemeHatasi ? hata.saglayiciAyrinti : undefined;
+
     await prisma.payment.update({
       where: { id: odeme.id },
       data: { status: "failed" },
     });
 
     await prisma.orderEvent.create({
-      data: { orderId: siparis.id, type: "payment_failed" },
+      data: {
+        orderId: siparis.id,
+        type: "payment_failed",
+        note: ayrinti ?? null,
+      },
     });
 
     if (hata instanceof OdemeHatasi) {
+      // Aynı güvenli bilgi loga da yazılır; teşhis kayıtla log arasında bölünmez.
+      console.error("Ödeme başlatma başarısız:", ayrinti ?? "ayrıntı yok");
+
       throw hata;
     }
 

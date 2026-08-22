@@ -20,10 +20,58 @@ export const ODEME_BASLATILAMADI =
 
 /** Yapılandırma veya sağlayıcı kaynaklı, kullanıcıya gösterilebilir hata. */
 export class OdemeHatasi extends Error {
-  constructor(mesaj: string) {
+  /**
+   * Sağlayıcıdan gelen hata kodu/mesajı (yalnızca `errorCode` ve
+   * `errorMessage`).
+   *
+   * KULLANICIYA GÖSTERİLMEZ: `message` genel metin olarak kalır, bu alan
+   * yalnızca denetim kaydı (`OrderEvent.note`) ve log içindir. Anahtar,
+   * token, imza veya kişisel veri İÇERMEZ.
+   */
+  readonly saglayiciAyrinti?: string;
+
+  constructor(mesaj: string, saglayiciAyrinti?: string) {
     super(mesaj);
     this.name = "OdemeHatasi";
+    this.saglayiciAyrinti = saglayiciAyrinti;
   }
+}
+
+/** `OrderEvent.note` alanına yazılacak ayrıntının üst sınırı. */
+export const AYRINTI_UZUNLUK_SINIRI = 300;
+
+/**
+ * Sağlayıcı yanıtından YALNIZCA `errorCode` ve `errorMessage` alanlarını alır.
+ *
+ * Başka hiçbir alan okunmaz: `token`, `checkoutFormContent`, `paymentPageUrl`
+ * ve sağlayıcının döndürebileceği diğer değerler bu fonksiyondan asla
+ * geçmez. Böylece denetim kaydına anahtar veya kişisel veri sızamaz.
+ *
+ * İki alan da yoksa `undefined` döner ve `note` boş bırakılır.
+ */
+export function saglayiciHataAyrintisi(yanit: unknown): string | undefined {
+  const kayit = (yanit ?? {}) as Record<string, unknown>;
+  const parcalar: string[] = [];
+
+  for (const ad of ["errorCode", "errorMessage"] as const) {
+    const deger = kayit[ad];
+
+    if (typeof deger !== "string" && typeof deger !== "number") {
+      continue;
+    }
+
+    const metin = String(deger).trim();
+
+    if (metin) {
+      parcalar.push(`${ad}=${metin}`);
+    }
+  }
+
+  if (parcalar.length === 0) {
+    return undefined;
+  }
+
+  return parcalar.join(" | ").slice(0, AYRINTI_UZUNLUK_SINIRI);
 }
 
 type SaglayiciYapilandirmasi = {
@@ -224,13 +272,16 @@ export async function checkoutFormBaslat(
   );
 
   if (yanit?.status !== "success" || typeof yanit?.token !== "string") {
-    // Sağlayıcı hata kodu loglanır; kullanıcıya sistem detayı gösterilmez.
+    // Hata kodu/mesajı çağırana taşınır: orada denetim kaydına yazılır.
+    // Kullanıcıya yine yalnızca genel mesaj döner.
+    const ayrinti = saglayiciHataAyrintisi(yanit);
+
     console.error(
       "iyzico Checkout Form başlatılamadı:",
-      String(yanit?.errorCode ?? "bilinmeyen")
+      ayrinti ?? "ayrıntı yok"
     );
 
-    throw new OdemeHatasi(ODEME_BASLATILAMADI);
+    throw new OdemeHatasi(ODEME_BASLATILAMADI, ayrinti);
   }
 
   return {
