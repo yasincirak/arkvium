@@ -31,6 +31,9 @@ const BOS_FORM = {
 export default function OdemeTestiFormu({ urunler }: { urunler: TestUrunu[] }) {
   const [urunKodu, setUrunKodu] = useState(urunler[0]?.kod ?? "");
   const [alanlar, setAlanlar] = useState(BOS_FORM);
+  // Sipariş gövdesinden AYRI tutulur: kimlik numarası siparişe yazılmaz,
+  // yalnızca ödeme başlatma adımında sağlayıcıya iletilir.
+  const [kimlikNo, setKimlikNo] = useState("");
   const [calisiyor, setCalisiyor] = useState(false);
   const [hata, setHata] = useState("");
   const [durum, setDurum] = useState("");
@@ -71,7 +74,7 @@ export default function OdemeTestiFormu({ urunler }: { urunler: TestUrunu[] }) {
       const odemeYanit = await fetch("/api/payment/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: siparisVeri.orderId }),
+        body: JSON.stringify({ orderId: siparisVeri.orderId, kimlikNo }),
       });
 
       const odemeVeri = await odemeYanit.json();
@@ -222,6 +225,25 @@ export default function OdemeTestiFormu({ urunler }: { urunler: TestUrunu[] }) {
             onChange={(e) => alanDegistir("city", e.target.value)}
             className={girdiSinifi}
           />
+        </div>
+
+        <div className="sm:col-span-2">
+          <label htmlFor="kimlikNo" className="mb-2 block text-sm text-white/60">
+            Kimlik numarası (sağlayıcı zorunlu tutuyor)
+          </label>
+          <input
+            id="kimlikNo"
+            required
+            inputMode="numeric"
+            value={kimlikNo}
+            onChange={(e) => setKimlikNo(e.target.value)}
+            className={girdiSinifi}
+          />
+          <p className="mt-2 text-xs text-white/40">
+            iyzico <code>buyer.identityNumber</code> alanını zorunlu tutar. Bu
+            değer siparişe veya başka bir tabloya KAYDEDİLMEZ; yalnızca ödeme
+            isteğinde sağlayıcıya iletilir. Sandbox testinde test değeri girin.
+          </p>
         </div>
 
         <div className="sm:col-span-2">

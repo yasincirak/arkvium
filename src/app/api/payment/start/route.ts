@@ -7,8 +7,11 @@ import { OdemeHatasi } from "@/lib/odeme-saglayici";
  * Ödeme başlatma.
  *
  * Güvenlik kuralları:
- * - İstemciden YALNIZCA sipariş kimliği alınır. Tutar, sepet ve fiyat
- *   bilgisi kabul edilmez; ödenecek tutar veritabanındaki siparişten okunur.
+ * - İstemciden yalnızca sipariş kimliği ve sağlayıcının zorunlu tuttuğu
+ *   kimlik numarası alınır. Tutar, sepet ve fiyat bilgisi kabul EDİLMEZ;
+ *   ödenecek tutar veritabanındaki siparişten okunur.
+ * - Kimlik numarası SAKLANMAZ: doğrudan sağlayıcıya geçirilir, hiçbir
+ *   tabloya yazılmaz ve loglanmaz.
  * - Kart bilgisi bu uca hiç gelmez (Checkout Form iyzico tarafında toplar).
  * - Sağlayıcı anahtarları ve callback adresi yanıtta yer almaz.
  * - Herkese açık olduğu için IP başına sınırlanır.
@@ -42,6 +45,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const orderId = String(body?.orderId || "").trim();
 
+    // Kimlik numarası sağlayıcının ZORUNLU tuttuğu alandır (buyer.identityNumber).
+    // Yalnızca iyzico'ya iletilir; veritabanına YAZILMAZ ve loglanmaz.
+    const kimlikNo = String(body?.kimlikNo || "").trim();
+
     if (!orderId) {
       return NextResponse.json(
         { error: "Sipariş bilgisi eksik." },
@@ -49,7 +56,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const sonuc = await odemeBaslat({ orderId, istemciIp: ip });
+    const sonuc = await odemeBaslat({
+      orderId,
+      istemciIp: ip,
+      kimlikNo: kimlikNo || undefined,
+    });
 
     return NextResponse.json({
       success: true,

@@ -94,6 +94,73 @@ function sahteSaglayici() {
   };
 }
 
+describe("ödeme başlatma — kimlik numarası", () => {
+  test("sağlayıcıya iletilir ama hiçbir tabloya YAZILMAZ", async () => {
+    const siparis = await siparisVer(1);
+    const saglayici = sahteSaglayici();
+    const KIMLIK = "11111111111";
+
+    await odemeBaslat({
+      orderId: siparis.id,
+      kimlikNo: KIMLIK,
+      saglayici: saglayici.fn,
+    });
+
+    // 1) Sağlayıcıya gitti mi? (iyzico buyer.identityNumber alanını zorunlu tutar)
+    const istek = saglayici.cagrilar[0] as { alici: { kimlikNo?: string } };
+
+    assert.equal(istek.alici.kimlikNo, KIMLIK);
+
+    // 2) Hiçbir tabloya yazılmadı mı? Kişisel veri saklanmaz.
+    const siparisKaydi = await prisma.order.findUniqueOrThrow({
+      where: { id: siparis.id },
+    });
+
+    assert.ok(
+      !JSON.stringify(siparisKaydi).includes(KIMLIK),
+      "kimlik numarası Order kaydında bulunmamalı"
+    );
+
+    const odemeler = await prisma.payment.findMany({
+      where: { orderId: siparis.id },
+    });
+
+    assert.ok(
+      !JSON.stringify(odemeler).includes(KIMLIK),
+      "kimlik numarası Payment kaydında bulunmamalı"
+    );
+
+    const olaylar = await prisma.orderEvent.findMany({
+      where: { orderId: siparis.id },
+    });
+
+    assert.ok(
+      !JSON.stringify(olaylar).includes(KIMLIK),
+      "kimlik numarası OrderEvent kaydında bulunmamalı"
+    );
+
+    const kalemler = await prisma.orderItem.findMany({
+      where: { orderId: siparis.id },
+    });
+
+    assert.ok(
+      !JSON.stringify(kalemler).includes(KIMLIK),
+      "kimlik numarası OrderItem kaydında bulunmamalı"
+    );
+  });
+
+  test("verilmezse sağlayıcıya tanımsız gider (mevcut davranış korunur)", async () => {
+    const siparis = await siparisVer(1);
+    const saglayici = sahteSaglayici();
+
+    await odemeBaslat({ orderId: siparis.id, saglayici: saglayici.fn });
+
+    const istek = saglayici.cagrilar[0] as { alici: { kimlikNo?: string } };
+
+    assert.equal(istek.alici.kimlikNo, undefined);
+  });
+});
+
 describe("ödeme başlatma", () => {
   test("tutar yalnızca veritabanındaki siparişten alınır", async () => {
     const siparis = await siparisVer(2);
