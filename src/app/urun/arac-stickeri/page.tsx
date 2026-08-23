@@ -8,6 +8,7 @@ import {
   TemsiliRozet,
 } from "@/components/gorsel/UrunGorselleri";
 import Logo, { ArkviumTamLogo } from "@/components/Logo";
+import { CANLI_ADRES, PAYLASIM_GORSELI } from "@/lib/seo";
 import { fiyatBicimle, SIPARIS_URUNLERI } from "@/lib/siparis";
 
 /**
@@ -29,11 +30,17 @@ export const metadata: Metadata = {
   title: "Araç İletişim QR Sticker'ı",
   description:
     "Telefon numaranızı aracınızda açıkça göstermeden, aracınızla ilgili durumlarda size ARKVIUM üzerinden güvenli mesaj gönderilmesini sağlayın.",
+  // Sayfa kendi canonical adresini gösterir.
+  alternates: { canonical: `${CANLI_ADRES}/urun/arac-stickeri` },
   openGraph: {
     title: "Araç İletişim QR Sticker'ı | ARKVIUM",
     description:
       "Telefon numaranız görünmeden aracınızla ilgili güvenli bildirim alın.",
     type: "website",
+    url: `${CANLI_ADRES}/urun/arac-stickeri`,
+    siteName: "ARKVIUM",
+    locale: "tr_TR",
+    images: [PAYLASIM_GORSELI],
   },
 };
 

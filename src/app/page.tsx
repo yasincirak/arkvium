@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import BolumGecisi from "@/components/animasyon/BolumGecisi";
 import MobilMenu from "@/components/MobilMenu";
@@ -14,7 +15,28 @@ import {
 } from "@/components/gorsel/UrunGorselleri";
 import HeroCarousel from "@/components/hero/HeroCarousel";
 import Logo, { ArkviumTamLogo } from "@/components/Logo";
+import { CANLI_ADRES, PAYLASIM_GORSELI } from "@/lib/seo";
 import UrunlerBolumu from "@/components/UrunlerBolumu";
+
+/**
+ * Ana sayfanın kendi canonical adresi.
+ * Global layout'ta canonical TANIMLI DEĞİLDİR; her sayfa kendini gösterir.
+ */
+export const metadata: Metadata = {
+  alternates: { canonical: CANLI_ADRES },
+  // DİKKAT: Next.js sayfa düzeyindeki `openGraph` nesnesini üsttekiyle
+  // BİRLEŞTİRMEZ, üzerine yazar. Bu yüzden alanlar burada tekrar verilir.
+  openGraph: {
+    title: "ARKVIUM — Dijital Sahiplik Platformu",
+    description:
+      "Eşyaların kaybolsa bile sana geri dönsün. QR kodlu dijital sahiplik ve güvenli iletişim.",
+    siteName: "ARKVIUM",
+    locale: "tr_TR",
+    type: "website",
+    url: CANLI_ADRES,
+    images: [PAYLASIM_GORSELI],
+  },
+};
 
 export default function Home() {
   return (

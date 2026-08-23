@@ -1,37 +1,32 @@
 import type { MetadataRoute } from "next";
+import { CANLI_ADRES } from "@/lib/seo";
 
 /**
- * Sitemap yalnızca herkese açık tanıtım sayfalarını içerir.
- * Eşya erişim sayfaları (/item/...) ve hesap sayfaları bilinçli olarak
- * dışarıda bırakılmıştır.
+ * Sitemap YALNIZCA herkese açık, indekslenmesi gereken tanıtım sayfalarını
+ * içerir.
+ *
+ * Bilerek DIŞARIDA bırakılanlar: admin, hesap, giriş/kayıt, sipariş ve ödeme
+ * sonucu sayfaları, QR erişim adresleri (`/t/...`, `/item/...`) ve kullanıcıya
+ * özel dinamik sayfalar. Bunlar robots.txt ile de engellenir.
+ *
+ * Adres ortam değişkeninden değil `CANLI_ADRES` sabitinden gelir; böylece
+ * önizleme dağıtımları sitemap'e önizleme adresi yazamaz.
  */
 export default function sitemap(): MetadataRoute.Sitemap {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-
-  if (!appUrl) {
-    return [];
-  }
-
   const guncellemeTarihi = new Date();
 
   return [
     {
-      url: appUrl,
+      url: CANLI_ADRES,
       lastModified: guncellemeTarihi,
       changeFrequency: "monthly",
       priority: 1,
     },
     {
-      url: `${appUrl}/register`,
+      url: `${CANLI_ADRES}/urun/arac-stickeri`,
       lastModified: guncellemeTarihi,
-      changeFrequency: "yearly",
-      priority: 0.6,
-    },
-    {
-      url: `${appUrl}/login`,
-      lastModified: guncellemeTarihi,
-      changeFrequency: "yearly",
-      priority: 0.4,
+      changeFrequency: "monthly",
+      priority: 0.8,
     },
   ];
 }

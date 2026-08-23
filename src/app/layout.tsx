@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import { CANLI_ADRES, PAYLASIM_GORSELI } from "@/lib/seo";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -31,12 +32,15 @@ export const metadata: Metadata = {
     siteName: "ARKVIUM",
     locale: "tr_TR",
     type: "website",
+    url: CANLI_ADRES,
+    images: [PAYLASIM_GORSELI],
   },
   twitter: {
     card: "summary_large_image",
     title: "ARKVIUM — Dijital Sahiplik Platformu",
     description:
       "Eşyaların kaybolsa bile sana geri dönsün. QR kodlu dijital sahiplik ve güvenli iletişim.",
+    images: [PAYLASIM_GORSELI],
   },
 };
 
