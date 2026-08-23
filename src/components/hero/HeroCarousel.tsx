@@ -211,12 +211,21 @@ export default function HeroCarousel() {
                 onClick={() => setEtkin(sira)}
                 aria-label={`${slayt.baslik} slaytına git`}
                 aria-current={sira === etkin}
-                className={`h-2.5 rounded-full transition-all ${
-                  sira === etkin
-                    ? "w-8 bg-indigo-600"
-                    : "w-2.5 bg-slate-300 hover:bg-slate-400"
-                }`}
-              />
+                /*
+                  Dokunma alanı 44×44 px; görünen yuvarlak içerideki span ile
+                  10×10 px kalır. Görsel tasarım değişmez.
+                */
+                className="flex h-11 w-11 items-center justify-center"
+              >
+                <span
+                  aria-hidden="true"
+                  className={`block h-2.5 rounded-full transition-all ${
+                    sira === etkin
+                      ? "w-8 bg-indigo-600"
+                      : "w-2.5 bg-slate-300 hover:bg-slate-400"
+                  }`}
+                />
+              </button>
             ))}
           </div>
 

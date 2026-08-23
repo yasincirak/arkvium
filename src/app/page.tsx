@@ -1,5 +1,6 @@
 import Link from "next/link";
 import BolumGecisi from "@/components/animasyon/BolumGecisi";
+import MobilMenu from "@/components/MobilMenu";
 import {
   IkonKalkan,
   IkonPanel,
@@ -21,7 +22,7 @@ export default function Home() {
       <ArkaPlanLogosu />
 
 
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">
+      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <Logo yaziSinifi="text-base sm:text-xl" amblemYuksekligi={30} />
 
@@ -47,19 +48,32 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Mobilde "Giriş Yap" menünün içindedir; masaüstünde header'da kalır. */}
             <a
               href="/login"
-              className="whitespace-nowrap rounded-xl px-2 py-2.5 text-sm font-semibold text-slate-600 transition hover:text-indigo-600 sm:px-4"
+              className="hidden whitespace-nowrap rounded-xl px-2 py-2.5 text-sm font-semibold text-slate-600 transition hover:text-indigo-600 md:inline-flex sm:px-4"
             >
               Giriş Yap
             </a>
 
             <a
               href="/register"
-              className="whitespace-nowrap rounded-xl bg-[#101a3d] px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1b2a5c] sm:px-5"
+              className="inline-flex min-h-[44px] items-center whitespace-nowrap rounded-xl bg-[#101a3d] px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1b2a5c] sm:px-5 md:min-h-0"
             >
               Hemen Başla
             </a>
+
+            <MobilMenu
+              baglantilar={[
+                { href: "#urunler", metin: "Ürünler" },
+                { href: "#faydalar", metin: "Faydalar" },
+                { href: "#nasil", metin: "Nasıl Çalışır" },
+                { href: "#senaryolar", metin: "Kullanım" },
+                { href: "#guvenlik", metin: "Güvenlik" },
+                { href: "#sss", metin: "SSS" },
+                { href: "/login", metin: "Giriş Yap" },
+              ]}
+            />
           </div>
         </div>
       </header>
@@ -477,20 +491,20 @@ export default function Home() {
               <h3 className="text-sm font-semibold text-[#101a3d]">Ürünler</h3>
               <ul className="mt-4 space-y-3 text-sm text-slate-500">
                 <li>
-                  <a href="/#urunler" className="transition hover:text-indigo-600">
+                  <a href="/#urunler" className="flex min-h-[44px] items-center transition hover:text-indigo-600 md:min-h-0">
                     Tüm ürünler
                   </a>
                 </li>
                 <li>
                   <Link
                     href="/urun/arac-stickeri"
-                    className="transition hover:text-indigo-600"
+                    className="flex min-h-[44px] items-center transition hover:text-indigo-600 md:min-h-0"
                   >
                     Araç İletişim QR Sticker&apos;ı
                   </Link>
                 </li>
                 <li>
-                  <a href="/#faydalar" className="transition hover:text-indigo-600">
+                  <a href="/#faydalar" className="flex min-h-[44px] items-center transition hover:text-indigo-600 md:min-h-0">
                     Size ne sağlar?
                   </a>
                 </li>
@@ -501,22 +515,22 @@ export default function Home() {
               <h3 className="text-sm font-semibold text-[#101a3d]">Nasıl çalışır</h3>
               <ul className="mt-4 space-y-3 text-sm text-slate-500">
                 <li>
-                  <a href="/#nasil" className="transition hover:text-indigo-600">
+                  <a href="/#nasil" className="flex min-h-[44px] items-center transition hover:text-indigo-600 md:min-h-0">
                     Dört adımda kullanım
                   </a>
                 </li>
                 <li>
-                  <a href="/#senaryolar" className="transition hover:text-indigo-600">
+                  <a href="/#senaryolar" className="flex min-h-[44px] items-center transition hover:text-indigo-600 md:min-h-0">
                     Kullanım alanları
                   </a>
                 </li>
                 <li>
-                  <a href="/#guvenlik" className="transition hover:text-indigo-600">
+                  <a href="/#guvenlik" className="flex min-h-[44px] items-center transition hover:text-indigo-600 md:min-h-0">
                     Gizlilik
                   </a>
                 </li>
                 <li>
-                  <a href="/#sss" className="transition hover:text-indigo-600">
+                  <a href="/#sss" className="flex min-h-[44px] items-center transition hover:text-indigo-600 md:min-h-0">
                     Sık sorulan sorular
                   </a>
                 </li>
@@ -527,19 +541,19 @@ export default function Home() {
               <h3 className="text-sm font-semibold text-[#101a3d]">Hesap</h3>
               <ul className="mt-4 space-y-3 text-sm text-slate-500">
                 <li>
-                  <Link href="/login" className="transition hover:text-indigo-600">
+                  <Link href="/login" className="flex min-h-[44px] items-center transition hover:text-indigo-600 md:min-h-0">
                     Giriş yap
                   </Link>
                 </li>
                 <li>
-                  <Link href="/register" className="transition hover:text-indigo-600">
+                  <Link href="/register" className="flex min-h-[44px] items-center transition hover:text-indigo-600 md:min-h-0">
                     Hesap oluştur
                   </Link>
                 </li>
                 <li>
                   <Link
                     href="/account/tags/activate"
-                    className="transition hover:text-indigo-600"
+                    className="flex min-h-[44px] items-center transition hover:text-indigo-600 md:min-h-0"
                   >
                     Etiketimi etkinleştir
                   </Link>
