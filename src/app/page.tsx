@@ -20,13 +20,6 @@ export default function Home() {
     <main className="relative min-h-screen bg-white text-[#101a3d]">
       <ArkaPlanLogosu />
 
-      {/*
-       * Ana sayfa açık temalı. Tarayıcı koyu moddayken globals.css gövde
-       * zeminini koyuya boyuyor ve sayfa sınırının dışında kalan alan
-       * (overscroll) siyah görünüyor. Yalnızca bu sayfa açıkken geçerlidir;
-       * diğer sayfaların koyu teması etkilenmez.
-       */}
-      <style>{`body { background: #ffffff; }`}</style>
 
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">
         <div className="mx-auto flex max-w-6xl items-center justify-between">

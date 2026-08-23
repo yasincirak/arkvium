@@ -26,6 +26,47 @@ const nextConfig = {
      */
     serverComponentsExternalPackages: ["iyzipay"],
   },
+
+  /**
+   * HTTP güvenlik başlıkları.
+   *
+   * Tüm uygulama rotalarına uygulanır. Yalnızca düşük riskli, davranış
+   * değiştirmeyen başlıklar eklenmiştir:
+   *
+   * - `X-Content-Type-Options: nosniff` — tarayıcının içerik türünü tahmin
+   *   etmesini engeller.
+   * - `Referrer-Policy: strict-origin-when-cross-origin` — dış sitelere tam
+   *   adres yerine yalnızca köken gönderilir (sipariş `publicToken` değeri
+   *   referrer ile sızmaz).
+   * - `X-Frame-Options: DENY` — sayfalar üçüncü taraf bir çerçeveye alınamaz
+   *   (clickjacking). Uygulama kendi içinde iframe kullanmıyor ve ödeme
+   *   yönlendirmesi `window.location.assign` ile üst düzeyde yapılıyor.
+   * - `Permissions-Policy` — kamera, mikrofon ve konum kapatılır. Bu API'lerin
+   *   hiçbiri uygulamada kullanılmıyor; QR okutma ziyaretçinin kendi kamera
+   *   uygulamasında gerçekleşir, sayfa içinde değil.
+   *
+   * Content-Security-Policy ve Strict-Transport-Security BİLEREK eklenmedi;
+   * ayrı değerlendirme gerektiriyorlar.
+   */
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+          { key: "X-Frame-Options", value: "DENY" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

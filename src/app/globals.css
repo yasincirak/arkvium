@@ -2,16 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * ARKVIUM tek temalıdır: gövde her zaman açık zemin + koyu metindir.
+ *
+ * `prefers-color-scheme: dark` bloğu KALDIRILDI. Sayfalar temalarını kendi
+ * kök elemanlarında açıkça belirtir (açık sayfalar `bg-white text-[#101a3d]`,
+ * koyu sayfalar `bg-[#0a0a0f] text-white`); bu değişkenleri hiçbir sayfa
+ * bilinçli okumuyordu. Blok yalnızca işletim sistemi koyu moddayken gövde
+ * metnini beyaza çevirip açık zeminli sayfalarda başlıkları görünmez
+ * kılıyordu ve iki sayfada geçici `<style>` yaması gerektiriyordu.
+ */
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {

@@ -13,15 +13,8 @@ import { fiyatBicimle, KARGO_NOTU, SIPARIS_URUNLERI } from "@/lib/siparis";
  * Her kart, ürünün kendi koduyla sipariş akışına gider; ödeme mevcut iyzico
  * akışıyla alınır. Ürün adı ve fiyatı `@/lib/siparis` içinde tek yerde durur;
  * burada tekrar yazılmaz ve adres satırına fiyat KONULMAZ.
- *
- * Araç ürünü önce kendi detay sayfasına gider; diğer ürünler doğrudan
- * sipariş sayfasına gider (mevcut davranış).
- */
 
-/** Detay sayfası bulunan ürünler. Diğerleri doğrudan siparişe gider. */
-const DETAY_SAYFALARI: Record<string, string> = {
-  "arac-stickeri": "/urun/arac-stickeri",
-};
+ */
 
 export default function UrunlerBolumu() {
   return (
@@ -38,7 +31,6 @@ export default function UrunlerBolumu() {
 
         <div className="mt-8 flex flex-wrap justify-center gap-6">
           {SIPARIS_URUNLERI.map((urun, sira) => {
-            const detay = DETAY_SAYFALARI[urun.kod];
             const gorselAnahtari = urunGorselAnahtari(urun.kod);
 
             return (
@@ -60,27 +52,25 @@ export default function UrunlerBolumu() {
 
                 <h3 className="text-xl font-semibold">{urun.ad}</h3>
 
-                <p className="mt-3 flex-1 leading-relaxed text-slate-600">
+                <p className="mt-3 leading-relaxed text-slate-600">
                   {urun.aciklama}
                 </p>
 
-                <div className="mt-6">
+                <div className="mt-6 flex-1" aria-hidden="true" />
+
+                <div>
                   <div className="text-2xl font-bold">
                     {fiyatBicimle(urun.fiyatKurus)}
                   </div>
                   <div className="mt-1 text-sm text-slate-500">{KARGO_NOTU}</div>
                 </div>
 
-                {/*
-                  Detay sayfası olan üründe kart ÖNCE detay sayfasına gider;
-                  satın alma oradaki düğmelerle yapılır. Detay sayfası olmayan
-                  ürünlerin mevcut davranışı (doğrudan sipariş) korunur.
-                */}
+                {/* Birincil eylem TÜM kartlarda aynıdır ve en altta durur. */}
                 <Link
-                  href={detay ?? `/siparis?urun=${urun.kod}`}
+                  href={`/siparis?urun=${urun.kod}`}
                   className="mt-6 inline-flex justify-center rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white transition hover:bg-emerald-500 active:scale-[0.98] motion-reduce:active:scale-100"
                 >
-                  {detay ? "Ürünü İncele" : "Satın Al"}
+                  Satın Al
                 </Link>
               </BolumGecisi>
             );
