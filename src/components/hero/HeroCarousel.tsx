@@ -1,12 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  AraclarIllustrasyonu,
-  EsyalarIllustrasyonu,
-  EvcilHayvanlarIllustrasyonu,
-  GuvenliIletisimIllustrasyonu,
-} from "./illustrasyonlar";
+import { Gorsel, TemsiliRozet } from "@/components/gorsel/UrunGorselleri";
 
 /**
  * Ana sayfa hero carousel'i.
@@ -27,15 +22,7 @@ const SLAYTLAR = [
     aciklama: "Değer verdiklerin sana geri dönebilsin.",
     metin:
       "Çanta, anahtar, valiz ve günlük eşyalarını ARKVIUM QR ürünleriyle güvenli iletişim sistemine bağla.",
-    Illustrasyon: EsyalarIllustrasyonu,
-  },
-  {
-    kod: "araclar",
-    baslik: "Araçlar",
-    aciklama: "Aracına dokunmadan sana güvenle ulaşsınlar.",
-    metin:
-      "Uygunsuz park, açık kalan far veya aracınla ilgili önemli bir durumda telefon numaran görünmeden mesaj al.",
-    Illustrasyon: AraclarIllustrasyonu,
+    gorsel: "hero" as const,
   },
   {
     kod: "evcil-hayvanlar",
@@ -43,7 +30,7 @@ const SLAYTLAR = [
     aciklama: "Kaybolduğunda bulan kişi sana güvenle ulaşsın.",
     metin:
       "QR künyeyi okutan kişi iletişim bilgilerini görmeden ARKVIUM üzerinden sana mesaj göndersin.",
-    Illustrasyon: EvcilHayvanlarIllustrasyonu,
+    gorsel: "evcil-hayvan" as const,
   },
   {
     kod: "guvenli-iletisim",
@@ -51,7 +38,7 @@ const SLAYTLAR = [
     aciklama: "Telefon numaran görünmeden mesaj al.",
     metin:
       "QR kodunu okutan kişi mesajını ARKVIUM üzerinden göndersin; telefon numaran doğrudan gösterilmesin.",
-    Illustrasyon: GuvenliIletisimIllustrasyonu,
+    gorsel: "mesajlasma" as const,
   },
 ];
 
@@ -128,7 +115,7 @@ export default function HeroCarousel() {
         <div className="relative">
           {SLAYTLAR.map((slayt, sira) => {
             const acikMi = sira === etkin;
-            const { Illustrasyon } = slayt;
+            
             // Sayfada tek bir h1 kalsın: gizli slaytların başlığı p olarak
             // işlenir, görünüm aynı sınıflarla korunur.
             const Baslik = acikMi ? "h1" : "p";
@@ -178,9 +165,14 @@ export default function HeroCarousel() {
                   </div>
                 </div>
 
-                <div className="mx-auto w-full max-w-md rounded-3xl border border-[#e5e0ff] bg-gradient-to-br from-[#f6f4ff] to-white p-6">
-                  <div className="aspect-[4/3]">
-                    <Illustrasyon />
+                <div className="mx-auto w-full max-w-xl">
+                  <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-[#e5e0ff] bg-slate-100 shadow-sm">
+                    <Gorsel
+                      anahtar={slayt.gorsel}
+                      sizes="(min-width: 768px) 44vw, 92vw"
+                      oncelikli={sira === 0}
+                    />
+                    <TemsiliRozet />
                   </div>
                 </div>
               </div>
