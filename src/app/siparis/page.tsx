@@ -1,4 +1,6 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { GIZLI_SAYFA_ROBOTS } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import SiparisFormu from "@/components/SiparisFormu";
 import { KARGO_UCRETI_KURUS, SIPARIS_URUNLERI } from "@/lib/siparis";
@@ -14,6 +16,11 @@ import { KARGO_UCRETI_KURUS, SIPARIS_URUNLERI } from "@/lib/siparis";
  */
 
 export const dynamic = "force-dynamic";
+
+/** Bu sayfa indekslenmez. */
+export const metadata: Metadata = {
+  robots: GIZLI_SAYFA_ROBOTS,
+};
 
 export default function SiparisPage({
   searchParams,

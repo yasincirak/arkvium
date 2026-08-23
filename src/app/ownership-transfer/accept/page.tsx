@@ -1,4 +1,6 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { GIZLI_SAYFA_ROBOTS } from "@/lib/seo";
 import { redirect } from "next/navigation";
 import { getUserSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
@@ -11,6 +13,11 @@ import AcceptForm from "./accept-form";
  * action'ına iletilir; ekranda veya hata metninde gösterilmez.
  */
 export const dynamic = "force-dynamic";
+
+/** Bu sayfa indekslenmez. */
+export const metadata: Metadata = {
+  robots: GIZLI_SAYFA_ROBOTS,
+};
 
 export default async function OwnershipTransferAcceptPage({
   searchParams,

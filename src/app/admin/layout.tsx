@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import Sidebar from "@/components/admin/Sidebar";
+import { GIZLI_SAYFA_ROBOTS } from "@/lib/seo";
 import Topbar from "@/components/admin/Topbar";
 
 export const metadata: Metadata = {
   title: "ARKVIUM | Yönetim Paneli",
   description: "ARKVIUM admin yönetim paneli.",
+  // Yönetim paneli ve tüm alt sayfaları indekslenmez.
+  robots: GIZLI_SAYFA_ROBOTS,
 };
 
 export default function AdminLayout({
