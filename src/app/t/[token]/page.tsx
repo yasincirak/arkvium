@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import AcilDurumBolumu from "@/components/AcilDurumBolumu";
 import ItemFinderSection from "@/components/ItemFinderSection";
 import KayipUyarisi from "@/components/KayipUyarisi";
+import { acilDurumGorunumu } from "@/lib/acil-durum";
 import { prisma } from "@/lib/prisma";
 import { getUserSession } from "@/lib/session";
 import { taramaBildirimiGonder } from "@/lib/tarama-bildirimi";
@@ -137,10 +139,16 @@ export default async function TagPage({ params }: Props) {
 
   await taramaBildirimiGonder(record, oturum?.userId ?? null);
 
+  // Acil durum profili tamamen isteğe bağlıdır ve yalnızca sahibi yayına
+  // aldıysa dolu döner. Buraya ancak etiket AKTİF ve kayda bağlıyken gelinir.
+  const acilDurum = await acilDurumGorunumu(record.id);
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#0a0a0f] p-6 text-white">
       <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-white/5 p-8">
         {record.status === "lost" && <KayipUyarisi />}
+
+        {acilDurum && <AcilDurumBolumu gorunum={acilDurum} />}
 
         <h1 className="text-3xl font-bold">{record.assetName}</h1>
 

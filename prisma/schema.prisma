@@ -42,6 +42,9 @@ model User {
   /// Üye olarak verilen siparişler. Misafir siparişler hiçbir kullanıcıya
   /// bağlı değildir (bkz. Order.userId).
   orders Order[]
+
+  /// Kullanıcının oluşturduğu acil durum profilleri (isteğe bağlı özellik).
+  emergencyProfiles EmergencyProfile[]
 }
 
 /// Şifre sıfırlama tokenları.
@@ -90,7 +93,7 @@ model ItemRecord {
   createdAt   DateTime
 
   userId String?
-  user   User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   finderMessages FinderMessage[]
 
@@ -99,6 +102,9 @@ model ItemRecord {
   tag Tag?
 
   ownershipTransfers OwnershipTransfer[]
+
+  /// Bu kayda bağlı acil durum profili (en fazla bir tane, isteğe bağlı).
+  emergencyProfile EmergencyProfile?
 }
 
 /// Fiziksel QR/NFC etiketi.
@@ -258,6 +264,7 @@ model RateLimitEntry {
 
   @@index([windowEnd])
 }
+
 /// Sipariş durumu.
 ///
 /// `stok_bekliyor` gibi bir ara durum YOKTUR: QR etiketleri ödeme
@@ -526,4 +533,104 @@ model OrderConsent {
 
   @@unique([orderId, belge])
   @@index([orderId])
+}
+
+/// Acil Durum Profili — TAMAMEN İSTEĞE BAĞLI özellik.
+///
+/// ÖZEL NİTELİKLİ KİŞİSEL VERİ: sağlık bilgileri KVKK m.6 kapsamındadır.
+/// Bu yüzden:
+/// - Profil varsayılan olarak KAPALIDIR (`enabled` false).
+/// - Her alan ayrı ayrı görünür yapılır; varsayılan hepsi KAPALI.
+/// - BEYAN EDİLEN TÜM ALANLAR (kan grubu dâhil) uygulama katmanında
+///   AES-256-GCM ile şifrelenir (bkz. src/lib/acil-durum-sifreleme.ts).
+///   Veritabanında düz metin sağlık verisi durmaz.
+/// - Açık rıza zamanı ve metin SÜRÜMÜ kaydedilir. Public sorgu
+///   (`acilDurumGorunumu`) kayıtlı sürümü yürürlükteki `ONAY_METNI_SURUMU`
+///   ile TAM EŞİTLİK karşılaştırır; eski sürümlü profil gösterilmez.
+/// - İçerik güncellenince profil otomatik olarak yayından kalkar; yeniden
+///   yayına almak için YENİ açık rıza gerekir.
+///
+/// Kayıt silinirse profil de silinir (Cascade): sağlık verisi öksüz kalmamalı.
+model EmergencyProfile {
+  id String @id @default(cuid())
+
+  /// Profili oluşturan sahip. Sahiplik kontrolü sunucuda bu alanla yapılır.
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Bağlı olduğu ürün kaydı. Bir kayıtta en fazla bir profil olur.
+  itemRecordId String     @unique
+  itemRecord   ItemRecord @relation(fields: [itemRecordId], references: [id], onDelete: Cascade)
+
+  /// Profil yayında mı. Varsayılan KAPALI.
+  enabled Boolean @default(false)
+
+  /// --- Beyan edilen bilgiler ---
+  /// TÜM alanlar ŞİFRELİ saklanır; ham hâlleriyle sorgulanamaz.
+  ///
+  /// `bloodType` de sağlık verisidir ve düz metin tutulmaz: uygulama
+  /// katmanında geçerli bir kan grubu koduna (bkz. KAN_GRUPLARI) doğrulanıp
+  /// şifrelenmiş biçimde yazılır.
+  displayName       String?
+  bloodType         String?
+  allergies         String?
+  medications       String?
+  medicalConditions String?
+  emergencyNote     String?
+
+  /// --- Alan bazlı görünürlük ---
+  /// JSON kullanılmaz: her alan ayrı sütun, tip güvenli ve sorgulanabilir.
+  displayNameGorunur       Boolean @default(false)
+  bloodTypeGorunur         Boolean @default(false)
+  allergiesGorunur         Boolean @default(false)
+  medicationsGorunur       Boolean @default(false)
+  medicalConditionsGorunur Boolean @default(false)
+  emergencyNoteGorunur     Boolean @default(false)
+  contactsGorunur          Boolean @default(false)
+
+  /// --- Onay kayıtları (denetim izi) ---
+  disclaimerAcceptedAt                  DateTime?
+  explicitConsentAt                     DateTime?
+  /// Onaylanan metnin sürümü. Public sorgu bu değeri yürürlükteki
+  /// `ONAY_METNI_SURUMU` ile karşılaştırır; farklı veya boşsa profil public
+  /// alanda GÖSTERİLMEZ. Metin değişince eski onaylar böylece geçersiz olur.
+  explicitConsentVersion                String?
+  emergencyContactDeclarationAcceptedAt DateTime?
+
+  /// Rıza geri çekildiğinde veya profil kapatıldığında yazılır.
+  consentWithdrawnAt DateTime?
+  disabledAt         DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contacts EmergencyContact[]
+
+  @@index([userId])
+}
+
+/// Acil durum yakını. Uygulama katmanında profil başına EN FAZLA 2 kayıt.
+///
+/// `name` ve `phone` ŞİFRELİ saklanır. Telefon numarası public sayfada metin
+/// olarak yazılmaz; arama yapılabilmesi için `tel:` bağlantısının içinde yer
+/// alır (yalnızca profil yayındayken ve kişiler görünür işaretliyken).
+model EmergencyContact {
+  id String @id @default(cuid())
+
+  emergencyProfileId String
+  emergencyProfile   EmergencyProfile @relation(fields: [emergencyProfileId], references: [id], onDelete: Cascade)
+
+  name         String
+  relationship String?
+  phone        String
+
+  /// Gösterim sırası: 1 birinci yakın, 2 ikinci yakın.
+  priority Int
+  enabled  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([emergencyProfileId, priority])
+  @@index([emergencyProfileId])
 }

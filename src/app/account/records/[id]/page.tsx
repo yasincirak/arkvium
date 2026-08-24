@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import AcilDurumPaneli from "@/components/account/AcilDurumPaneli";
 import BildirimListesi from "@/components/account/BildirimListesi";
 import DurumPanel from "@/components/account/DurumPanel";
 import TagPanel from "@/components/account/TagPanel";
 import TransferPanel from "@/components/account/TransferPanel";
+import { sahibiIcinProfil } from "@/lib/acil-durum";
+import { sifrelemeHazirMi } from "@/lib/acil-durum-sifreleme";
 import { getUserSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getFinderMessagesForOwner } from "@/lib/store";
@@ -38,6 +41,17 @@ export default async function AccountRecordDetailPage({
   if (!record) {
     notFound();
   }
+
+  // Acil durum profili isteğe bağlıdır; yoksa panel boş hâliyle açılır.
+  // Şifreleme anahtarı yapılandırılmamışsa panel yazma sunmaz.
+  const acilDurumKullanilabilir = sifrelemeHazirMi();
+
+  const acilDurumProfili = acilDurumKullanilabilir
+    ? await sahibiIcinProfil({
+        itemRecordId: record.id,
+        userId: session.userId,
+      })
+    : null;
 
   // Etiketin taşınabileceği ürünler: kullanıcıya ait, henüz etiketi olmayanlar.
   const tasinabilirUrunler = record.tag
@@ -161,6 +175,12 @@ export default async function AccountRecordDetailPage({
               </Link>
             </div>
           )}
+
+          <AcilDurumPaneli
+            itemRecordId={record.id}
+            profil={acilDurumProfili}
+            kullanilabilir={acilDurumKullanilabilir}
+          />
 
           <TransferPanel
             itemRecordId={record.id}

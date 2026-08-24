@@ -65,6 +65,25 @@ const nextConfig = {
           },
         ],
       },
+      {
+        // QR erişim sayfaları acil durum bilgisi içerebilir. Bu sayfalar
+        // hiçbir ara katmanda (CDN, tarayıcı, proxy) SAKLANMAMALIDIR: sahibi
+        // rızasını geri çektiğinde bilgi anında görünmez olmalı.
+        //
+        // `X-Robots-Tag` sayfa metadata'sındaki noindex kuralını HTTP
+        // düzeyinde de tekrarlar; robots.txt zaten /t yolunu kapatır.
+        source: "/t/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store, no-cache, must-revalidate, max-age=0",
+          },
+          {
+            key: "X-Robots-Tag",
+            value: "noindex, nofollow, noarchive, nosnippet",
+          },
+        ],
+      },
     ];
   },
 };

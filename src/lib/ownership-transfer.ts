@@ -345,6 +345,52 @@ export async function devirDavetiKabulEt(
           data: { userId: kullaniciId },
         });
 
+        // 2b) Acil durum profili ASLA yeni sahibe devrolmaz.
+        //
+        //     Sağlık verisi eski sahibe aittir ve açık rızası yalnızca kendi
+        //     paylaşımı için geçerlidir. Profil kapatılır, rıza geri çekilmiş
+        //     sayılır ve şifreli sağlık/iletişim alanları temizlenir; yakınlar
+        //     silinir. Yeni sahip isterse kendi profilini sıfırdan oluşturur.
+        const profil = await islem.emergencyProfile.findUnique({
+          where: { itemRecordId: record.id },
+          select: { id: true },
+        });
+
+        if (profil) {
+          await islem.emergencyContact.deleteMany({
+            where: { emergencyProfileId: profil.id },
+          });
+
+          await islem.emergencyProfile.update({
+            where: { id: profil.id },
+            data: {
+              enabled: false,
+              disabledAt: new Date(),
+              consentWithdrawnAt: new Date(),
+              explicitConsentAt: null,
+              explicitConsentVersion: null,
+              disclaimerAcceptedAt: null,
+              emergencyContactDeclarationAcceptedAt: null,
+              displayName: null,
+              bloodType: null,
+              allergies: null,
+              medications: null,
+              medicalConditions: null,
+              emergencyNote: null,
+              displayNameGorunur: false,
+              bloodTypeGorunur: false,
+              allergiesGorunur: false,
+              medicationsGorunur: false,
+              medicalConditionsGorunur: false,
+              emergencyNoteGorunur: false,
+              contactsGorunur: false,
+              // Sahiplik yeni kullanıcıya geçtiği için profil kabuğu da onun
+              // adına kalır; içeriği boştur.
+              userId: kullaniciId,
+            },
+          });
+        }
+
         // 3) Etiketi olmayan eski (legacy) üründe devir yine tamamlanır;
         //    sahte Tag veya TagEvent üretilmez.
         if (record.tag) {
