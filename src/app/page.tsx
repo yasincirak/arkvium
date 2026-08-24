@@ -13,14 +13,22 @@ import {
   Gorsel,
   TemsiliRozet,
 } from "@/components/gorsel/UrunGorselleri";
-import HeroCarousel from "@/components/hero/HeroCarousel";
+import HeroBolumu from "@/components/hero/HeroBolumu";
 import Logo, { ArkviumTamLogo } from "@/components/Logo";
 import { CANLI_ADRES, PAYLASIM_GORSELI } from "@/lib/seo";
 import UrunlerBolumu from "@/components/UrunlerBolumu";
 
 /**
- * Ana sayfanın kendi canonical adresi.
- * Global layout'ta canonical TANIMLI DEĞİLDİR; her sayfa kendini gösterir.
+ * ARKVIUM ana sayfası — pazarlama katmanı.
+ *
+ * Tasarım kuralları DESIGN.md içinde tanımlıdır. Renk, boşluk, gölge ve
+ * hareket değerleri burada uydurulmaz: `ark-*` tokenları kullanılır.
+ *
+ * Bölüm ritmi: beyaz → `surface-2` bandı → beyaz ... Bantlar arasındaki
+ * geçiş yalnızca zemin rengi ve 1px kenarlıkla yapılır; ek boşluk verilmez.
+ *
+ * Ana sayfanın kendi canonical adresi vardır; global layout'ta canonical
+ * TANIMLI DEĞİLDİR, her sayfa kendini gösterir.
  */
 export const metadata: Metadata = {
   alternates: { canonical: CANLI_ADRES },
@@ -38,196 +46,204 @@ export const metadata: Metadata = {
   },
 };
 
+/** Üst barda ve mobil menüde AYNI sırayla kullanılan bölüm çıpaları. */
+const BOLUMLER = [
+  { href: "#urunler", metin: "Ürünler" },
+  { href: "#nasil", metin: "Nasıl Çalışır" },
+  { href: "#faydalar", metin: "Faydalar" },
+  { href: "#senaryolar", metin: "Araç" },
+  { href: "#guvenlik", metin: "Gizlilik" },
+  { href: "#sss", metin: "SSS" },
+];
+
+const ADIMLAR = [
+  {
+    numara: "01",
+    baslik: "Ürününü seç",
+    metin:
+      "İhtiyacına uygun QR sticker, anahtarlık, künye veya valiz etiketini seç.",
+  },
+  {
+    numara: "02",
+    baslik: "Satın al",
+    metin:
+      "Teslimat bilgilerini gir ve ödemeni güvenli ödeme sayfasında tamamla.",
+  },
+  {
+    numara: "03",
+    baslik: "Etiketini etkinleştir",
+    metin:
+      "Ürün eline ulaştığında hesabına giriş yap ve QR etiketini hesabına bağla.",
+  },
+  {
+    numara: "04",
+    baslik: "Güvenle mesaj al",
+    metin:
+      "Etiketi eşyana uygula; QR okutulduğunda kişisel bilgilerin görünmeden sana mesaj gelsin.",
+  },
+];
+
+const FAYDALAR = [
+  {
+    Ikon: IkonTarama,
+    baslik: "Kurulum gerektirmez",
+    metin:
+      "QR kod telefonun kamerasıyla okunur ve tarayıcıda açılır. Mesajı gönderen kişinin uygulama yüklemesine gerek yoktur.",
+  },
+  {
+    Ikon: IkonKalkan,
+    baslik: "Numaran açıkta durmaz",
+    metin:
+      "Etikette telefon numaran yazmaz. Bildirim sana ARKVIUM üzerinden iletilir.",
+  },
+  {
+    Ikon: IkonTasima,
+    baslik: "Etiketi taşıyabilirsin",
+    metin:
+      "Eşyan değişirse etiketi iptal etmeden hesabındaki başka bir kayda bağlayabilirsin.",
+  },
+  {
+    Ikon: IkonPanel,
+    baslik: "Tek panelden yönetirsin",
+    metin:
+      "Eşyalarını ekler, düzenler, kayıp olarak işaretler ve gelen bildirimleri aynı yerden görürsün.",
+  },
+];
+
+const GIZLILIK_MADDELERI = [
+  "QR kodun içinde telefon numaran bulunmaz.",
+  "QR kodun açtığı sayfada kişisel iletişim bilgin doğrudan gösterilmez.",
+  "Mesaj sana ARKVIUM üzerinden iletilir.",
+];
+
+const SORULAR = [
+  {
+    soru: "QR kodu okutan kişinin uygulama yüklemesi gerekir mi?",
+    cevap:
+      "Hayır. QR kod tarayıcıda bir sayfa açar ve mesaj formu doğrudan orada doldurulur; uygulama kurulumu veya hesap açma gerekmez.",
+  },
+  {
+    soru: "Telefon numaram görünür mü?",
+    cevap:
+      "QR kodun açtığı sayfada telefon numaran ve e-posta adresin gösterilmez. Mesajı gönderen kişi kendi iletişim bilgisini bırakır.",
+  },
+  {
+    soru: "Etiketi nasıl etkinleştiririm?",
+    cevap:
+      "ARKVIUM hesabına giriş yapıp etiketin üzerindeki aktivasyon kodunu girersin. Etkinleştirme için giriş yapman gerekir.",
+  },
+  {
+    soru: "Bana mesaj nasıl ulaşır?",
+    cevap:
+      "Gönderilen bildirim hesabındaki e-posta adresine iletilir ve hesabında da görüntülenir.",
+  },
+  {
+    soru: "Eşyamı değiştirirsem etiket ne olur?",
+    cevap:
+      "Etiketi hesabındaki başka bir kayda taşıyabilirsin; etiket iptal olmadan yeni kaydına bağlanır.",
+  },
+  {
+    soru: "Eşyamı kayıp olarak işaretleyebilir miyim?",
+    cevap:
+      "Evet. Kayıp işaretlediğinde QR kodu okutan kişi bu uyarıyı sayfada görür.",
+  },
+];
+
+/** Üst bardaki ve footer'daki bağlantılar için ortak sınıf. */
+const BAGLANTI =
+  "transition duration-200 hover:text-ark-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent";
+
 export default function Home() {
   return (
-    <main className="relative min-h-screen bg-white text-[#101a3d]">
+    <main className="relative min-h-screen bg-ark-surface text-ark-ink">
       <ArkaPlanLogosu />
 
-
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
+      <header className="sticky top-0 z-20 border-b border-ark-line bg-white/90 px-6 py-3 backdrop-blur sm:px-8">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
           <Logo yaziSinifi="text-base sm:text-xl" amblemYuksekligi={30} />
 
-          <div className="hidden gap-6 text-sm text-slate-600 md:flex">
-            <a href="#urunler" className="transition hover:text-indigo-600">
-              Ürünler
-            </a>
-            <a href="#faydalar" className="transition hover:text-indigo-600">
-              Faydalar
-            </a>
-            <a href="#nasil" className="transition hover:text-indigo-600">
-              Nasıl Çalışır
-            </a>
-            <a href="#senaryolar" className="transition hover:text-indigo-600">
-              Kullanım
-            </a>
-            <a href="#guvenlik" className="transition hover:text-indigo-600">
-              Güvenlik
-            </a>
-            <a href="#sss" className="transition hover:text-indigo-600">
-              SSS
-            </a>
-          </div>
+          <nav
+            aria-label="Bölümler"
+            className="hidden gap-7 text-sm text-ark-ink-2 md:flex"
+          >
+            {BOLUMLER.map((bolum) => (
+              <a key={bolum.href} href={bolum.href} className={BAGLANTI}>
+                {bolum.metin}
+              </a>
+            ))}
+          </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Mobilde "Giriş Yap" menünün içindedir; masaüstünde header'da kalır. */}
             <a
               href="/login"
-              className="hidden whitespace-nowrap rounded-xl px-2 py-2.5 text-sm font-semibold text-slate-600 transition hover:text-indigo-600 md:inline-flex sm:px-4"
+              className={`hidden whitespace-nowrap rounded-xl px-2 py-2.5 text-sm font-semibold text-ark-ink-2 sm:px-4 md:inline-flex ${BAGLANTI}`}
             >
               Giriş Yap
             </a>
 
             <a
               href="/register"
-              className="inline-flex min-h-[44px] items-center whitespace-nowrap rounded-xl bg-[#101a3d] px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1b2a5c] sm:px-5 md:min-h-0"
+              className="inline-flex min-h-[44px] items-center whitespace-nowrap rounded-xl bg-ark-ink px-4 py-2.5 text-sm font-semibold text-white transition duration-200 hover:bg-ark-ink-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent sm:px-5 md:min-h-0"
             >
               Hemen Başla
             </a>
 
             <MobilMenu
-              baglantilar={[
-                { href: "#urunler", metin: "Ürünler" },
-                { href: "#faydalar", metin: "Faydalar" },
-                { href: "#nasil", metin: "Nasıl Çalışır" },
-                { href: "#senaryolar", metin: "Kullanım" },
-                { href: "#guvenlik", metin: "Güvenlik" },
-                { href: "#sss", metin: "SSS" },
-                { href: "/login", metin: "Giriş Yap" },
-              ]}
+              baglantilar={[...BOLUMLER, { href: "/login", metin: "Giriş Yap" }]}
             />
           </div>
         </div>
       </header>
 
-      <HeroCarousel />
+      <HeroBolumu />
 
-      <section id="ozellikler" className="scroll-mt-24 mx-auto max-w-6xl px-6 py-12 sm:py-16">
-        <BolumGecisi>
-          <h2 className="text-center text-3xl font-bold">Neden ARKVIUM?</h2>
-        </BolumGecisi>
+      {/* Nasıl çalışır — dört adım */}
+      <section
+        id="nasil"
+        aria-labelledby="nasil-basligi"
+        className="scroll-mt-24 border-y border-ark-line bg-ark-surface-2"
+      >
+        <div className="mx-auto max-w-6xl px-6 py-16 sm:px-8 sm:py-24">
+          <BolumGecisi className="text-center">
+            <p className="ark-etiket text-ark-accent">Nasıl çalışır</p>
 
-        <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <BolumGecisi className="rounded-2xl border border-slate-200 bg-white p-8 transition duration-300 hover:-translate-y-1 hover:shadow-md motion-reduce:transform-none">
-            <h3 className="text-xl font-semibold">QR Dijital Kimlik</h3>
-            <p className="mt-3 text-slate-600">
-              Her eşya için benzersiz QR kod oluştur ve dijital kimlik ver.
-            </p>
-          </BolumGecisi>
-
-          <BolumGecisi
-            gecikme={80}
-            className="rounded-2xl border border-slate-200 bg-white p-8 transition duration-300 hover:-translate-y-1 hover:shadow-md motion-reduce:transform-none"
-          >
-            <h3 className="text-xl font-semibold">Gizli İletişim</h3>
-            <p className="mt-3 text-slate-600">
-              Bulan kişi sana ulaşır ama telefon numaran doğrudan görünmez.
-            </p>
-          </BolumGecisi>
-
-          <BolumGecisi
-            gecikme={160}
-            className="rounded-2xl border border-slate-200 bg-white p-8 transition duration-300 hover:-translate-y-1 hover:shadow-md motion-reduce:transform-none"
-          >
-            <h3 className="text-xl font-semibold">Hesabına Bağlı Etiket</h3>
-            <p className="mt-3 text-slate-600">
-              Etiketi hesabında etkinleştirirsin; dilediğinde başka bir kaydına
-              taşıyabilirsin.
-            </p>
-          </BolumGecisi>
-
-          <BolumGecisi
-            gecikme={240}
-            className="rounded-2xl border border-slate-200 bg-white p-8 transition duration-300 hover:-translate-y-1 hover:shadow-md motion-reduce:transform-none"
-          >
-            <h3 className="text-xl font-semibold">Kolay Yönetim</h3>
-            <p className="mt-3 text-slate-600">
-              Tüm eşyalarını tek panelden ekle, düzenle ve takip et.
-            </p>
-          </BolumGecisi>
-        </div>
-
-        <BolumGecisi gecikme={120}>
-          <div className="mt-9 grid items-center gap-8 rounded-3xl border border-[#e5e0ff] bg-[#f6f4ff] p-8 md:grid-cols-2 sm:p-10">
-            <div>
-              <h3 className="text-2xl font-bold">Okut, mesaj gelsin</h3>
-              <p className="mt-4 leading-relaxed text-slate-600">
-                QR kod telefonun kamerasıyla okutulur ve tarayıcıda açılır.
-                Mesajı gönderen kişinin uygulama kurmasına gerek yoktur;
-                bildirim sana ARKVIUM üzerinden ulaşır.
-              </p>
-            </div>
-
-            <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-[#e5e0ff] bg-slate-100">
-              <Gorsel anahtar="aktivasyon" sizes="(min-width: 768px) 48vw, 90vw" />
-                <TemsiliRozet />
-            </div>
-          </div>
-        </BolumGecisi>
-      </section>
-
-      <section id="nasil" className="scroll-mt-24 border-y border-slate-200 bg-slate-50">
-        <div className="mx-auto max-w-6xl px-6 py-12 sm:py-16">
-          <BolumGecisi>
-            <h2 className="text-center text-3xl font-bold">
-              Fiziksel ARKVIUM ürününü dört adımda kullan
+            <h2 id="nasil-basligi" className="ark-baslik mt-3 text-ark-ink">
+              Kutudan çıkıp korumaya dört adım
             </h2>
           </BolumGecisi>
 
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <BolumGecisi className="rounded-2xl border border-slate-200 bg-white p-7">
-              <div className="text-4xl font-bold text-indigo-600">01</div>
-              <h3 className="mt-4 text-xl font-semibold">Ürününü seç</h3>
-              <p className="mt-3 text-slate-600">
-                İhtiyacına uygun QR sticker, anahtarlık, künye veya valiz
-                etiketini seç.
-              </p>
-            </BolumGecisi>
+          <ol className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {ADIMLAR.map((adim, sira) => (
+              <BolumGecisi
+                key={adim.numara}
+                as="li"
+                gecikme={Math.min(sira * 70, 300)}
+                className="rounded-2xl border border-ark-line bg-ark-surface p-6 shadow-ark-1 sm:p-7"
+              >
+                <div
+                  aria-hidden="true"
+                  className="text-3xl font-bold tracking-tight text-ark-accent"
+                >
+                  {adim.numara}
+                </div>
 
-            <BolumGecisi
-              gecikme={90}
-              className="rounded-2xl border border-slate-200 bg-white p-7"
-            >
-              <div className="text-4xl font-bold text-indigo-600">02</div>
-              <h3 className="mt-4 text-xl font-semibold">Satın al</h3>
-              <p className="mt-3 text-slate-600">
-                Teslimat bilgilerini gir ve ödemeni güvenli ödeme sayfasında
-                tamamla.
-              </p>
-            </BolumGecisi>
+                <h3 className="mt-4 text-xl font-semibold text-ark-ink">
+                  {adim.baslik}
+                </h3>
 
-            <BolumGecisi
-              gecikme={180}
-              className="rounded-2xl border border-slate-200 bg-white p-7"
-            >
-              <div className="text-4xl font-bold text-indigo-600">03</div>
-              <h3 className="mt-4 text-xl font-semibold">
-                Etiketini etkinleştir
-              </h3>
-              <p className="mt-3 text-slate-600">
-                Ürün eline ulaştığında ARKVIUM hesabına giriş yap ve QR etiketini
-                hesabına bağla.
-              </p>
-            </BolumGecisi>
+                <p className="mt-3 leading-relaxed text-ark-ink-2">
+                  {adim.metin}
+                </p>
+              </BolumGecisi>
+            ))}
+          </ol>
 
-            <BolumGecisi
-              gecikme={270}
-              className="rounded-2xl border border-slate-200 bg-white p-7"
-            >
-              <div className="text-4xl font-bold text-indigo-600">04</div>
-              <h3 className="mt-4 text-xl font-semibold">Güvenle mesaj al</h3>
-              <p className="mt-3 text-slate-600">
-                Etiketi eşyana veya aracına uygula; QR okutulduğunda kişisel
-                bilgilerin görünmeden sana mesaj gelsin.
-              </p>
-            </BolumGecisi>
-          </div>
-
-          <p className="mt-8 text-center text-slate-600">
+          <p className="mt-10 text-left text-ark-ink-2 sm:text-center">
             Fiziksel ürün istemiyor musun?{" "}
             <a
               href="/register"
-              className="font-semibold text-indigo-600 underline-offset-4 transition hover:text-indigo-700 hover:underline"
+              className="font-semibold text-ark-accent underline-offset-4 transition duration-200 hover:text-ark-accent-strong hover:underline"
             >
               Ücretsiz hesap oluştur
             </a>
@@ -238,256 +254,225 @@ export default function Home() {
 
       <UrunlerBolumu />
 
-      {/* Sağladığı faydalar */}
-      <section id="faydalar" className="scroll-mt-24 border-y border-slate-200 bg-slate-50">
-        <div className="mx-auto max-w-6xl px-6 py-12 sm:py-16">
-          <BolumGecisi>
-            <h2 className="text-center text-3xl font-bold">Size ne sağlar?</h2>
-            <p className="mx-auto mt-4 max-w-2xl text-center text-slate-600">
-              ARKVIUM etiketi, eşyanla iletişim kurulmasını sen kontrol edersin.
-            </p>
-          </BolumGecisi>
+      {/* Faydalar */}
+      <section
+        id="faydalar"
+        aria-labelledby="faydalar-basligi"
+        className="mx-auto max-w-6xl scroll-mt-24 px-6 py-16 sm:px-8 sm:py-24"
+      >
+        {/*
+          Mobilde sola hizalı: dar ekranda ortalanmış çok satırlı paragrafın
+          her satırı farklı yerden başlar ve göz satır başını kaybeder
+          (DESIGN.md § 4). `sm`den itibaren ortalanmış hâline döner.
+        */}
+        <BolumGecisi className="text-left sm:text-center">
+          <p className="ark-etiket text-ark-accent">Faydalar</p>
 
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              {
-                Ikon: IkonTarama,
-                baslik: "Kurulum gerektirmez",
-                metin:
-                  "QR kod telefonun kamerasıyla okunur ve tarayıcıda açılır. Mesajı gönderen kişinin uygulama yüklemesine gerek yoktur.",
-              },
-              {
-                Ikon: IkonKalkan,
-                baslik: "Numaran açıkta durmaz",
-                metin:
-                  "Etikette telefon numaran yazmaz. Bildirim sana ARKVIUM üzerinden iletilir.",
-              },
-              {
-                Ikon: IkonTasima,
-                baslik: "Etiketi taşıyabilirsin",
-                metin:
-                  "Eşyan değişirse etiketi iptal etmeden hesabındaki başka bir kayda bağlayabilirsin.",
-              },
-              {
-                Ikon: IkonPanel,
-                baslik: "Tek panelden yönetirsin",
-                metin:
-                  "Eşyalarını ekler, düzenler, kayıp olarak işaretler ve gelen bildirimleri aynı yerden görürsün.",
-              },
-            ].map((oge, sira) => (
-              <BolumGecisi
-                key={oge.baslik}
-                gecikme={sira * 70}
-                className="rounded-2xl border border-slate-200 bg-white p-7 transition duration-300 hover:-translate-y-1 hover:shadow-md motion-reduce:transform-none"
-              >
-                <oge.Ikon />
-                <h3 className="mt-5 text-lg font-semibold">{oge.baslik}</h3>
-                <p className="mt-3 leading-relaxed text-slate-600">{oge.metin}</p>
-              </BolumGecisi>
-            ))}
-          </div>
-        </div>
-      </section>
+          <h2 id="faydalar-basligi" className="ark-baslik mt-3 text-ark-ink">
+            İletişimi sen kontrol edersin
+          </h2>
 
-      {/* Kullanım senaryoları */}
-      <section id="senaryolar" className="scroll-mt-24 mx-auto max-w-6xl px-6 py-12 sm:py-16">
-        <BolumGecisi>
-          <h2 className="text-center text-3xl font-bold">Nerelerde kullanılır?</h2>
-          <p className="mx-auto mt-4 max-w-2xl text-center text-slate-600">
-            Aynı mantık farklı eşyalarda çalışır: QR okutulur, sana ARKVIUM
-            üzerinden mesaj gelir.
+          <p className="ark-giris mt-4 max-w-2xl text-ark-ink-2 sm:mx-auto">
+            Eşyanla kimin, nasıl ve ne zaman iletişim kuracağına karar veren
+            taraf sensin.
           </p>
         </BolumGecisi>
 
-        <div className="mt-8 grid items-center gap-8 md:grid-cols-2">
-          <BolumGecisi>
-            <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-[#e5e0ff] bg-slate-100">
-              <Gorsel anahtar="arac" sizes="(min-width: 768px) 48vw, 90vw" />
-                <TemsiliRozet />
-            </div>
-          </BolumGecisi>
-
-          <BolumGecisi gecikme={120}>
-            <h3 className="text-2xl font-bold">Araç</h3>
-            <p className="mt-4 leading-relaxed text-slate-600">
-              Hatalı park, açık unutulan far veya araçta fark edilen bir durum
-              için numaran görünmeden bildirim al.
-            </p>
-
-            <Link
-              href="/urun/arac-stickeri"
-              className="mt-6 inline-flex rounded-xl border border-indigo-200 bg-white px-6 py-3 font-semibold text-indigo-700 transition hover:bg-indigo-50"
-            >
-              Araç ürününü incele
-            </Link>
-          </BolumGecisi>
-        </div>
-
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            {
-              baslik: "Anahtar",
-              metin: "Anahtarlığa takılan metal etiketle kayıp anahtarlarına ulaşılsın.",
-            },
-            {
-              baslik: "Evcil hayvan",
-              metin: "Tasmadaki künye okutulduğunda sana güvenli mesaj gelsin.",
-            },
-            {
-              baslik: "Valiz",
-              metin: "Valizin kaybolduğunda bulan kişi seninle iletişime geçebilsin.",
-            },
-            {
-              baslik: "Kayıp eşya",
-              metin: "Eşyanı kayıp olarak işaretle; QR okutan kişi bu uyarıyı görsün.",
-            },
-          ].map((oge, sira) => (
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {FAYDALAR.map((oge, sira) => (
             <BolumGecisi
               key={oge.baslik}
-              gecikme={sira * 70}
-              className="rounded-2xl border border-slate-200 bg-white p-7 transition duration-300 hover:-translate-y-1 hover:shadow-md motion-reduce:transform-none"
+              gecikme={Math.min(sira * 70, 300)}
+              className="ark-kart-hover rounded-2xl border border-ark-line bg-ark-surface p-6 shadow-ark-1 sm:p-7"
             >
-              <h3 className="text-lg font-semibold">{oge.baslik}</h3>
-              <p className="mt-3 leading-relaxed text-slate-600">{oge.metin}</p>
+              <oge.Ikon />
+
+              <h3 className="mt-5 text-lg font-semibold text-ark-ink">
+                {oge.baslik}
+              </h3>
+
+              <p className="mt-3 leading-relaxed text-ark-ink-2">{oge.metin}</p>
             </BolumGecisi>
           ))}
         </div>
       </section>
 
-      {/* Güven ve gizlilik */}
-      <section id="guvenlik" className="scroll-mt-24 border-y border-slate-200 bg-slate-50">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-12 sm:py-16 md:grid-cols-2">
-          <BolumGecisi>
-            <h2 className="text-3xl font-bold">Gizlilik önce gelir</h2>
+      {/*
+        Araç odaklı bölüm.
 
-            <p className="mt-4 leading-relaxed text-slate-600">
-              ARKVIUM&apos;un hedefi sadece eşyayı buldurmak değil; kullanıcıyı
-              koruyan, güvenli ve kontrollü bir dijital sahiplik altyapısı
-              kurmaktır.
+        Eski "Nerelerde kullanılır?" ızgarası KALDIRILDI: kullanım senaryoları
+        artık ürün kartlarının içinde, ürünle birlikte anlatılıyor ve ikisi
+        birbirini tekrar ediyordu. Burada yalnızca kendi ayrıntı sayfası olan
+        tek ürün öne çıkarılır.
+      */}
+      <section
+        id="senaryolar"
+        aria-labelledby="arac-basligi"
+        className="scroll-mt-24 border-y border-ark-line bg-ark-surface-2"
+      >
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-16 sm:px-8 sm:py-24 md:grid-cols-2 md:gap-16">
+          {/*
+            METİN, DOM'da da görselden ÖNCE gelir: mobilde tek sütuna inince
+            ziyaretçi hangi bölümde olduğunu bilmeden bir fotoğrafla
+            karşılaşmasın (DESIGN.md § 9) ve ekran okuyucu da başlığı önce
+            okusun — okuma sırası görsel sırayla aynı kalır (§ 10).
+
+            Masaüstünde görsel yine SOLDA durur; bunu yalnızca `md:order-*`
+            sağlar, kaynak sırası değişmez.
+          */}
+          <BolumGecisi className="md:order-2">
+            <p className="ark-etiket text-ark-accent">Araç</p>
+
+            <h2 id="arac-basligi" className="ark-baslik mt-3 text-ark-ink">
+              Camında numaran yazmasın
+            </h2>
+
+            <p className="ark-olcu mt-5 leading-relaxed text-ark-ink-2">
+              Hatalı park, açık unutulan far veya araçta fark edilen bir durum
+              için sürücüler sana ulaşabilsin — telefon numaran camda yazmadan.
+              Kâğıda numara yazıp bırakma dönemi kapanır.
             </p>
 
-            <ul className="mt-8 space-y-4 text-slate-600">
-              <li className="flex gap-3">
-                <span aria-hidden="true" className="mt-2 h-2 w-2 shrink-0 rounded-full bg-indigo-500" />
-                <span className="leading-relaxed">
-                  QR kodun içinde telefon numaran bulunmaz.
-                </span>
-              </li>
-              <li className="flex gap-3">
-                <span aria-hidden="true" className="mt-2 h-2 w-2 shrink-0 rounded-full bg-indigo-500" />
-                <span className="leading-relaxed">
-                  QR kodun açtığı sayfada kişisel iletişim bilgin doğrudan
-                  gösterilmez.
-                </span>
-              </li>
-              <li className="flex gap-3">
-                <span aria-hidden="true" className="mt-2 h-2 w-2 shrink-0 rounded-full bg-indigo-500" />
-                <span className="leading-relaxed">
-                  Mesaj sana ARKVIUM üzerinden iletilir.
-                </span>
-              </li>
+            <Link
+              href="/urun/arac-stickeri"
+              className="mt-8 inline-flex min-h-[44px] items-center rounded-xl border border-ark-line-strong bg-ark-surface px-6 py-3 font-semibold text-ark-ink transition duration-200 hover:bg-ark-surface-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent"
+            >
+              Araç ürününü incele
+            </Link>
+          </BolumGecisi>
+
+          <BolumGecisi gecikme={120} className="md:order-1">
+            <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-ark-line bg-ark-surface-3 shadow-ark-2">
+              <Gorsel anahtar="arac" sizes="(min-width: 768px) 48vw, 90vw" />
+              <TemsiliRozet />
+            </div>
+          </BolumGecisi>
+        </div>
+      </section>
+
+      {/* Gizlilik */}
+      <section
+        id="guvenlik"
+        aria-labelledby="guvenlik-basligi"
+        className="mx-auto max-w-6xl scroll-mt-24 px-6 py-16 sm:px-8 sm:py-24"
+      >
+        <div className="grid items-center gap-10 md:grid-cols-2 md:gap-16">
+          <BolumGecisi>
+            <p className="ark-etiket text-ark-accent">Gizlilik</p>
+
+            <h2 id="guvenlik-basligi" className="ark-baslik mt-3 text-ark-ink">
+              Bulunabilirlik, mahremiyet pahasına olmaz
+            </h2>
+
+            <p className="ark-olcu mt-5 leading-relaxed text-ark-ink-2">
+              ARKVIUM&apos;un hedefi sadece eşyayı buldurmak değil; kullanıcıyı
+              koruyan, kontrollü bir dijital sahiplik altyapısı kurmaktır.
+            </p>
+
+            <ul className="mt-8 space-y-4">
+              {GIZLILIK_MADDELERI.map((madde) => (
+                <li key={madde} className="flex gap-3">
+                  <span
+                    aria-hidden="true"
+                    className="mt-2 h-2 w-2 shrink-0 rounded-full bg-ark-accent"
+                  />
+                  <span className="leading-relaxed text-ark-ink-2">
+                    {madde}
+                  </span>
+                </li>
+              ))}
             </ul>
           </BolumGecisi>
 
           <BolumGecisi gecikme={120}>
-            <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-slate-200 bg-slate-100">
-              <Gorsel anahtar="mesajlasma" sizes="(min-width: 768px) 48vw, 90vw" />
-                <TemsiliRozet />
+            <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-ark-line bg-ark-surface-3 shadow-ark-2">
+              <Gorsel
+                anahtar="mesajlasma"
+                sizes="(min-width: 768px) 48vw, 90vw"
+              />
+              <TemsiliRozet />
             </div>
           </BolumGecisi>
         </div>
       </section>
 
       {/* Sık sorulan sorular */}
-      <section id="sss" className="scroll-mt-24 mx-auto max-w-3xl px-6 py-12 sm:py-16">
-        <BolumGecisi>
-          <h2 className="text-center text-3xl font-bold">Sık sorulan sorular</h2>
-        </BolumGecisi>
+      <section
+        id="sss"
+        aria-labelledby="sss-basligi"
+        className="scroll-mt-24 border-y border-ark-line bg-ark-surface-2"
+      >
+        <div className="mx-auto max-w-3xl px-6 py-16 sm:px-8 sm:py-24">
+          <BolumGecisi className="text-center">
+            <p className="ark-etiket text-ark-accent">SSS</p>
 
-        <div className="mt-8 space-y-3">
-          {[
-            {
-              soru: "QR kodu okutan kişinin uygulama yüklemesi gerekir mi?",
-              cevap:
-                "Hayır. QR kod tarayıcıda bir sayfa açar ve mesaj formu doğrudan orada doldurulur; uygulama kurulumu veya hesap açma gerekmez.",
-            },
-            {
-              soru: "Telefon numaram görünür mü?",
-              cevap:
-                "QR kodun açtığı sayfada telefon numaran ve e-posta adresin gösterilmez. Mesajı gönderen kişi kendi iletişim bilgisini bırakır.",
-            },
-            {
-              soru: "Etiketi nasıl etkinleştiririm?",
-              cevap:
-                "ARKVIUM hesabına giriş yapıp etiketin üzerindeki aktivasyon kodunu girersin. Etkinleştirme için giriş yapman gerekir.",
-            },
-            {
-              soru: "Bana mesaj nasıl ulaşır?",
-              cevap:
-                "Gönderilen bildirim hesabındaki e-posta adresine iletilir ve hesabında da görüntülenir.",
-            },
-            {
-              soru: "Eşyamı değiştirirsem etiket ne olur?",
-              cevap:
-                "Etiketi hesabındaki başka bir kayda taşıyabilirsin; etiket iptal olmadan yeni kaydına bağlanır.",
-            },
-            {
-              soru: "Eşyamı kayıp olarak işaretleyebilir miyim?",
-              cevap:
-                "Evet. Kayıp işaretlediğinde QR kodu okutan kişi bu uyarıyı sayfada görür.",
-            },
-          ].map((oge, sira) => (
-            <BolumGecisi key={oge.soru} gecikme={sira * 60}>
-              <details className="group rounded-2xl border border-slate-200 bg-white px-6 open:border-indigo-200 open:bg-[#faf9ff]">
-                <summary className="cursor-pointer list-none py-5 font-semibold outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60">
-                  <span className="flex items-center justify-between gap-4">
-                    {oge.soru}
-                    <span
-                      aria-hidden="true"
-                      className="shrink-0 text-indigo-500 transition duration-300 group-open:rotate-45 motion-reduce:transition-none"
-                    >
-                      +
+            <h2 id="sss-basligi" className="ark-baslik mt-3 text-ark-ink">
+              Sık sorulan sorular
+            </h2>
+          </BolumGecisi>
+
+          <div className="mt-12 space-y-3">
+            {SORULAR.map((oge, sira) => (
+              <BolumGecisi key={oge.soru} gecikme={Math.min(sira * 60, 300)}>
+                <details className="group rounded-2xl border border-ark-line bg-ark-surface px-6 shadow-ark-1">
+                  <summary className="cursor-pointer list-none py-5 font-semibold text-ark-ink outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent">
+                    <span className="flex items-center justify-between gap-4">
+                      {oge.soru}
+                      <span
+                        aria-hidden="true"
+                        className="shrink-0 text-xl leading-none text-ark-accent transition duration-200 group-open:rotate-45"
+                      >
+                        +
+                      </span>
                     </span>
-                  </span>
-                </summary>
-                <p className="pb-5 leading-relaxed text-slate-600">{oge.cevap}</p>
-              </details>
-            </BolumGecisi>
-          ))}
+                  </summary>
+
+                  <p className="pb-5 leading-relaxed text-ark-ink-2">
+                    {oge.cevap}
+                  </p>
+                </details>
+              </BolumGecisi>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* Son çağrı */}
-      <section className="mx-auto max-w-6xl px-6 py-12 sm:py-16">
+      <section className="mx-auto max-w-6xl px-6 py-16 sm:px-8 sm:py-24">
         <BolumGecisi>
-          <div className="grid items-center gap-8 rounded-3xl border border-[#e5e0ff] bg-[#f6f4ff] p-8 md:grid-cols-2 sm:p-12">
+          <div className="grid items-center gap-10 rounded-3xl border border-ark-line bg-ark-surface-2 p-8 shadow-ark-1 sm:p-12 md:grid-cols-2">
             <div>
-              <h2 className="text-3xl font-bold">Eşyana dijital kimlik ver</h2>
+              <h2 className="ark-baslik text-ark-ink">
+                Eşyana dijital kimlik ver
+              </h2>
 
-              <p className="mt-4 leading-relaxed text-slate-600">
+              <p className="ark-olcu mt-5 leading-relaxed text-ark-ink-2">
                 Etiketini seç, hesabına bağla ve numaran görünmeden bildirim al.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
                   href="/#urunler"
-                  className="inline-flex justify-center rounded-xl bg-[#101a3d] px-8 py-4 font-semibold text-white transition hover:bg-[#1b2a5c] active:scale-[0.98] motion-reduce:active:scale-100"
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-ark-ink px-8 py-3.5 font-semibold text-white transition duration-200 hover:bg-ark-ink-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent active:scale-[0.98] motion-reduce:active:scale-100"
                 >
                   Ürünleri İncele
                 </Link>
 
                 <Link
                   href="/account/tags/activate"
-                  className="inline-flex justify-center rounded-xl border border-indigo-200 bg-white px-8 py-4 font-semibold text-indigo-700 transition hover:bg-indigo-50"
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-ark-line-strong bg-ark-surface px-8 py-3.5 font-semibold text-ark-ink transition duration-200 hover:bg-ark-surface-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent"
                 >
                   Etiketimi Etkinleştir
                 </Link>
               </div>
             </div>
 
-            <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-[#e5e0ff] bg-slate-100">
-              <Gorsel anahtar="anahtarlik" sizes="(min-width: 768px) 40vw, 90vw" />
-                <TemsiliRozet />
+            <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-ark-line bg-ark-surface-3">
+              <Gorsel
+                anahtar="anahtarlik"
+                sizes="(min-width: 768px) 40vw, 90vw"
+              />
+              <TemsiliRozet />
             </div>
           </div>
         </BolumGecisi>
@@ -498,61 +483,82 @@ export default function Home() {
         veya hukuki metin bağlantısı eklenmez: bu hesaplar/sayfalar projede
         tanımlı değildir ve kırık bağlantı üretmemek için uydurulmaz.
       */}
-      <footer className="border-t border-slate-200 bg-slate-50">
-        <div className="mx-auto max-w-6xl px-6 py-12">
+      <footer className="border-t border-ark-line bg-ark-surface-2">
+        <div className="mx-auto max-w-6xl px-6 py-14 sm:px-8">
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <ArkviumTamLogo genislik={160} />
-              <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-500">
-                Eşyalarına QR kodlu dijital kimlik ver; kişisel bilgilerin
-                görünmeden sana ulaşılsın.
+
+              <p className="mt-4 max-w-xs text-sm leading-relaxed text-ark-ink-3">
+                Dijital Sahiplik Platformu. Eşyalarına QR kodlu dijital kimlik
+                ver; kişisel bilgilerin görünmeden sana ulaşılsın.
               </p>
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-[#101a3d]">Ürünler</h3>
-              <ul className="mt-4 space-y-3 text-sm text-slate-500">
+              <h2 className="text-sm font-semibold text-ark-ink">Ürünler</h2>
+              <ul className="mt-4 space-y-2 text-sm text-ark-ink-3">
                 <li>
-                  <a href="/#urunler" className="flex min-h-[44px] items-center transition hover:text-indigo-600 md:min-h-0">
+                  <a
+                    href="/#urunler"
+                    className={`flex min-h-[44px] items-center md:min-h-0 md:py-1 ${BAGLANTI}`}
+                  >
                     Tüm ürünler
                   </a>
                 </li>
                 <li>
                   <Link
                     href="/urun/arac-stickeri"
-                    className="flex min-h-[44px] items-center transition hover:text-indigo-600 md:min-h-0"
+                    className={`flex min-h-[44px] items-center md:min-h-0 md:py-1 ${BAGLANTI}`}
                   >
                     Araç İletişim QR Sticker&apos;ı
                   </Link>
                 </li>
                 <li>
-                  <a href="/#faydalar" className="flex min-h-[44px] items-center transition hover:text-indigo-600 md:min-h-0">
-                    Size ne sağlar?
+                  <a
+                    href="/#faydalar"
+                    className={`flex min-h-[44px] items-center md:min-h-0 md:py-1 ${BAGLANTI}`}
+                  >
+                    Faydalar
                   </a>
                 </li>
               </ul>
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-[#101a3d]">Nasıl çalışır</h3>
-              <ul className="mt-4 space-y-3 text-sm text-slate-500">
+              <h2 className="text-sm font-semibold text-ark-ink">
+                Nasıl çalışır
+              </h2>
+              <ul className="mt-4 space-y-2 text-sm text-ark-ink-3">
                 <li>
-                  <a href="/#nasil" className="flex min-h-[44px] items-center transition hover:text-indigo-600 md:min-h-0">
+                  <a
+                    href="/#nasil"
+                    className={`flex min-h-[44px] items-center md:min-h-0 md:py-1 ${BAGLANTI}`}
+                  >
                     Dört adımda kullanım
                   </a>
                 </li>
                 <li>
-                  <a href="/#senaryolar" className="flex min-h-[44px] items-center transition hover:text-indigo-600 md:min-h-0">
-                    Kullanım alanları
+                  <a
+                    href="/#senaryolar"
+                    className={`flex min-h-[44px] items-center md:min-h-0 md:py-1 ${BAGLANTI}`}
+                  >
+                    Araç etiketi
                   </a>
                 </li>
                 <li>
-                  <a href="/#guvenlik" className="flex min-h-[44px] items-center transition hover:text-indigo-600 md:min-h-0">
+                  <a
+                    href="/#guvenlik"
+                    className={`flex min-h-[44px] items-center md:min-h-0 md:py-1 ${BAGLANTI}`}
+                  >
                     Gizlilik
                   </a>
                 </li>
                 <li>
-                  <a href="/#sss" className="flex min-h-[44px] items-center transition hover:text-indigo-600 md:min-h-0">
+                  <a
+                    href="/#sss"
+                    className={`flex min-h-[44px] items-center md:min-h-0 md:py-1 ${BAGLANTI}`}
+                  >
                     Sık sorulan sorular
                   </a>
                 </li>
@@ -560,22 +566,28 @@ export default function Home() {
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-[#101a3d]">Hesap</h3>
-              <ul className="mt-4 space-y-3 text-sm text-slate-500">
+              <h2 className="text-sm font-semibold text-ark-ink">Hesap</h2>
+              <ul className="mt-4 space-y-2 text-sm text-ark-ink-3">
                 <li>
-                  <Link href="/login" className="flex min-h-[44px] items-center transition hover:text-indigo-600 md:min-h-0">
+                  <Link
+                    href="/login"
+                    className={`flex min-h-[44px] items-center md:min-h-0 md:py-1 ${BAGLANTI}`}
+                  >
                     Giriş yap
                   </Link>
                 </li>
                 <li>
-                  <Link href="/register" className="flex min-h-[44px] items-center transition hover:text-indigo-600 md:min-h-0">
+                  <Link
+                    href="/register"
+                    className={`flex min-h-[44px] items-center md:min-h-0 md:py-1 ${BAGLANTI}`}
+                  >
                     Hesap oluştur
                   </Link>
                 </li>
                 <li>
                   <Link
                     href="/account/tags/activate"
-                    className="flex min-h-[44px] items-center transition hover:text-indigo-600 md:min-h-0"
+                    className={`flex min-h-[44px] items-center md:min-h-0 md:py-1 ${BAGLANTI}`}
                   >
                     Etiketimi etkinleştir
                   </Link>
@@ -584,7 +596,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="mt-10 border-t border-slate-200 pt-6 text-center text-sm text-slate-500">
+          <div className="mt-12 border-t border-ark-line pt-6 text-center text-sm text-ark-ink-3">
             © 2026 ARKVIUM. Tüm hakları saklıdır.
           </div>
         </div>
