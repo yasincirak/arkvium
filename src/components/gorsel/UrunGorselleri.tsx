@@ -16,6 +16,7 @@ type GorselTanimi = {
 };
 
 export type GorselAnahtari =
+  | "acil-durum"
   | "hero"
   | "arac"
   | "sticker-seti"
@@ -26,6 +27,16 @@ export type GorselAnahtari =
   | "aktivasyon";
 
 const GORSELLER: Record<GorselAnahtari, GorselTanimi> = {
+  "acil-durum": {
+    src: "/gorseller/acil-durum.jpg",
+    alt: "Sedyedeki motosikletlinin kaskındaki QR kodu telefonuyla okutan sağlık personeli; arkada açık kapılı ambulans",
+    /*
+     * Kadraj: QR okutma anı (telefon + kasktaki QR) yatayda %45'te durur.
+     * Kaynak 2:1'e yakın olduğu için 4:3 ve 5:4 kutularda yatay kırpma
+     * yapılır; %45 hem masaüstünde hem mobilde bu anı çerçeve içinde tutar.
+     */
+    konum: "45% 50%",
+  },
   hero: {
     src: "/gorseller/hero.jpg",
     alt: "Lacivert çantaya takılı QR etiketi telefonuyla okutan kişi; yanında QR etiketli anahtarlar ve evcil hayvan tasması",

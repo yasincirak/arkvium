@@ -35,9 +35,14 @@
   --ark-accent-strong: #4338ca;
   --ark-accent-soft: #eef0ff;
 
-  /* Ticaret: YALNIZCA satın alma. Beyaz metinle 5.48 (emerald-600 3.77 idi). */
-  --ark-commerce: #047857;
-  --ark-commerce-strong: #036249;
+  /*
+   * Ticaret: YALNIZCA satın alma eylemi.
+   *
+   * Önceden yeşildi; marka sistemine ait olmadığı için kaldırıldı ve marka
+   * moruna çekildi. Beyaz metinle 6.29 — AA.
+   */
+  --ark-commerce: #4f46e5;
+  --ark-commerce-strong: #4338ca;
 
   /* Yüzeyler */
   --ark-surface: #ffffff;
@@ -47,6 +52,25 @@
   /* Çizgiler */
   --ark-line: #e2e6f0;
   --ark-line-strong: #cdd5e8;
+
+  /*
+   * KOYU LACİVERT YÜZEY — hero ve güven bölümü.
+   *
+   * Sayfanın tamamı beyaz kalmasın diye iki bölüm koyu zemine oturur.
+   * Bu bir "koyu tema" DEĞİLDİR: yalnızca belirli bölümlerin kendi
+   * zeminidir ve `prefers-color-scheme` ile ilgisi yoktur.
+   *
+   * Koyu zeminde kullanılabilecek metin renkleri sınırlıdır; ölçülmüş
+   * oranlar için DESIGN.md § 3.2'ye bakın. `--ark-accent` (#4f46e5) koyu
+   * zeminde 2.70 verir ve METİN olarak KULLANILAMAZ; onun yerine
+   * `--ark-accent-on-dark` kullanılır.
+   */
+  --ark-ink-deep: #0b1330;
+  --ark-surface-dark: #101a3d;
+  --ark-on-dark: #ffffff;
+  --ark-on-dark-2: #b6c0dc;
+  --ark-accent-on-dark: #a5b4fc;
+  --ark-line-dark: rgb(255 255 255 / 0.12);
 }
 
 body {
@@ -97,6 +121,23 @@ body {
   /* Okunabilirlik sınırı: paragraf 65 karakteri aşmaz (DESIGN.md § 4). */
   .ark-olcu {
     max-width: 65ch;
+  }
+
+  /*
+   * Görselin alt kenarına doğru koyulaşan ince perde.
+   *
+   * Kullanım vitrininde etiket metni fotoğrafın ÜZERİNE biner; perde
+   * olmadan açık zeminli fotoğraflarda metin okunmaz hâle gelir. Gradyan
+   * yalnızca burada — metnin altındaki maske olarak — kullanılır; metnin
+   * kendisine veya düğmelere gradyan uygulanmaz (DESIGN.md § 3.3).
+   */
+  .ark-perde {
+    background-image: linear-gradient(
+      to top,
+      rgb(11 19 48 / 0.88) 0%,
+      rgb(11 19 48 / 0.55) 38%,
+      rgb(11 19 48 / 0) 72%
+    );
   }
 }
 

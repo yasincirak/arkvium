@@ -1,0 +1,399 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { IkonKalkan } from "@/components/gorsel/Ikonlar";
+import { ArkviumTamLogo } from "@/components/Logo";
+import {
+  Gorsel,
+  TemsiliRozet,
+  type GorselAnahtari,
+} from "@/components/gorsel/UrunGorselleri";
+
+/**
+ * Ana sayfa hero kaydırıcısı.
+ *
+ * ARKVIUM'un beş temel kullanım alanını sırayla anlatır; ilk slayt her
+ * zaman Acil Durum Profili'dir.
+ *
+ * DAVRANIŞ
+ * - 6 saniyede bir otomatik ilerler.
+ * - Fare üzerine gelince ve dokunma sırasında otomatik geçiş DURUR.
+ * - Ok düğmeleri, noktalar, klavye ok tuşları ve parmakla kaydırma çalışır.
+ * - Her kullanıcı etkileşiminde sayaç sıfırlanır (etkin slayt değişince
+ *   zamanlayıcı efekti yeniden kurulur).
+ * - `prefers-reduced-motion: reduce` tercihinde otomatik geçiş HİÇ
+ *   başlamaz; slaytlar yalnızca elle değiştirilir.
+ *
+ * YÜKSEKLİK
+ * Tüm slaytlar aynı esnek satırda durur; kapsayıcı en uzun slaytın
+ * yüksekliğini alır. Slayt değişince sayfa yüksekliği değişmez, içerik
+ * sıçraması olmaz.
+ */
+
+type Dugme = { metin: string; href: string; tur: "birincil" | "ikincil" };
+
+type Slayt = {
+  kod: string;
+  etiket: string;
+  baslik: string;
+  metin: string;
+  gorsel: GorselAnahtari;
+  bilgiEtiketleri?: string[];
+  dugmeler: Dugme[];
+  /** Sağlık verisi taşıyan slaytta zorunlu hukuki açıklama. */
+  beyanUyarisi?: string;
+};
+
+const SLAYTLAR: Slayt[] = [
+  {
+    kod: "acil-durum",
+    etiket: "Acil Durum Profili",
+    baslik: "Acil durumda saniyeler önemlidir",
+    metin:
+      "Sağlık personeli veya yardım eden kişi QR'ı okutarak kullanıcının paylaşmayı seçtiği sağlık bilgilerini görebilir ve acil durumda aranacak yakınlarına tek dokunuşla ulaşabilir.",
+    bilgiEtiketleri: [
+      "Kan grubu",
+      "Alerjiler",
+      "Kullanılan ilaçlar",
+      "Acil durum kişileri",
+    ],
+    gorsel: "acil-durum",
+    dugmeler: [
+      {
+        metin: "Acil Durum Profilini İncele",
+        href: "#acil-durum",
+        tur: "birincil",
+      },
+      { metin: "Nasıl Çalışır?", href: "#nasil", tur: "ikincil" },
+    ],
+    beyanUyarisi:
+      "Gösterilen bilgiler kullanıcının kendi beyanıdır; doğrulanmış tıbbi kayıt değildir.",
+  },
+  {
+    kod: "kayip-esya",
+    etiket: "Kayıp eşya",
+    baslik: "Eşyaların kaybolsa bile sana geri dönsün",
+    metin:
+      "ARKVIUM etiketini eşyanla eşleştir. Bulan kişi QR'ı okutarak uygulama indirmeden sana güvenli şekilde ulaşsın.",
+    gorsel: "hero",
+    dugmeler: [
+      { metin: "QR Etiketleri İncele", href: "#urunler", tur: "birincil" },
+    ],
+  },
+  {
+    kod: "evcil-hayvan",
+    etiket: "Evcil hayvan",
+    baslik: "Kaybolduğunda ona ulaşmanın bir yolu olsun",
+    metin:
+      "Künyedeki QR kod okutulduğunda bulan kişi, paylaşmayı seçtiğin bilgiler üzerinden sana ulaşabilsin.",
+    gorsel: "evcil-hayvan",
+    dugmeler: [
+      {
+        metin: "Evcil Hayvan Künyesini İncele",
+        href: "#urunler",
+        tur: "birincil",
+      },
+    ],
+  },
+  {
+    kod: "valiz",
+    etiket: "Valiz ve seyahat",
+    baslik: "Valizin kaybolduğunda iletişim bilgilerin açıkta kalmasın",
+    metin:
+      "QR valiz etiketi sayesinde valizi bulan kişi, telefon numaranı doğrudan görmeden sana ulaşabilsin.",
+    gorsel: "valiz",
+    dugmeler: [
+      { metin: "Valiz Etiketini İncele", href: "#urunler", tur: "birincil" },
+    ],
+  },
+  {
+    kod: "arac",
+    etiket: "Araç ve motosiklet",
+    baslik: "Aracın için güvenli iletişim ve acil durum bağlantısı",
+    metin:
+      "QR etiketi; gerektiğinde araç sahibiyle gizli iletişim kurulmasını ve izin verilen acil durum bilgilerinin görüntülenmesini sağlar.",
+    gorsel: "arac",
+    dugmeler: [
+      {
+        metin: "Araç Etiketini İncele",
+        href: "/urun/arac-stickeri",
+        tur: "birincil",
+      },
+    ],
+  },
+];
+
+const GECIS_SURESI = 6000;
+const KAYDIRMA_ESIGI = 48;
+
+export default function HeroKaydirici() {
+  const [etkin, setEtkin] = useState(0);
+  const [duraklat, setDuraklat] = useState(false);
+  const [azaltilmisHareket, setAzaltilmisHareket] = useState(false);
+  const dokunusBaslangici = useRef<number | null>(null);
+
+  const git = useCallback((hedef: number) => {
+    setEtkin((hedef + SLAYTLAR.length) % SLAYTLAR.length);
+  }, []);
+
+  // Hareket azaltma tercihi: otomatik geçiş hiç başlamaz.
+  useEffect(() => {
+    const sorgu = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+    setAzaltilmisHareket(sorgu.matches);
+
+    const dinleyici = (olay: MediaQueryListEvent) =>
+      setAzaltilmisHareket(olay.matches);
+
+    sorgu.addEventListener("change", dinleyici);
+
+    return () => sorgu.removeEventListener("change", dinleyici);
+  }, []);
+
+  /**
+   * Otomatik ilerleme.
+   *
+   * `etkin` bağımlılıkta olduğu için kullanıcı ok, nokta veya kaydırmayla
+   * slaytı değiştirdiğinde efekt yeniden kurulur — yani SAYAÇ SIFIRLANIR.
+   */
+  useEffect(() => {
+    if (azaltilmisHareket || duraklat) {
+      return;
+    }
+
+    const zamanlayici = window.setTimeout(() => {
+      setEtkin((mevcut) => (mevcut + 1) % SLAYTLAR.length);
+    }, GECIS_SURESI);
+
+    return () => window.clearTimeout(zamanlayici);
+  }, [etkin, duraklat, azaltilmisHareket]);
+
+  return (
+    <section
+      aria-labelledby="hero-basligi"
+      aria-roledescription="karusel"
+      className="relative overflow-hidden bg-ark-surface-dark"
+      onMouseEnter={() => setDuraklat(true)}
+      onMouseLeave={() => setDuraklat(false)}
+      onTouchStart={(olay) => {
+        setDuraklat(true);
+        dokunusBaslangici.current = olay.touches[0].clientX;
+      }}
+      onTouchEnd={(olay) => {
+        const baslangic = dokunusBaslangici.current;
+
+        dokunusBaslangici.current = null;
+        setDuraklat(false);
+
+        if (baslangic === null) {
+          return;
+        }
+
+        const fark = olay.changedTouches[0].clientX - baslangic;
+
+        if (Math.abs(fark) < KAYDIRMA_ESIGI) {
+          return;
+        }
+
+        // Sola kaydırma sonraki slaydı getirir.
+        git(fark < 0 ? etkin + 1 : etkin - 1);
+      }}
+      onKeyDown={(olay) => {
+        if (olay.key === "ArrowLeft") {
+          olay.preventDefault();
+          git(etkin - 1);
+        }
+        if (olay.key === "ArrowRight") {
+          olay.preventDefault();
+          git(etkin + 1);
+        }
+      }}
+    >
+      {/* Zemin derinliği — dekoratif, metin taşımaz, kontrastı düşürmez. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_100%_at_85%_0%,transparent_35%,var(--ark-ink-deep)_100%)]"
+      />
+
+      <div className="relative mx-auto max-w-6xl px-6 pb-8 pt-10 sm:px-8 sm:pb-10 sm:pt-12 lg:pt-14">
+        {/*
+          Marka kilidi — resmî tam logo (amblem + ARKVIUM + alt slogan).
+
+          Logo siyah-beyaz bir dosyadır; lacivert zeminde kaybolmaması için
+          BEYAZ bir kutunun içinde durur. Dosya, biçim, oranlar ve renkler
+          DEĞİŞTİRİLMEZ — logo yalnızca kendi zeminine oturtulur. Renk
+          filtresi veya yeniden çizim UYGULANMAZ.
+
+          Kaydırıcının üstünde bir kez bulunur; her slaytta tekrarlanmaz.
+        */}
+        <div className="mb-12 flex justify-center rounded-3xl bg-white px-6 py-10 shadow-ark-3 sm:mb-14 sm:px-10 sm:py-14">
+          <ArkviumTamLogo
+            genislik={640}
+            className="h-auto w-[220px] sm:w-[320px] lg:w-[400px]"
+          />
+        </div>
+
+        <div className="overflow-hidden">
+          <div
+            className="flex transition-transform duration-500 ease-out"
+            style={{ transform: `translateX(-${etkin * 100}%)` }}
+          >
+            {SLAYTLAR.map((slayt, sira) => {
+              const gizli = sira !== etkin;
+
+              return (
+                <div
+                  key={slayt.kod}
+                  aria-hidden={gizli}
+                  className="w-full shrink-0"
+                >
+                  <div className="grid items-center gap-10 lg:grid-cols-12 lg:gap-12">
+                    {/*
+                      Metin KAYNAK sırasında önce gelir (ekran okuyucu ve
+                      `h1` sırası için), ama mobilde `order` ile görselin
+                      ALTINA alınır: dar ekranda önce sahne görünür, sonra
+                      başlık ve düğmeler okunur. Masaüstünde metin yine
+                      solda kalır.
+                    */}
+                    <div className="order-2 lg:order-1 lg:col-span-6">
+                      <p className="ark-etiket text-ark-accent-on-dark">
+                        {slayt.etiket}
+                      </p>
+
+                      {sira === 0 ? (
+                        <h1
+                          id="hero-basligi"
+                          className="ark-display mt-4 text-balance text-ark-on-dark"
+                        >
+                          {slayt.baslik}
+                        </h1>
+                      ) : (
+                        <p className="ark-display mt-4 text-balance text-ark-on-dark">
+                          {slayt.baslik}
+                        </p>
+                      )}
+
+                      <p className="ark-giris ark-olcu mt-5 text-ark-on-dark-2">
+                        {slayt.metin}
+                      </p>
+
+                      {slayt.bilgiEtiketleri && (
+                        <ul className="mt-6 flex flex-wrap gap-2">
+                          {slayt.bilgiEtiketleri.map((bilgi) => (
+                            <li
+                              key={bilgi}
+                              className="rounded-full border border-ark-line-dark bg-white/5 px-3.5 py-1.5 text-sm text-ark-on-dark"
+                            >
+                              {bilgi}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+
+                      <div className="mt-8 flex flex-wrap gap-3">
+                        {slayt.dugmeler.map((dugme) => (
+                          <Link
+                            key={dugme.href}
+                            href={dugme.href}
+                            tabIndex={gizli ? -1 : undefined}
+                            onClick={() => setDuraklat(false)}
+                            className={
+                              dugme.tur === "birincil"
+                                ? "inline-flex min-h-[44px] items-center rounded-xl bg-white px-6 py-3.5 font-semibold text-ark-ink transition duration-200 hover:bg-ark-on-dark-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent-on-dark active:scale-[0.98] motion-reduce:active:scale-100"
+                                : "inline-flex min-h-[44px] items-center rounded-xl border border-ark-line-dark px-6 py-3.5 font-semibold text-ark-on-dark transition duration-200 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent-on-dark"
+                            }
+                          >
+                            {dugme.metin}
+                          </Link>
+                        ))}
+                      </div>
+
+                      {slayt.beyanUyarisi && (
+                        <p className="mt-6 flex items-start gap-2.5 text-sm leading-relaxed text-ark-on-dark-2">
+                          <span
+                            aria-hidden="true"
+                            className="mt-0.5 shrink-0 text-ark-accent-on-dark"
+                          >
+                            <IkonKalkan />
+                          </span>
+                          {slayt.beyanUyarisi}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="order-1 lg:order-2 lg:col-span-6">
+                      {/*
+                        Kadraj `UrunGorselleri` içindeki `konum` değeriyle
+                        ayarlanır; acil durum görselinde QR okutma anı hem
+                        4:3 (mobil) hem 5:4 (masaüstü) kırpmada çerçevede
+                        kalır. "Temsili görsel" ibaresi sağ altta durur.
+                      */}
+                      <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-ark-line-dark shadow-ark-3 sm:aspect-[5/4]">
+                        <Gorsel
+                          anahtar={slayt.gorsel}
+                          oncelikli={sira === 0}
+                          sizes="(min-width: 1024px) 560px, 92vw"
+                        />
+                        <TemsiliRozet />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Kontroller: oklar solda, noktalar ortada — hepsi 44px hedefli. */}
+        <div className="mt-10 flex items-center justify-between gap-4 border-t border-ark-line-dark pt-6">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => git(etkin - 1)}
+              aria-label="Önceki slayt"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-ark-line-dark text-ark-on-dark transition duration-200 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent-on-dark"
+            >
+              <span aria-hidden="true" className="text-lg leading-none">
+                ‹
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => git(etkin + 1)}
+              aria-label="Sonraki slayt"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-ark-line-dark text-ark-on-dark transition duration-200 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent-on-dark"
+            >
+              <span aria-hidden="true" className="text-lg leading-none">
+                ›
+              </span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1">
+            {SLAYTLAR.map((slayt, sira) => (
+              <button
+                key={slayt.kod}
+                type="button"
+                onClick={() => git(sira)}
+                aria-label={`${slayt.etiket} slaydını göster`}
+                aria-current={sira === etkin}
+                className="inline-flex h-11 w-8 items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent-on-dark"
+              >
+                <span
+                  aria-hidden="true"
+                  className={`block h-1.5 rounded-full transition-all duration-200 ${
+                    sira === etkin
+                      ? "w-7 bg-white"
+                      : "w-1.5 bg-white/35"
+                  }`}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}

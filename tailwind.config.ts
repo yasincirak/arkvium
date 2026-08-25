@@ -33,6 +33,14 @@ const config: Config = {
           "surface-3": "var(--ark-surface-3)",
           line: "var(--ark-line)",
           "line-strong": "var(--ark-line-strong)",
+
+          /* Koyu lacivert bölümler (hero, güven) */
+          "ink-deep": "var(--ark-ink-deep)",
+          "surface-dark": "var(--ark-surface-dark)",
+          "on-dark": "var(--ark-on-dark)",
+          "on-dark-2": "var(--ark-on-dark-2)",
+          "accent-on-dark": "var(--ark-accent-on-dark)",
+          "line-dark": "var(--ark-line-dark)",
         },
       },
 

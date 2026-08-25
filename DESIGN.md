@@ -54,13 +54,27 @@ yazılmaz.**
 | Vurgu (etkileşim) | `--ark-accent` | `#4f46e5` | Bağlantı, aktif durum, odak halkası |
 | Vurgu koyu (hover) | `--ark-accent-strong` | `#4338ca` | Bağlantı hover, vurgulu düğme hover |
 | Vurgu zemin | `--ark-accent-soft` | `#eef0ff` | Rozet, ikon kutusu zemini |
-| Ticaret (satın alma) | `--ark-commerce` | `#047857` | Yalnızca "Satın Al" eylemi |
-| Ticaret hover | `--ark-commerce-strong` | `#036249` | Satın alma hover |
+| Ticaret (satın alma) | `--ark-commerce` | `#4f46e5` | Yalnızca "Satın Al" eylemi |
+| Ticaret hover | `--ark-commerce-strong` | `#4338ca` | Satın alma hover |
 | Yüzey | `--ark-surface` | `#ffffff` | Ana zemin, kart zemini |
 | Yüzey 2 | `--ark-surface-2` | `#f7f8fc` | Alternatif bölüm bandı |
 | Yüzey 3 | `--ark-surface-3` | `#eef1f9` | Vurgulu kutu, görsel placeholder |
 | Çizgi | `--ark-line` | `#e2e6f0` | Kart ve bölüm kenarlığı |
 | Çizgi güçlü | `--ark-line-strong` | `#cdd5e8` | Ayırıcı, form kenarlığı |
+
+#### Koyu lacivert yüzey (yalnızca hero ve gizlilik bölümü)
+
+| Rol | Token | Hex | Kullanım |
+|---|---|---|---|
+| Koyu yüzey | `--ark-surface-dark` | `#101a3d` | Bölüm zemini |
+| En koyu | `--ark-ink-deep` | `#0b1330` | Derinlik katmanı, görsel maskesi |
+| Koyu üstü metin | `--ark-on-dark` | `#ffffff` | Başlık, birincil metin |
+| Koyu üstü ikincil | `--ark-on-dark-2` | `#b6c0dc` | Paragraf, yardımcı metin |
+| Koyu üstü vurgu | `--ark-accent-on-dark` | `#a5b4fc` | Etiket, işaret |
+| Koyu üstü çizgi | `--ark-line-dark` | `rgb(255 255 255 / .12)` | Ayırıcı, kenarlık |
+
+Bu **koyu tema DEĞİLDİR**: yalnızca iki bölümün kendi zeminidir ve
+`prefers-color-scheme` ile ilişkisi yoktur.
 
 ### 3.2 Kontrast (ölçülmüş, WCAG 2.1)
 
@@ -79,7 +93,17 @@ Renkli zemin üzerinde beyaz metin:
 |---|---|---|
 | `#101a3d` | **16.97:1** | AAA |
 | `#4f46e5` | **6.29:1** | AA |
-| `#047857` | **5.48:1** | AA |
+
+Koyu lacivert zemin (`#101a3d`) üzerinde:
+
+| Renk | Oran | Sonuç |
+|---|---|---|
+| `#ffffff` | **16.97:1** | AAA |
+| `#b6c0dc` | **9.35:1** | AAA |
+| `#a5b4fc` | **8.51:1** | AAA |
+
+**Yasak:** `--ark-accent` (`#4f46e5`) koyu zeminde **2.70:1** verir ve orada
+METİN olarak kullanılamaz; yerine `--ark-accent-on-dark` kullanılır.
 
 **Yasak:** `#6f7a99` ve daha açık griler metin için kullanılmaz (4.27:1, AA
 altında). `#059669` (emerald-600) beyaz metinle **3.77:1** verir ve düğme
@@ -141,6 +165,23 @@ yüklenir). İkinci bir yazı ailesi eklenmez.
 **Kural:** İki bölüm arasında hem dolgu hem kenar boşluğu (`py` + `my`) aynı
 anda kullanılmaz; ritim yalnızca `py` ile kurulur.
 
+### Bölüm kompozisyon ritmi
+
+**Hiçbir bölüm bir öncekiyle aynı kompozisyonu kullanmaz.** Ana sayfadaki sıra:
+
+| # | Bölüm | Kompozisyon |
+|---|---|---|
+| 1 | Hero | Koyu lacivert, iki katmanlı görsel |
+| 2 | Akış | Zikzak satırlar, büyük görsel, **kart yok** |
+| 3 | Ürünler | Karşılaştırma ızgarası — sayfadaki **tek** ızgara |
+| 4 | Kullanım | Farklı boyutlu görsel kutuları |
+| 5 | Gizlilik | Koyu lacivert, numaralı ifadeler |
+| 6 | SSS | Dar sütun, açılır kapanır |
+| 7 | Son çağrı | Tek ortalanmış panel |
+
+Arka arkaya iki "beyaz kart ızgarası" bölümü **eklenmez**. Izgara yalnızca
+karşılaştırma gereken yerde (ürünler) kullanılır.
+
 ---
 
 ## 6. Bileşen kuralları
@@ -155,6 +196,10 @@ anda kullanılmaz; ritim yalnızca `py` ile kurulur.
   meta → birincil eylem**
 - Bir ızgaradaki tüm kartlar **eşit yükseklikte** olur; birincil eylem
   hepsinde **aynı hizada, en altta** durur (esnek boşluk ile itilir).
+  Eşitlik `grid` + `auto-rows-fr` ile sağlanır — `flex-wrap` bunu yalnızca
+  satır içinde yapar ve satırlar arasında farklı yükseklik bırakır.
+- Izgara eksik kalan son satırı `col-start` ile **ortalar**; kartlar sola
+  yapışmaz.
 - Kartın tamamı bağlantı yapılmaz; eylem açık bir düğmedir.
 
 ### 6.2 Düğme
@@ -334,6 +379,8 @@ satış sayısı, sahte yorum, sahte puan, izinsiz kurumsal müşteri logosu.
 | Sahte sosyal kanıt | Dürüstlük ilkesine aykırı; hukuki risk |
 | Sayfa yüklenirken içerik atlaması (CLS) | Görsellerde sabit en-boy oranı zorunludur |
 | Yeni yazı ailesi / ikon kütüphanesi eklemek | Bağımlılık ve yükleme maliyeti; mevcut yapıyla çözülür |
+| Arka arkaya aynı 3'lü/4'lü beyaz kart ızgaraları | Sayfa şablona benzer; bölümler birbirinden ayrışmaz |
+| Ticaret rengi olarak yeşil | Marka sisteminin dışında; CTA marka moru veya laciverttir |
 
 ---
 
@@ -358,6 +405,6 @@ karmaşıklaştırır.
 | Alan | Durum |
 |---|---|
 | Token katmanı (`globals.css`, `tailwind.config.ts`) | ✅ Uygulandı |
-| Ana sayfa pazarlama katmanı | ✅ Uygulandı |
+| Ana sayfa pazarlama katmanı | ✅ Uygulandı (koyu hero + akış + vitrin) |
 | Diğer pazarlama sayfaları (`/urun/*`) | ⏳ Sırada |
 | İşlevsel yüzeyler (hesap, sipariş, admin) | ⛔ Kapsam dışı |

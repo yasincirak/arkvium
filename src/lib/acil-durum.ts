@@ -380,7 +380,32 @@ export type AcilDurumGorunumu = {
 export async function acilDurumGorunumu(
   itemRecordId: string
 ): Promise<AcilDurumGorunumu | null> {
-  const profil = await prisma.emergencyProfile.findFirst({
+  const profil = await acilDurumProfiliniOku(itemRecordId);
+
+  if (!profil) {
+    return null;
+  }
+
+  return profilGorunumeCevir(profil);
+}
+
+/**
+ * Profili okur; okuma BAŞARISIZ olursa `null` döner.
+ *
+ * NEDEN try/catch: bu sorgu, ürünün en kritik sayfasından — QR okutulduğunda
+ * açılan `/t/<token>` — her istekte çağrılır. Acil Durum Profili İSTEĞE
+ * BAĞLI bir özelliktir ve hiçbir koşulda o sayfayı çökertmemelidir.
+ *
+ * Somut senaryo: özellik henüz uygulanmamış bir ortamda `EmergencyProfile`
+ * tablosu yoktur. Koruma olmadan Prisma hata fırlatır ve QR sayfası 500
+ * verir; yani etiketi okutan kişi eşya sahibine hiç ulaşamaz.
+ *
+ * Hata ayrıntısı loglanmaz — bu sorgu sağlık verisi taşır ve hata nesnesi
+ * sorgu alanlarını içerebilir. Yalnızca hata TİPİ yazılır.
+ */
+async function acilDurumProfiliniOku(itemRecordId: string) {
+  try {
+    return await prisma.emergencyProfile.findFirst({
     where: {
       itemRecordId,
       enabled: true,
@@ -413,13 +438,22 @@ export async function acilDurumGorunumu(
         take: SINIRLAR.enFazlaKisi,
         select: { name: true, relationship: true, phone: true },
       },
-    },
-  });
+      },
+    });
+  } catch (hata) {
+    console.error(
+      "Acil durum profili okunamadı:",
+      hata instanceof Error ? hata.name : "BilinmeyenHata"
+    );
 
-  if (!profil) {
     return null;
   }
+}
 
+/** Okunan profili, public sözleşmeye uygun görünüme çevirir. */
+function profilGorunumeCevir(
+  profil: NonNullable<Awaited<ReturnType<typeof acilDurumProfiliniOku>>>
+): AcilDurumGorunumu | null {
   // MADDE 4: profil kaydın GÜNCEL sahibine ait olmalı. Sahiplik devri
   // profili zaten temizler; bu kontrol o akış bozulsa bile eski sahibin
   // verisinin yeni sahibin etiketinde görünmesini engeller.

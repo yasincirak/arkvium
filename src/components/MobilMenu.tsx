@@ -5,7 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 /**
  * Mobil (md altı) gezinme menüsü.
  *
- * Masaüstü görünümü ETKİLENMEZ: bileşen `md:hidden` ile yalnızca dar
+ * Masaüstü görünümü ETKİLENMEZ: bileşen `lg:hidden` ile yalnızca dar
  * ekranlarda görünür; masaüstündeki yatay menü olduğu gibi kalır.
  *
  * Erişilebilirlik:
@@ -41,7 +41,7 @@ export default function MobilMenu({ baglantilar }: { baglantilar: Baglanti[] }) 
   }, [acik]);
 
   return (
-    <div className="md:hidden">
+    <div className="lg:hidden">
       <button
         ref={dugmeRef}
         type="button"

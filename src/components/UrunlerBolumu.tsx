@@ -58,34 +58,55 @@ const PAZARLAMA: Record<string, PazarlamaBilgisi> = {
   },
 };
 
+/**
+ * Son satırdaki kartların yatay konumu.
+ *
+ * Beş ürün üç sütuna sığmaz; ikinci satırda iki kart kalır. Bu kartlar
+ * `col-start` ile ortalanır, aksi hâlde sola yapışıp ızgarayı dengesiz
+ * gösterirler. Sınıf adları Tailwind tarayıcısının görebilmesi için TAM
+ * yazılır; string birleştirmeyle üretilmez.
+ */
+const SON_SATIR_YERLESIMI: Record<number, string> = {
+  3: "lg:col-start-2",
+  4: "sm:col-start-2 lg:col-start-4",
+};
+
 export default function UrunlerBolumu() {
   return (
     <section
       id="urunler"
       aria-labelledby="urunler-basligi"
-      className="scroll-mt-24 border-y border-ark-line bg-ark-surface-2"
+      className="scroll-mt-24 border-b border-ark-line bg-ark-surface"
     >
       <div className="mx-auto max-w-6xl px-6 py-16 sm:px-8 sm:py-24">
         {/*
-          Mobilde sola hizalı: giriş paragrafı dar ekranda 4 satıra çıkıyor ve
-          ortalanmış çok satırlı metin okunurluğu düşürüyor (DESIGN.md § 4).
-          `sm`den itibaren ortalanmış hâline döner; masaüstü değişmez.
+          Başlık bloğu sola hizalı: sayfadaki diğer bölümlerle aynı ritmi
+          korur ve ortalanmış çok satırlı metnin mobilde yarattığı okuma
+          sorununu baştan ortadan kaldırır (DESIGN.md § 4).
         */}
-        <BolumGecisi className="text-left sm:text-center">
+        <BolumGecisi className="max-w-2xl">
           <p className="ark-etiket text-ark-accent">Ürün ailesi</p>
 
           <h2 id="urunler-basligi" className="ark-baslik mt-3 text-ark-ink">
-            Her eşya için ayrı bir etiket
+            Etiketini seç
           </h2>
 
-          <p className="ark-giris mt-4 max-w-2xl text-ark-ink-2 sm:mx-auto">
-            Hepsi aynı sistemde çalışır: etiketi tak, hesabına bağla, bulan
-            kişi sana ulaşsın. Farkları nereye takıldıkları ve neye
-            dayandıklarıdır.
+          <p className="ark-giris mt-4 text-ark-ink-2">
+            Hepsi aynı sistemde çalışır. Farkları nereye takıldıkları, neye
+            dayandıkları ve kaç QR etiketi içerdikleridir.
           </p>
         </BolumGecisi>
 
-        <div className="mt-12 flex flex-wrap justify-center gap-6">
+        {/*
+          Izgara `auto-rows-fr` kullanır: satır yükseklikleri eşitlenir, bu
+          yüzden BEŞ kartın tamamı aynı yükseklikte olur ve "Satın Al"
+          düğmeleri aynı hizaya oturur (flex-wrap bunu yalnızca satır içinde
+          sağlıyordu).
+
+          Sütun sayısı ikiye katlanmış ve her kart iki sütun kaplar; böylece
+          eksik kalan son satır `col-start` ile ORTALANABİLİR.
+        */}
+        <div className="mt-12 grid auto-rows-fr gap-6 sm:mt-16 sm:grid-cols-4 lg:grid-cols-6">
           {SIPARIS_URUNLERI.map((urun, sira) => {
             const gorselAnahtari = urunGorselAnahtari(urun.kod);
             const pazarlama = PAZARLAMA[urun.kod];
@@ -95,10 +116,10 @@ export default function UrunlerBolumu() {
                 key={urun.kod}
                 // Toplam gecikme 300ms'i aşmaz (DESIGN.md § 8).
                 gecikme={Math.min(sira * 70, 300)}
-                className="ark-kart-hover flex w-full flex-col rounded-2xl border border-ark-line bg-ark-surface p-6 shadow-ark-1 sm:w-[calc((100%-1.5rem)/2)] sm:p-7 lg:w-[calc((100%-3rem)/3)]"
+                className={`ark-kart-hover flex flex-col rounded-3xl border border-ark-line bg-ark-surface p-5 shadow-ark-1 sm:col-span-2 sm:p-6 ${SON_SATIR_YERLESIMI[sira] ?? ""}`}
               >
                 {gorselAnahtari && (
-                  <div className="relative mb-6 aspect-[4/3] overflow-hidden rounded-xl bg-ark-surface-3">
+                  <div className="relative mb-6 aspect-[3/2] overflow-hidden rounded-2xl bg-ark-surface-3">
                     <Gorsel
                       anahtar={gorselAnahtari}
                       sizes="(min-width: 1024px) 352px, (min-width: 640px) 45vw, 90vw"
@@ -109,12 +130,12 @@ export default function UrunlerBolumu() {
                 )}
 
                 {pazarlama && (
-                  <p className="ark-etiket text-ark-ink-3">
+                  <p className="ark-etiket inline-flex self-start rounded-full bg-ark-accent-soft px-3 py-1 text-ark-accent">
                     {pazarlama.kategori}
                   </p>
                 )}
 
-                <h3 className="mt-2 text-xl font-semibold text-ark-ink">
+                <h3 className="mt-3 text-xl font-bold text-ark-ink">
                   {urun.ad}
                 </h3>
 
@@ -142,8 +163,8 @@ export default function UrunlerBolumu() {
                 {/* Esnek boşluk: fiyat ve düğmeyi tüm kartlarda aynı hizaya iter. */}
                 <div className="mt-6 flex-1" aria-hidden="true" />
 
-                <div>
-                  <div className="text-2xl font-bold text-ark-ink">
+                <div className="border-t border-ark-line pt-5">
+                  <div className="text-3xl font-bold tracking-tight text-ark-ink">
                     {fiyatBicimle(urun.fiyatKurus)}
                   </div>
                   <div className="mt-1 text-sm text-ark-ink-3">
