@@ -1,4 +1,5 @@
 import WhatsappBaglantisi from "@/components/WhatsappBaglantisi";
+import { sozluk } from "@/lib/i18n";
 import type { FinderMessage } from "@/lib/types";
 
 /**
@@ -12,6 +13,8 @@ type BildirimListesiProps = {
 };
 
 export default function BildirimListesi({ mesajlar }: BildirimListesiProps) {
+  const ceviri = sozluk();
+
   return (
     <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
       <h2 className="text-xl font-semibold">
@@ -19,10 +22,7 @@ export default function BildirimListesi({ mesajlar }: BildirimListesiProps) {
       </h2>
 
       {mesajlar.length === 0 ? (
-        <p className="mt-2 text-sm leading-6 text-white/50">
-          Bu ürün için henüz bildirim yok. Eşyanı bulan biri QR kodunu okutup
-          mesaj bıraktığında burada görünecek.
-        </p>
+        <p className="mt-2 text-sm leading-6 text-white/50">{ceviri.kalanlar.bildirimYok}</p>
       ) : (
         <div className="mt-5 space-y-4">
           {mesajlar.map((mesaj) => (
@@ -48,14 +48,14 @@ export default function BildirimListesi({ mesajlar }: BildirimListesiProps) {
 
               <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                 <div>
-                  <span className="text-white/40">Konum:</span>{" "}
+                  <span className="text-white/40">{ceviri.hesap.bildirim.konum}</span>{" "}
                   <span className="text-white/70">
                     {mesaj.location || "Belirtilmedi"}
                   </span>
                 </div>
 
                 <div>
-                  <span className="text-white/40">E-posta:</span>{" "}
+                  <span className="text-white/40">{ceviri.hesap.bildirim.eposta}</span>{" "}
                   <span className="break-all text-white/70">
                     {mesaj.finderEmail || "Belirtilmedi"}
                   </span>
@@ -63,7 +63,7 @@ export default function BildirimListesi({ mesajlar }: BildirimListesiProps) {
               </div>
 
               <div className="mt-4 rounded-lg bg-black/20 p-4 text-sm leading-6 text-white/70">
-                {mesaj.message || "Mesaj bırakılmadı."}
+                {mesaj.message || ceviri.hesap.bildirim.mesajYok}
               </div>
             </div>
           ))}

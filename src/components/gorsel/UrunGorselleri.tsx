@@ -134,10 +134,10 @@ export function Gorsel({
  * kontrastlı ve köşede durur. Görsel kapsayıcısının içine, `Gorsel` ile
  * kardeş olarak yerleştirilir.
  */
-export function TemsiliRozet() {
+export function TemsiliRozet({ metin }: { metin?: string }) {
   return (
     <span className="pointer-events-none absolute bottom-2 right-2 rounded-md bg-white/80 px-2 py-1 text-[11px] font-medium text-slate-600 backdrop-blur-sm">
-      Temsili görsel
+      {metin ?? "Temsili görsel"}
     </span>
   );
 }

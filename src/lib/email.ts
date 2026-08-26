@@ -1,4 +1,6 @@
 import nodemailer from "nodemailer";
+import { VARSAYILAN_DIL, type Dil } from "./i18n/diller";
+import { sozlukAl } from "./i18n/sozlukler";
 
 /**
  * E-posta gönderim katmanı.
@@ -113,25 +115,27 @@ export function uygulamaAdresi(): string | null {
 export function sifreSifirlamaEpostasi(
   adSoyad: string | null,
   baglanti: string,
-  gecerlilikDakika: number
+  gecerlilikDakika: number,
+  dil: Dil = VARSAYILAN_DIL
 ): Omit<EpostaIcerigi, "alici"> {
+  const c = sozlukAl(dil).eposta;
+
   return {
-    konu: "ARKVIUM şifre sıfırlama talebi",
+    konu: c.sifreSifirlama.konu,
     metin: `
-Merhaba ${adSoyad || ""},
+${c.merhaba} ${adSoyad || ""},
 
-ARKVIUM hesabınız için şifre sıfırlama talebi aldık.
+${c.sifreSifirlama.giris}
 
-Yeni şifrenizi belirlemek için aşağıdaki bağlantıyı kullanın:
+${c.sifreSifirlama.yonerge}
 
 ${baglanti}
 
-Bu bağlantı ${gecerlilikDakika} dakika boyunca geçerlidir ve yalnızca bir kez kullanılabilir.
+${c.sifreSifirlama.gecerlilik.replace("{sure}", String(gecerlilikDakika))}
 
-Bu talebi siz yapmadıysanız bu e-postayı yok sayabilirsiniz; şifreniz değişmez.
+${c.sifreSifirlama.uyari}
 
-ARKVIUM
-Dijital Sahiplik Platformu
+${c.imza}
     `.trim(),
   };
 }
@@ -139,25 +143,27 @@ Dijital Sahiplik Platformu
 export function epostaDogrulamaEpostasi(
   adSoyad: string | null,
   baglanti: string,
-  gecerlilikSaat: number
+  gecerlilikSaat: number,
+  dil: Dil = VARSAYILAN_DIL
 ): Omit<EpostaIcerigi, "alici"> {
+  const c = sozlukAl(dil).eposta;
+
   return {
-    konu: "ARKVIUM e-posta adresinizi doğrulayın",
+    konu: c.dogrulama.konu,
     metin: `
-Merhaba ${adSoyad || ""},
+${c.merhaba} ${adSoyad || ""},
 
-ARKVIUM hesabınızı oluşturduğunuz için teşekkür ederiz.
+${c.dogrulama.giris}
 
-E-posta adresinizi doğrulamak için aşağıdaki bağlantıyı kullanın:
+${c.dogrulama.yonerge}
 
 ${baglanti}
 
-Bu bağlantı ${gecerlilikSaat} saat boyunca geçerlidir ve yalnızca bir kez kullanılabilir.
+${c.dogrulama.gecerlilik.replace("{sure}", String(gecerlilikSaat))}
 
-Bu hesabı siz oluşturmadıysanız bu e-postayı yok sayabilirsiniz.
+${c.dogrulama.uyari}
 
-ARKVIUM
-Dijital Sahiplik Platformu
+${c.imza}
     `.trim(),
   };
 }
@@ -173,24 +179,25 @@ Dijital Sahiplik Platformu
 export function taramaBildirimiEpostasi(
   adSoyad: string | null,
   urunAdi: string,
-  zaman: string
+  zaman: string,
+  dil: Dil = VARSAYILAN_DIL
 ): Omit<EpostaIcerigi, "alici"> {
+  const c = sozlukAl(dil).eposta;
+
   return {
-    konu: `ARKVIUM: "${urunAdi}" etiketiniz okutuldu`,
+    konu: c.tarama.konu.replace("{urun}", urunAdi),
     metin: `
-Merhaba ${adSoyad || ""},
+${c.merhaba} ${adSoyad || ""},
 
-Kayıp olarak işaretlediğiniz "${urunAdi}" adlı eşyanızın QR etiketi az önce okutuldu.
+${c.tarama.giris.replace("{urun}", urunAdi)}
 
-Okutulma zamanı: ${zaman}
+${c.tarama.zaman.replace("{zaman}", zaman)}
 
-Eşyayı bulan kişi iletişim formunu doldurursa bilgileri ayrı bir e-posta ile size ulaşacaktır.
-Bu bildirim yalnızca etiketin okutulduğunu gösterir; eşyanın kesin konumunu içermez.
+${c.tarama.aciklama}
 
-Aynı eşya için bu bildirim saatte en fazla bir kez gönderilir.
+${c.tarama.siklik}
 
-ARKVIUM
-Dijital Sahiplik Platformu
+${c.imza}
     `.trim(),
   };
 }
@@ -199,26 +206,29 @@ export function devirDavetiEpostasi(
   gonderenAdSoyad: string | null,
   urunAdi: string,
   baglanti: string,
-  gecerlilikSaat: number
+  gecerlilikSaat: number,
+  dil: Dil = VARSAYILAN_DIL
 ): Omit<EpostaIcerigi, "alici"> {
+  const c = sozlukAl(dil).eposta;
+
   return {
-    konu: "ARKVIUM ürün sahipliği devri daveti",
+    konu: c.devir.konu,
     metin: `
-Merhaba,
+${c.merhaba},
 
-${gonderenAdSoyad || "Bir ARKVIUM kullanıcısı"} "${urunAdi}" adlı ürünün sahipliğini size devretmek istiyor.
+${c.devir.giris
+  .replace("{gonderen}", gonderenAdSoyad || c.devir.birKullanici)
+  .replace("{urun}", urunAdi)}
 
-Daveti incelemek ve onaylamak için aşağıdaki bağlantıyı kullanın:
+${c.devir.yonerge}
 
 ${baglanti}
 
-Bu bağlantı ${gecerlilikSaat} saat boyunca geçerlidir ve yalnızca bir kez kullanılabilir.
-Ürün, siz onaylamadan hesabınıza geçmez.
+${c.devir.gecerlilik.replace("{sure}", String(gecerlilikSaat))}
 
-Bu daveti beklemiyorsanız bu e-postayı yok sayabilirsiniz.
+${c.devir.uyari}
 
-ARKVIUM
-Dijital Sahiplik Platformu
+${c.imza}
     `.trim(),
   };
 }
@@ -233,25 +243,26 @@ export function siparisOnayEpostasi(
   adSoyad: string | null,
   siparisNumarasi: string,
   tutarMetni: string,
-  takipAdresi: string | null
+  takipAdresi: string | null,
+  dil: Dil = VARSAYILAN_DIL
 ): Omit<EpostaIcerigi, "alici"> {
+  const c = sozlukAl(dil).eposta;
+
   return {
-    konu: `ARKVIUM siparişiniz alındı (${siparisNumarasi})`,
+    konu: c.siparisOnay.konu.replace("{numara}", siparisNumarasi),
     metin: `
-Merhaba ${adSoyad || ""},
+${c.merhaba} ${adSoyad || ""},
 
-Ödemeniz alındı ve siparişiniz oluşturuldu.
+${c.siparisOnay.giris}
 
-Sipariş numarası: ${siparisNumarasi}
-Toplam tutar: ${tutarMetni}
+${c.siparisOnay.numara.replace("{numara}", siparisNumarasi)}
+${c.siparisOnay.tutar.replace("{tutar}", tutarMetni)}
 
-Siparişiniz hazırlanıp kargoya verildiğinde bilgilendirileceksiniz.
-${takipAdresi ? `\nSipariş durumunuzu buradan izleyebilirsiniz:\n${takipAdresi}\n` : ""}
-Ürününüz elinize ulaştığında QR etiketini ARKVIUM hesabınızdan
-etkinleştirmeyi unutmayın.
+${c.siparisOnay.kargo}
+${takipAdresi ? `\n${c.siparisOnay.takip}\n${takipAdresi}\n` : ""}
+${c.siparisOnay.hatirlatma}
 
-ARKVIUM
-Dijital Sahiplik Platformu
+${c.imza}
     `.trim(),
   };
 }

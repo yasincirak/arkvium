@@ -5,6 +5,7 @@ import {
   TemsiliRozet,
   type GorselAnahtari,
 } from "@/components/gorsel/UrunGorselleri";
+import { sozluk } from "@/lib/i18n";
 
 /**
  * Kullanım vitrini.
@@ -29,38 +30,25 @@ type Senaryo = {
   baglanti?: { href: string; metin: string };
 };
 
-const SENARYOLAR: Senaryo[] = [
-  {
-    anahtar: "arac",
-    baslik: "Araç",
-    metin:
-      "Hatalı park, açık unutulan far veya araçla ilgili bir durumda sürücüler sana ulaşsın — camında numaran yazmadan.",
-    genis: true,
-    baglanti: { href: "/urun/arac-stickeri", metin: "Araç ürününü incele" },
-  },
-  {
-    anahtar: "anahtarlik",
-    baslik: "Anahtar",
-    metin: "Düşen ev ve araç anahtarların sana dönsün.",
-  },
-  {
-    anahtar: "evcil-hayvan",
-    baslik: "Evcil hayvan",
-    metin: "Künyeyi okutan kişi seninle güvenle iletişime geçsin.",
-  },
-  {
-    anahtar: "valiz",
-    baslik: "Valiz",
-    metin: "Bagaj bandında karışan valizin sahibini bulsun.",
-  },
-  {
-    anahtar: "hero",
-    baslik: "Kayıp eşya",
-    metin: "Eşyanı kayıp işaretle; QR'ı okutan kişi bu uyarıyı görsün.",
-  },
-];
-
 export default function KullanimVitrini() {
+  const s = sozluk();
+
+  const SENARYOLAR: Senaryo[] = [
+    {
+      anahtar: "arac",
+      ...s.kullanim.arac,
+      genis: true,
+      baglanti: {
+        href: "/urun/arac-stickeri",
+        metin: s.kullanim.arac.baglanti,
+      },
+    },
+    { anahtar: "anahtarlik", ...s.kullanim.anahtar },
+    { anahtar: "evcil-hayvan", ...s.kullanim.evcilHayvan },
+    { anahtar: "valiz", ...s.kullanim.valiz },
+    { anahtar: "hero", ...s.kullanim.kayipEsya },
+  ];
+
   return (
     <section
       id="senaryolar"
@@ -69,15 +57,14 @@ export default function KullanimVitrini() {
     >
       <div className="mx-auto max-w-6xl px-6 py-20 sm:px-8 sm:py-28">
         <BolumGecisi className="max-w-2xl">
-          <p className="ark-etiket text-ark-accent">Kullanım</p>
+          <p className="ark-etiket text-ark-accent">{s.kullanim.etiket}</p>
 
           <h2 id="senaryolar-basligi" className="ark-baslik mt-3 text-ark-ink">
-            Değer verdiğin her şeye takılır
+            {s.kullanim.baslik}
           </h2>
 
           <p className="ark-giris mt-4 text-ark-ink-2">
-            Aynı sistem farklı eşyalarda çalışır: QR okutulur, sana ARKVIUM
-            üzerinden mesaj gelir.
+            {s.kullanim.giris}
           </p>
         </BolumGecisi>
 
@@ -156,7 +143,7 @@ export default function KullanimVitrini() {
                   aria-hidden="true"
                   className="pointer-events-none absolute right-0 top-0 h-11 w-40"
                 >
-                  <TemsiliRozet />
+                  <TemsiliRozet metin={s.gorsel.temsili} />
                 </div>
               </div>
             </BolumGecisi>

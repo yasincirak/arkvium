@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import AkisBolumu from "@/components/AkisBolumu";
 import BolumGecisi from "@/components/animasyon/BolumGecisi";
+import DilSecici from "@/components/DilSecici";
 import KonuKaydirici from "@/components/KonuKaydirici";
 import KullanimVitrini from "@/components/KullanimVitrini";
 import MobilMenu from "@/components/MobilMenu";
 import { Gorsel, TemsiliRozet } from "@/components/gorsel/UrunGorselleri";
 import HeroKaydirici from "@/components/hero/HeroKaydirici";
 import Logo, { ArkviumTamLogo } from "@/components/Logo";
+import { aktifDil, sozluk } from "@/lib/i18n";
 import { CANLI_ADRES, PAYLASIM_GORSELI } from "@/lib/seo";
 import UrunlerBolumu from "@/components/UrunlerBolumu";
 
@@ -32,83 +34,57 @@ import UrunlerBolumu from "@/components/UrunlerBolumu";
  * Ana sayfanın kendi canonical adresi vardır; global layout'ta canonical
  * TANIMLI DEĞİLDİR, her sayfa kendini gösterir.
  */
-export const metadata: Metadata = {
-  alternates: { canonical: CANLI_ADRES },
+export function generateMetadata(): Metadata {
+  const s = sozluk();
+
+  return {
+    title: s.seo.anaBaslik,
+    description: s.seo.anaAciklama,
+    alternates: { canonical: CANLI_ADRES },
   // DİKKAT: Next.js sayfa düzeyindeki `openGraph` nesnesini üsttekiyle
   // BİRLEŞTİRMEZ, üzerine yazar. Bu yüzden alanlar burada tekrar verilir.
-  openGraph: {
-    title: "ARKVIUM — Dijital Sahiplik Platformu",
-    description:
-      "Eşyaların kaybolsa bile sana geri dönsün. QR kodlu dijital sahiplik ve güvenli iletişim.",
-    siteName: "ARKVIUM",
-    locale: "tr_TR",
-    type: "website",
-    url: CANLI_ADRES,
-    images: [PAYLASIM_GORSELI],
-  },
-};
-
-/** Üst barda ve mobil menüde AYNI sırayla kullanılan bölüm çıpaları. */
-const BOLUMLER = [
-  { href: "#nasil", metin: "Nasıl Çalışır" },
-  { href: "#urunler", metin: "Ürünler" },
-  { href: "#senaryolar", metin: "Kullanım" },
-  { href: "#acil-durum", metin: "Acil Durum" },
-  { href: "#guvenlik", metin: "Gizlilik" },
-  { href: "#sss", metin: "SSS" },
-];
-
-/**
- * Gizlilik bölümündeki üç ifade.
- *
- * Bu üç madde ürünün DOĞRULANMIŞ davranışıdır ve bilerek genişletilmez:
- * "%100 güvenli", "kırılamaz" gibi ölçülemeyen hiçbir iddia eklenmez
- * (DESIGN.md § 11).
- */
-const GIZLILIK_MADDELERI = [
-  { numara: "01", metin: "Telefon numaran QR kodda yer almaz." },
-  { numara: "02", metin: "Kişisel iletişim bilgilerin doğrudan gösterilmez." },
-  { numara: "03", metin: "Mesaj ARKVIUM üzerinden iletilir." },
-];
-
-const SORULAR = [
-  {
-    soru: "QR kodu okutan kişinin uygulama yüklemesi gerekir mi?",
-    cevap:
-      "Hayır. QR kod tarayıcıda bir sayfa açar ve mesaj formu doğrudan orada doldurulur; uygulama kurulumu veya hesap açma gerekmez.",
-  },
-  {
-    soru: "Telefon numaram görünür mü?",
-    cevap:
-      "QR kodun açtığı sayfada telefon numaran ve e-posta adresin gösterilmez. Mesajı gönderen kişi kendi iletişim bilgisini bırakır.",
-  },
-  {
-    soru: "Etiketi nasıl etkinleştiririm?",
-    cevap:
-      "ARKVIUM hesabına giriş yapıp etiketin üzerindeki aktivasyon kodunu girersin. Etkinleştirme için giriş yapman gerekir.",
-  },
-  {
-    soru: "Bana mesaj nasıl ulaşır?",
-    cevap:
-      "Gönderilen bildirim hesabındaki e-posta adresine iletilir ve hesabında da görüntülenir.",
-  },
-  {
-    soru: "Eşyamı değiştirirsem etiket ne olur?",
-    cevap:
-      "Etiketi hesabındaki başka bir kayda taşıyabilirsin; etiket iptal olmadan yeni kaydına bağlanır.",
-  },
-  {
-    soru: "Eşyamı kayıp olarak işaretleyebilir miyim?",
-    cevap:
-      "Evet. Kayıp işaretlediğinde QR kodu okutan kişi bu uyarıyı sayfada görür.",
-  },
-];
+    openGraph: {
+      title: s.seo.anaBaslik,
+      description: s.seo.anaAciklama,
+      siteName: "ARKVIUM",
+      locale: aktifDil() === "en" ? "en_US" : "tr_TR",
+      type: "website",
+      url: CANLI_ADRES,
+      images: [PAYLASIM_GORSELI],
+    },
+  };
+}
 
 /** Üst bardaki ve footer'daki bağlantılar için ortak sınıf. */
 const BAGLANTI =
   "transition duration-200 hover:text-ark-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent";
 
 export default function Home() {
+  const s = sozluk();
+  const dil = aktifDil();
+
+  /** Üst barda ve mobil menüde AYNI sırayla kullanılan bölüm çıpaları. */
+  const BOLUMLER = [
+    { href: "#nasil", metin: s.header.nasilCalisir },
+    { href: "#urunler", metin: s.header.urunler },
+    { href: "#senaryolar", metin: s.header.kullanim },
+    { href: "#acil-durum", metin: s.header.acilDurum },
+    { href: "#guvenlik", metin: s.header.gizlilik },
+    { href: "#sss", metin: s.header.sss },
+  ];
+
+  /**
+   * Gizlilik bölümündeki üç ifade — ürünün DOĞRULANMIŞ davranışı.
+   * Bilerek genişletilmez; ölçülemeyen hiçbir iddia eklenmez.
+   */
+  const GIZLILIK_MADDELERI = [
+    { numara: "01", metin: s.gizlilik.madde1 },
+    { numara: "02", metin: s.gizlilik.madde2 },
+    { numara: "03", metin: s.gizlilik.madde3 },
+  ];
+
+  const SORULAR = [s.sss.s1, s.sss.s2, s.sss.s3, s.sss.s4, s.sss.s5, s.sss.s6];
+
   return (
     <main className="min-h-screen bg-ark-surface text-ark-ink">
       <header className="sticky top-0 z-20 border-b border-ark-line bg-white/90 px-6 py-3 backdrop-blur sm:px-8">
@@ -127,7 +103,7 @@ export default function Home() {
             eylemlerle çakışıyordu, o aralıkta hamburger menü kullanılır.
           */}
           <nav
-            aria-label="Bölümler"
+            aria-label={s.header.bolumler}
             className="hidden items-center gap-1 rounded-2xl border border-ark-line bg-ark-surface-2 p-1 lg:flex"
           >
             {BOLUMLER.map((bolum) => (
@@ -142,29 +118,121 @@ export default function Home() {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            {/*
+              Dil seçici masaüstünde header'da açıkça görünür; mobilde
+              hamburger menünün içinde yer alır (bkz. MobilMenu).
+            */}
+            <DilSecici
+              aktif={dil}
+              etiketler={s.dil}
+              className="hidden lg:inline-flex"
+            />
+
             {/* Mobilde "Giriş Yap" menünün içindedir; masaüstünde header'da kalır. */}
             <a
               href="/login"
               className={`hidden whitespace-nowrap rounded-xl px-2 py-2.5 text-sm font-semibold text-ark-ink-2 sm:px-4 lg:inline-flex ${BAGLANTI}`}
             >
-              Giriş Yap
+              {s.header.girisYap}
             </a>
 
             <a
               href="/register"
               className="inline-flex min-h-[44px] items-center whitespace-nowrap rounded-xl bg-ark-ink px-4 py-2.5 text-sm font-semibold text-white transition duration-200 hover:bg-ark-ink-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent sm:px-5 md:min-h-0"
             >
-              Hemen Başla
+              {s.header.hemenBasla}
             </a>
 
             <MobilMenu
-              baglantilar={[...BOLUMLER, { href: "/login", metin: "Giriş Yap" }]}
+              baglantilar={[
+                ...BOLUMLER,
+                { href: "/login", metin: s.header.girisYap },
+              ]}
+              etiketler={{ ac: s.header.menuAc, kapat: s.header.menuKapat }}
+              altIcerik={<DilSecici aktif={dil} etiketler={s.dil} />}
             />
           </div>
         </div>
       </header>
 
-      <HeroKaydirici />
+      <HeroKaydirici
+        metinler={{
+          oncekiSlayt: s.hero.oncekiSlayt,
+          sonrakiSlayt: s.hero.sonrakiSlayt,
+          slaydiGoster: s.hero.slaydiGoster,
+          temsiliGorsel: s.gorsel.temsili,
+          slaytlar: [
+            { kod: "marka", etiket: s.hero.marka.etiket, markaSlayti: true },
+            {
+              kod: "acil-durum",
+              ...s.hero.acilDurum,
+              bilgiEtiketleri: [
+                s.hero.acilDurum.bilgiler.kanGrubu,
+                s.hero.acilDurum.bilgiler.alerjiler,
+                s.hero.acilDurum.bilgiler.ilaclar,
+                s.hero.acilDurum.bilgiler.kisiler,
+              ],
+              gorsel: "acil-durum",
+              dugmeler: [
+                {
+                  metin: s.hero.acilDurum.dugmeBirincil,
+                  href: "#acil-durum",
+                  tur: "birincil",
+                },
+                {
+                  metin: s.hero.acilDurum.dugmeIkincil,
+                  href: "#nasil",
+                  tur: "ikincil",
+                },
+              ],
+            },
+            {
+              kod: "kayip-esya",
+              ...s.hero.kayipEsya,
+              gorsel: "hero",
+              dugmeler: [
+                {
+                  metin: s.hero.kayipEsya.dugme,
+                  href: "#urunler",
+                  tur: "birincil",
+                },
+              ],
+            },
+            {
+              kod: "evcil-hayvan",
+              ...s.hero.evcilHayvan,
+              gorsel: "evcil-hayvan",
+              dugmeler: [
+                {
+                  metin: s.hero.evcilHayvan.dugme,
+                  href: "#urunler",
+                  tur: "birincil",
+                },
+              ],
+            },
+            {
+              kod: "valiz",
+              ...s.hero.valiz,
+              gorsel: "valiz",
+              dugmeler: [
+                { metin: s.hero.valiz.dugme, href: "#urunler", tur: "birincil" },
+              ],
+            },
+            {
+              kod: "arac",
+              ...s.hero.arac,
+              gorsel: "arac",
+              dugmeler: [
+                {
+                  metin: s.hero.arac.dugme,
+                  href: "/urun/arac-stickeri",
+                  tur: "birincil",
+                },
+              ],
+            },
+          ],
+        }}
+      />
 
       <AkisBolumu />
 
@@ -172,7 +240,59 @@ export default function Home() {
 
       <KullanimVitrini />
 
-      <KonuKaydirici />
+      <KonuKaydirici
+        metinler={{
+          etiket: s.konuKaydirici.etiket,
+          baslik: s.konuKaydirici.baslik,
+          onceki: s.konuKaydirici.onceki,
+          sonraki: s.konuKaydirici.sonraki,
+          basliklar: s.konuKaydirici.basliklar,
+          konuyuGoster: s.konuKaydirici.konuyuGoster,
+          temsiliGorsel: s.gorsel.temsili,
+          slaytlar: [
+            {
+              kod: "acil-durum",
+              ...s.konuKaydirici.acilDurum,
+              maddeler: [
+                s.konuKaydirici.acilDurum.m1,
+                s.konuKaydirici.acilDurum.m2,
+                s.konuKaydirici.acilDurum.m3,
+              ],
+              gorsel: "arac",
+            },
+            {
+              kod: "kayip-esya",
+              ...s.konuKaydirici.kayipEsya,
+              maddeler: [
+                s.konuKaydirici.kayipEsya.m1,
+                s.konuKaydirici.kayipEsya.m2,
+                s.konuKaydirici.kayipEsya.m3,
+              ],
+              gorsel: "hero",
+            },
+            {
+              kod: "evcil-hayvan",
+              ...s.konuKaydirici.evcilHayvan,
+              maddeler: [
+                s.konuKaydirici.evcilHayvan.m1,
+                s.konuKaydirici.evcilHayvan.m2,
+                s.konuKaydirici.evcilHayvan.m3,
+              ],
+              gorsel: "evcil-hayvan",
+            },
+            {
+              kod: "guvenli-iletisim",
+              ...s.konuKaydirici.guvenliIletisim,
+              maddeler: [
+                s.konuKaydirici.guvenliIletisim.m1,
+                s.konuKaydirici.guvenliIletisim.m2,
+                s.konuKaydirici.guvenliIletisim.m3,
+              ],
+              gorsel: "mesajlasma",
+            },
+          ],
+        }}
+      />
 
       {/*
         Gizlilik — koyu lacivert.
@@ -187,18 +307,19 @@ export default function Home() {
       >
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 py-20 sm:px-8 sm:py-28 lg:grid-cols-2 lg:gap-16">
           <BolumGecisi>
-            <p className="ark-etiket text-ark-accent-on-dark">Gizlilik</p>
+            <p className="ark-etiket text-ark-accent-on-dark">
+              {s.gizlilik.etiket}
+            </p>
 
             <h2
               id="guvenlik-basligi"
               className="ark-baslik mt-3 text-balance text-ark-on-dark"
             >
-              Bulunabilirlik, mahremiyet pahasına olmaz
+              {s.gizlilik.baslik}
             </h2>
 
             <p className="ark-olcu mt-5 leading-relaxed text-ark-on-dark-2">
-              Eşyanı bulan kişinin sana ulaşabilmesi için kişisel bilgilerinin
-              ortada durması gerekmiyor.
+              {s.gizlilik.giris}
             </p>
 
             <ol className="mt-10 space-y-6">
@@ -225,7 +346,7 @@ export default function Home() {
                 anahtar="mesajlasma"
                 sizes="(min-width: 1024px) 48vw, 90vw"
               />
-              <TemsiliRozet />
+              <TemsiliRozet metin={s.gorsel.temsili} />
             </div>
           </BolumGecisi>
         </div>
@@ -239,10 +360,10 @@ export default function Home() {
       >
         <div className="mx-auto max-w-3xl px-6 py-20 sm:px-8 sm:py-28">
           <BolumGecisi>
-            <p className="ark-etiket text-ark-accent">SSS</p>
+            <p className="ark-etiket text-ark-accent">{s.sss.etiket}</p>
 
             <h2 id="sss-basligi" className="ark-baslik mt-3 text-ark-ink">
-              Sık sorulan sorular
+              {s.sss.baslik}
             </h2>
           </BolumGecisi>
 
@@ -277,11 +398,11 @@ export default function Home() {
         <div className="mx-auto max-w-6xl px-6 py-20 sm:px-8 sm:py-24">
           <BolumGecisi className="mx-auto max-w-2xl text-center">
             <h2 className="ark-baslik text-balance text-ark-ink">
-              Eşyana dijital kimlik ver
+              {s.sonCagri.baslik}
             </h2>
 
             <p className="mt-5 leading-relaxed text-ark-ink-2">
-              Etiketini seç, hesabına bağla ve numaran görünmeden bildirim al.
+              {s.sonCagri.metin}
             </p>
 
             <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
@@ -289,14 +410,14 @@ export default function Home() {
                 href="/#urunler"
                 className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-ark-ink px-8 py-3.5 font-semibold text-white transition duration-200 hover:bg-ark-ink-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent active:scale-[0.98] motion-reduce:active:scale-100"
               >
-                Ürünleri İncele
+                {s.sonCagri.urunleriIncele}
               </Link>
 
               <Link
                 href="/account/tags/activate"
                 className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-ark-line-strong bg-ark-surface px-8 py-3.5 font-semibold text-ark-ink transition duration-200 hover:bg-ark-surface-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent"
               >
-                Etiketimi Etkinleştir
+                {s.sonCagri.etiketiEtkinlestir}
               </Link>
             </div>
           </BolumGecisi>
@@ -315,20 +436,21 @@ export default function Home() {
               <ArkviumTamLogo genislik={124} />
 
               <p className="mt-4 max-w-xs text-sm leading-relaxed text-ark-ink-3">
-                Dijital Sahiplik Platformu. Eşyalarına QR kodlu dijital kimlik
-                ver; kişisel bilgilerin görünmeden sana ulaşılsın.
+                {s.footer.aciklama}
               </p>
             </div>
 
             <div>
-              <h2 className="text-sm font-semibold text-ark-ink">Ürünler</h2>
+              <h2 className="text-sm font-semibold text-ark-ink">
+                {s.footer.urunler}
+              </h2>
               <ul className="mt-4 space-y-1 text-sm text-ark-ink-3">
                 <li>
                   <a
                     href="/#urunler"
                     className={`flex min-h-[44px] items-center md:min-h-0 md:py-1.5 ${BAGLANTI}`}
                   >
-                    Tüm ürünler
+                    {s.footer.tumUrunler}
                   </a>
                 </li>
                 <li>
@@ -336,7 +458,7 @@ export default function Home() {
                     href="/urun/arac-stickeri"
                     className={`flex min-h-[44px] items-center md:min-h-0 md:py-1.5 ${BAGLANTI}`}
                   >
-                    Araç İletişim QR Sticker&apos;ı
+                    {s.urunler.ad.aracStickeri}
                   </Link>
                 </li>
                 <li>
@@ -344,7 +466,7 @@ export default function Home() {
                     href="/#senaryolar"
                     className={`flex min-h-[44px] items-center md:min-h-0 md:py-1.5 ${BAGLANTI}`}
                   >
-                    Kullanım alanları
+                    {s.footer.kullanimAlanlari}
                   </a>
                 </li>
               </ul>
@@ -352,7 +474,7 @@ export default function Home() {
 
             <div>
               <h2 className="text-sm font-semibold text-ark-ink">
-                Nasıl çalışır
+                {s.footer.nasilCalisir}
               </h2>
               <ul className="mt-4 space-y-1 text-sm text-ark-ink-3">
                 <li>
@@ -360,23 +482,21 @@ export default function Home() {
                     href="/#nasil"
                     className={`flex min-h-[44px] items-center md:min-h-0 md:py-1.5 ${BAGLANTI}`}
                   >
-                    Üç adımda kullanım
+                    {s.footer.ucAdimdaKullanim}
                   </a>
                 </li>
                 <li>
                   <a
                     href="/#acil-durum"
                     className={`flex min-h-[44px] items-center md:min-h-0 md:py-1.5 ${BAGLANTI}`}
-                  >
-                    Acil Durum Profili
-                  </a>
+                  >{s.acilDurumPaneli.baslik}</a>
                 </li>
                 <li>
                   <a
                     href="/#guvenlik"
                     className={`flex min-h-[44px] items-center md:min-h-0 md:py-1.5 ${BAGLANTI}`}
                   >
-                    Gizlilik
+                    {s.footer.gizlilik}
                   </a>
                 </li>
                 <li>
@@ -384,21 +504,23 @@ export default function Home() {
                     href="/#sss"
                     className={`flex min-h-[44px] items-center md:min-h-0 md:py-1.5 ${BAGLANTI}`}
                   >
-                    Sık sorulan sorular
+                    {s.footer.sss}
                   </a>
                 </li>
               </ul>
             </div>
 
             <div>
-              <h2 className="text-sm font-semibold text-ark-ink">Hesap</h2>
+              <h2 className="text-sm font-semibold text-ark-ink">
+                {s.footer.hesap}
+              </h2>
               <ul className="mt-4 space-y-1 text-sm text-ark-ink-3">
                 <li>
                   <Link
                     href="/login"
                     className={`flex min-h-[44px] items-center md:min-h-0 md:py-1.5 ${BAGLANTI}`}
                   >
-                    Giriş yap
+                    {s.footer.girisYap}
                   </Link>
                 </li>
                 <li>
@@ -406,7 +528,7 @@ export default function Home() {
                     href="/register"
                     className={`flex min-h-[44px] items-center md:min-h-0 md:py-1.5 ${BAGLANTI}`}
                   >
-                    Hesap oluştur
+                    {s.footer.hesapOlustur}
                   </Link>
                 </li>
                 <li>
@@ -414,7 +536,7 @@ export default function Home() {
                     href="/account/tags/activate"
                     className={`flex min-h-[44px] items-center md:min-h-0 md:py-1.5 ${BAGLANTI}`}
                   >
-                    Etiketimi etkinleştir
+                    {s.footer.etiketimiEtkinlestir}
                   </Link>
                 </li>
               </ul>
@@ -422,7 +544,7 @@ export default function Home() {
           </div>
 
           <div className="mt-12 border-t border-ark-line pt-6 text-center text-sm text-ark-ink-3">
-            © 2026 ARKVIUM. Tüm hakları saklıdır.
+            {s.footer.telifHakki}
           </div>
         </div>
       </footer>

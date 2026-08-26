@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 /**
  * Mobil (md altı) gezinme menüsü.
@@ -18,7 +18,16 @@ import { useEffect, useId, useRef, useState } from "react";
 
 type Baglanti = { href: string; metin: string };
 
-export default function MobilMenu({ baglantilar }: { baglantilar: Baglanti[] }) {
+export default function MobilMenu({
+  baglantilar,
+  altIcerik,
+  etiketler,
+}: {
+  baglantilar: Baglanti[];
+  /** Menünün altında gösterilecek ek içerik (dil seçici). */
+  altIcerik?: ReactNode;
+  etiketler?: { ac: string; kapat: string };
+}) {
   const [acik, setAcik] = useState(false);
   const panelId = useId();
   const dugmeRef = useRef<HTMLButtonElement | null>(null);
@@ -46,7 +55,7 @@ export default function MobilMenu({ baglantilar }: { baglantilar: Baglanti[] }) 
         ref={dugmeRef}
         type="button"
         onClick={() => setAcik((onceki) => !onceki)}
-        aria-label={acik ? "Menüyü kapat" : "Menüyü aç"}
+        aria-label={acik ? (etiketler?.kapat ?? "Menüyü kapat") : (etiketler?.ac ?? "Menüyü aç")}
         aria-expanded={acik}
         aria-controls={panelId}
         className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-[#101a3d] transition hover:bg-slate-100"
@@ -85,6 +94,12 @@ export default function MobilMenu({ baglantilar }: { baglantilar: Baglanti[] }) 
                 {baglanti.metin}
               </a>
             ))}
+
+            {altIcerik && (
+              <div className="border-t border-slate-200 px-2 py-3">
+                {altIcerik}
+              </div>
+            )}
           </nav>
         </div>
       )}

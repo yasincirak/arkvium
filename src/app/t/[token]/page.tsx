@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
+import SayfaUstBari from "@/components/SayfaUstBari";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AcilDurumBolumu from "@/components/AcilDurumBolumu";
 import ItemFinderSection from "@/components/ItemFinderSection";
 import KayipUyarisi from "@/components/KayipUyarisi";
 import { acilDurumGorunumu } from "@/lib/acil-durum";
+import { sozluk } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
 import { getUserSession } from "@/lib/session";
 import { taramaBildirimiGonder } from "@/lib/tarama-bildirimi";
 import { etiketKoduBicimle, type TagDurumu } from "@/lib/tags";
-import { ITEM_DURUM_ETIKETLERI } from "@/lib/types";
 
 /**
  * Etiket genel erişim sayfası (yeni akış).
@@ -25,15 +26,17 @@ type Props = {
   };
 };
 
-export const metadata: Metadata = {
-  title: "Bulunan Eşya",
-  robots: {
-    index: false,
-    follow: false,
-    nocache: true,
-    googleBot: { index: false, follow: false },
-  },
-};
+export function generateMetadata(): Metadata {
+  return {
+    title: sozluk().qr.baslik,
+    robots: {
+      index: false,
+      follow: false,
+      nocache: true,
+      googleBot: { index: false, follow: false },
+    },
+  };
+}
 
 export const dynamic = "force-dynamic";
 
@@ -42,12 +45,14 @@ function BilgiKutusu({
   aciklama,
   ton,
   eylem,
+  markaAlt,
 }: {
   baslik: string;
   aciklama: string;
   ton: "notr" | "uyari";
   /** Açıklamanın altında gösterilecek bağlantı; yalnızca gereken durumlarda verilir. */
   eylem?: React.ReactNode;
+  markaAlt: string;
 }) {
   const sinif =
     ton === "uyari"
@@ -55,22 +60,24 @@ function BilgiKutusu({
       : "border-white/10 bg-white/5 text-white/70";
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#0a0a0f] p-6 text-white">
+    <main className="pt-20 flex min-h-screen items-center justify-center bg-[#0a0a0f] p-6 text-white">
+      <SayfaUstBari ton="koyu" />
+
       <div className={`w-full max-w-xl rounded-2xl border p-8 ${sinif}`}>
         <h1 className="text-2xl font-bold">{baslik}</h1>
         <p className="mt-4 leading-7">{aciklama}</p>
 
         {eylem && <div className="mt-6">{eylem}</div>}
 
-        <p className="mt-8 text-sm opacity-70">
-          ARKVIUM — Dijital Sahiplik Platformu
-        </p>
+        <p className="mt-8 text-sm opacity-70">{markaAlt}</p>
       </div>
     </main>
   );
 }
 
 export default async function TagPage({ params }: Props) {
+  const s = sozluk();
+
   const tag = await prisma.tag.findUnique({
     where: { publicToken: params.token },
     include: { itemRecord: true },
@@ -85,9 +92,10 @@ export default async function TagPage({ params }: Props) {
   if (durum === "revoked") {
     return (
       <BilgiKutusu
+        markaAlt={s.qr.markaAlt}
         ton="uyari"
-        baslik="Bu etiket iptal edilmiş"
-        aciklama="Bu etiket artık kullanılmıyor. Bir eşya bulduysanız lütfen etiketin üzerindeki başka bir iletişim yolunu kullanın."
+        baslik={s.qr.iptalEdilmis.baslik}
+        aciklama={s.qr.iptalEdilmis.metin}
       />
     );
   }
@@ -95,9 +103,10 @@ export default async function TagPage({ params }: Props) {
   if (durum === "unused") {
     return (
       <BilgiKutusu
+        markaAlt={s.qr.markaAlt}
         ton="notr"
-        baslik="Bu etiket henüz etkinleştirilmemiş"
-        aciklama="Bu etiket bir ürüne bağlanmamış. Etiket sizin elinizdeyse ARKVIUM hesabınızdan etkinleştirebilirsiniz."
+        baslik={s.qr.etkinlestirilmemis.baslik}
+        aciklama={s.qr.etkinlestirilmemis.metin}
         eylem={
           <Link
             href={`/account/tags/activate?kod=${encodeURIComponent(
@@ -105,7 +114,7 @@ export default async function TagPage({ params }: Props) {
             )}`}
             className="inline-flex rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-500"
           >
-            Bu etiketi etkinleştir
+            {s.qr.etkinlestirilmemis.dugme}
           </Link>
         }
       />
@@ -115,9 +124,10 @@ export default async function TagPage({ params }: Props) {
   if (durum === "inactive") {
     return (
       <BilgiKutusu
+        markaAlt={s.qr.markaAlt}
         ton="notr"
-        baslik="Bu etiket şu anda pasif"
-        aciklama="Etiket sahibi bu etiketi geçici olarak devre dışı bırakmış. Şu anda bildirim gönderilemiyor."
+        baslik={s.qr.pasif.baslik}
+        aciklama={s.qr.pasif.metin}
       />
     );
   }
@@ -127,9 +137,10 @@ export default async function TagPage({ params }: Props) {
   if (!record) {
     return (
       <BilgiKutusu
+        markaAlt={s.qr.markaAlt}
         ton="notr"
-        baslik="Bu etikete bağlı ürün bulunamadı"
-        aciklama="Etiket etkin ancak herhangi bir ürüne bağlı değil. Şu anda bildirim gönderilemiyor."
+        baslik={s.qr.urunYok.baslik}
+        aciklama={s.qr.urunYok.metin}
       />
     );
   }
@@ -144,7 +155,8 @@ export default async function TagPage({ params }: Props) {
   const acilDurum = await acilDurumGorunumu(record.id);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#0a0a0f] p-6 text-white">
+    <main className="pt-20 flex min-h-screen items-center justify-center bg-[#0a0a0f] p-6 text-white">
+      <SayfaUstBari ton="koyu" />
       <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-white/5 p-8">
         {record.status === "lost" && <KayipUyarisi />}
 
@@ -153,31 +165,43 @@ export default async function TagPage({ params }: Props) {
         <h1 className="text-3xl font-bold">{record.assetName}</h1>
 
         <p className="mt-3 text-white/60">
-          Bu eşya ARKVIUM dijital sahiplik sistemine kayıtlıdır.
+          {s.qr.altYazi}
         </p>
 
         <div className="mt-8 space-y-3">
           {record.category && (
             <div>
-              <span className="text-white/40">Kategori</span>
+              <span className="text-white/40">{s.qr.kategori}</span>
               <p>{record.category}</p>
             </div>
           )}
 
           <div>
-            <span className="text-white/40">Durum</span>
-            <p>{ITEM_DURUM_ETIKETLERI[record.status] ?? "Aktif"}</p>
+            <span className="text-white/40">{s.qr.durum}</span>
+            <p>
+              {s.qr.durumlar[
+                record.status as keyof typeof s.qr.durumlar
+              ] ?? s.qr.durumlar.active}
+            </p>
           </div>
 
           {record.description && (
             <div>
-              <span className="text-white/40">Açıklama</span>
+              <span className="text-white/40">{s.qr.aciklama}</span>
               <p>{record.description}</p>
             </div>
           )}
         </div>
 
-        <ItemFinderSection recordId={record.id} />
+        <ItemFinderSection
+          recordId={record.id}
+          metinler={{
+            buldumDugmesi: s.qr.buEsyayiBuldum,
+            whatsappIleIletisim: s.qr.whatsappIleIletisim,
+            whatsappMesaji: s.qr.whatsappMesaji,
+            form: s.bulanKisi,
+          }}
+        />
       </div>
     </main>
   );

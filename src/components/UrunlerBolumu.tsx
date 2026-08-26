@@ -5,7 +5,8 @@ import {
   TemsiliRozet,
   urunGorselAnahtari,
 } from "@/components/gorsel/UrunGorselleri";
-import { fiyatBicimle, KARGO_NOTU, SIPARIS_URUNLERI } from "@/lib/siparis";
+import { sozluk } from "@/lib/i18n";
+import { fiyatBicimle, SIPARIS_URUNLERI } from "@/lib/siparis";
 
 /**
  * Ana sayfadaki "Ürün ailesi" bölümü.
@@ -30,34 +31,6 @@ type PazarlamaBilgisi = {
   senaryo: string;
 };
 
-const PAZARLAMA: Record<string, PazarlamaBilgisi> = {
-  "sticker-seti": {
-    kategori: "Günlük eşya",
-    senaryo:
-      "Laptop çantanı kafede unuttuğunda, bulan kişi kapaktaki QR'ı okutup sana haber verebilir.",
-  },
-  "arac-stickeri": {
-    kategori: "Araç",
-    senaryo:
-      "Aracın yanlış yerde kaldığında ya da çıkışı kapattığında, sürücü camdaki QR'dan sana ulaşır.",
-  },
-  "metal-anahtarlik": {
-    kategori: "Anahtar",
-    senaryo:
-      "Ev ve araç anahtarlarını düşürdüğünde, bulan kişi anahtarlıktaki QR'ı okutarak seni bulur.",
-  },
-  "evcil-hayvan-kunyesi": {
-    kategori: "Evcil hayvan",
-    senaryo:
-      "Köpeğin tasmasından kurtulup kaybolduğunda, onu bulan kişi künyeyi okutup seninle iletişime geçer.",
-  },
-  "valiz-etiketi": {
-    kategori: "Seyahat",
-    senaryo:
-      "Valizin bagaj bandında karıştığında, yanlış valizi alan yolcu etiketteki QR'dan sana yazar.",
-  },
-};
-
 /**
  * Son satırdaki kartların yatay konumu.
  *
@@ -72,6 +45,50 @@ const SON_SATIR_YERLESIMI: Record<number, string> = {
 };
 
 export default function UrunlerBolumu() {
+  const s = sozluk();
+
+  /**
+   * Ürün kodundan pazarlama metnine eşleme.
+   *
+   * Ad, açıklama ve fiyat `@/lib/siparis` içinde tek kaynaktan gelir; ad ve
+   * açıklamanın çevirisi sözlükte, FİYAT ise yalnızca katalogda durur.
+   */
+  const PAZARLAMA: Record<
+    string,
+    PazarlamaBilgisi & { ad: string; aciklama: string }
+  > = {
+    "sticker-seti": {
+      kategori: s.urunler.kategori.gunlukEsya,
+      senaryo: s.urunler.senaryo.stickerSeti,
+      ad: s.urunler.ad.stickerSeti,
+      aciklama: s.urunler.aciklama.stickerSeti,
+    },
+    "arac-stickeri": {
+      kategori: s.urunler.kategori.arac,
+      senaryo: s.urunler.senaryo.aracStickeri,
+      ad: s.urunler.ad.aracStickeri,
+      aciklama: s.urunler.aciklama.aracStickeri,
+    },
+    "metal-anahtarlik": {
+      kategori: s.urunler.kategori.anahtar,
+      senaryo: s.urunler.senaryo.metalAnahtarlik,
+      ad: s.urunler.ad.metalAnahtarlik,
+      aciklama: s.urunler.aciklama.metalAnahtarlik,
+    },
+    "evcil-hayvan-kunyesi": {
+      kategori: s.urunler.kategori.evcilHayvan,
+      senaryo: s.urunler.senaryo.evcilHayvanKunyesi,
+      ad: s.urunler.ad.evcilHayvanKunyesi,
+      aciklama: s.urunler.aciklama.evcilHayvanKunyesi,
+    },
+    "valiz-etiketi": {
+      kategori: s.urunler.kategori.seyahat,
+      senaryo: s.urunler.senaryo.valizEtiketi,
+      ad: s.urunler.ad.valizEtiketi,
+      aciklama: s.urunler.aciklama.valizEtiketi,
+    },
+  };
+
   return (
     <section
       id="urunler"
@@ -85,15 +102,14 @@ export default function UrunlerBolumu() {
           sorununu baştan ortadan kaldırır (DESIGN.md § 4).
         */}
         <BolumGecisi className="max-w-2xl">
-          <p className="ark-etiket text-ark-accent">Ürün ailesi</p>
+          <p className="ark-etiket text-ark-accent">{s.urunler.etiket}</p>
 
           <h2 id="urunler-basligi" className="ark-baslik mt-3 text-ark-ink">
-            Etiketini seç
+            {s.urunler.baslik}
           </h2>
 
           <p className="ark-giris mt-4 text-ark-ink-2">
-            Hepsi aynı sistemde çalışır. Farkları nereye takıldıkları, neye
-            dayandıkları ve kaç QR etiketi içerdikleridir.
+            {s.urunler.giris}
           </p>
         </BolumGecisi>
 
@@ -125,7 +141,7 @@ export default function UrunlerBolumu() {
                       sizes="(min-width: 1024px) 352px, (min-width: 640px) 45vw, 90vw"
                       className="transition duration-300 ease-out hover:scale-[1.04] motion-reduce:transform-none"
                     />
-                    <TemsiliRozet />
+                    <TemsiliRozet metin={s.gorsel.temsili} />
                   </div>
                 )}
 
@@ -136,17 +152,17 @@ export default function UrunlerBolumu() {
                 )}
 
                 <h3 className="mt-3 text-xl font-bold text-ark-ink">
-                  {urun.ad}
+                  {pazarlama?.ad ?? urun.ad}
                 </h3>
 
                 <p className="mt-3 leading-relaxed text-ark-ink-2">
-                  {urun.aciklama}
+                  {pazarlama?.aciklama ?? urun.aciklama}
                 </p>
 
                 {pazarlama && (
                   <div className="mt-5 rounded-xl bg-ark-surface-2 p-4">
                     <p className="ark-etiket text-ark-ink-3">
-                      Ne zaman işe yarar?
+                      {s.urunler.neZamanIseYarar}
                     </p>
                     <p className="mt-2 text-sm leading-relaxed text-ark-ink-2">
                       {pazarlama.senaryo}
@@ -156,8 +172,8 @@ export default function UrunlerBolumu() {
 
                 <p className="mt-4 text-sm text-ark-ink-3">
                   {urun.qrAdedi > 1
-                    ? `${urun.qrAdedi} adet QR etiketi içerir`
-                    : "1 adet QR etiketi içerir"}
+                    ? `${urun.qrAdedi} ${s.urunler.qrAdediCogul}`
+                    : s.urunler.qrAdediTekil}
                 </p>
 
                 {/* Esnek boşluk: fiyat ve düğmeyi tüm kartlarda aynı hizaya iter. */}
@@ -168,7 +184,7 @@ export default function UrunlerBolumu() {
                     {fiyatBicimle(urun.fiyatKurus)}
                   </div>
                   <div className="mt-1 text-sm text-ark-ink-3">
-                    {KARGO_NOTU}
+                    {s.kalanlar.kargoNotuTam}
                   </div>
                 </div>
 
@@ -176,8 +192,8 @@ export default function UrunlerBolumu() {
                   href={`/siparis?urun=${urun.kod}`}
                   className="mt-6 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-ark-commerce px-6 py-3 font-semibold text-white transition duration-200 hover:bg-ark-commerce-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent active:scale-[0.98] motion-reduce:active:scale-100"
                 >
-                  <span>Satın Al</span>
-                  <span className="sr-only"> — {urun.ad}</span>
+                  <span>{s.urunler.satinAl}</span>
+                  <span className="sr-only"> — {pazarlama?.ad ?? urun.ad}</span>
                 </Link>
               </BolumGecisi>
             );

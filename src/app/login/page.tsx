@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import SayfaUstBari from "@/components/SayfaUstBari";
 import { FormEvent, useState } from "react";
+import { useSozluk } from "@/lib/i18n/istemci";
 
 /**
  * Giriş sonrası dönülecek adres.
@@ -23,6 +25,8 @@ function guvenliDonusAdresi(deger: string | null): string {
 }
 
 export default function LoginPage() {
+  const s = useSozluk();
+
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -47,7 +51,7 @@ export default function LoginPage() {
     const data = await response.json();
 
     if (!response.ok) {
-      setError(data.error || "Giriş yapılamadı.");
+      setError(data.error || s.kimlik.girisHatasi);
       setIsSubmitting(false);
       return;
     }
@@ -58,7 +62,9 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#09090f] px-4 py-12 text-white">
+    <main className="pt-20 flex min-h-screen items-center justify-center bg-[#09090f] px-4 py-12 text-white">
+      <SayfaUstBari ton="koyu" />
+
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.03] p-8 shadow-2xl">
         <div className="mb-8 text-center">
           <Link
@@ -68,10 +74,10 @@ export default function LoginPage() {
             ARKVIUM
           </Link>
 
-          <h1 className="mt-6 text-3xl font-bold">Giriş Yap</h1>
+          <h1 className="mt-6 text-3xl font-bold">{s.kimlik.girisBaslik}</h1>
 
           <p className="mt-2 text-sm text-white/50">
-            Hesabına giriş yap ve ürünlerini yönet.
+            {s.kimlik.girisAltyazi}
           </p>
         </div>
 
@@ -81,7 +87,7 @@ export default function LoginPage() {
               htmlFor="email"
               className="mb-2 block text-sm font-medium text-white/80"
             >
-              E-posta
+              {s.kimlik.eposta}
             </label>
 
             <input
@@ -91,7 +97,7 @@ export default function LoginPage() {
               required
               autoComplete="email"
               className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-indigo-500"
-              placeholder="ornek@email.com"
+              placeholder={s.kimlik.epostaOrnek}
             />
           </div>
 
@@ -100,15 +106,13 @@ export default function LoginPage() {
               <label
                 htmlFor="password"
                 className="block text-sm font-medium text-white/80"
-              >
-                Şifre
-              </label>
+              >{s.kalanlar.sifre}</label>
 
               <Link
                 href="/forgot-password"
                 className="text-sm font-medium text-indigo-400 hover:text-indigo-300"
               >
-                Şifremi unuttum
+                {s.kimlik.sifremiUnuttum}
               </Link>
             </div>
 
@@ -119,7 +123,7 @@ export default function LoginPage() {
               required
               autoComplete="current-password"
               className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-indigo-500"
-              placeholder="Şifreniz"
+              placeholder={s.kimlik.sifreniz}
             />
           </div>
 
@@ -134,17 +138,17 @@ export default function LoginPage() {
             disabled={isSubmitting}
             className="w-full rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting ? "Giriş yapılıyor..." : "Giriş Yap"}
+            {isSubmitting ? s.kimlik.girisYapiliyor : s.kimlik.girisDugme}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-white/50">
-          Hesabın yok mu?{" "}
+          {s.kimlik.hesabinYokMu}{" "}
           <Link
             href="/register"
             className="font-medium text-indigo-400 hover:text-indigo-300"
           >
-            Hesap oluştur
+            {s.kimlik.hesapOlustur}
           </Link>
         </p>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSozluk } from "@/lib/i18n/istemci";
 import { useRouter } from "next/navigation";
 import { editRecord } from "@/lib/actions";
 
@@ -17,6 +18,8 @@ type Props = {
 };
 
 export default function EditRecordForm({ record }: Props) {
+  const ceviri = useSozluk();
+
   const router = useRouter();
 
   const [assetName, setAssetName] = useState(record.assetName);
@@ -45,7 +48,7 @@ export default function EditRecordForm({ record }: Props) {
       });
 
       if (!updatedRecord) {
-        setError("Kayıt güncellenemedi.");
+        setError(ceviri.hesap.kayitDuzenle.hata);
         setSaving(false);
         return;
       }
@@ -53,7 +56,7 @@ export default function EditRecordForm({ record }: Props) {
       router.push(`/account/records/${record.id}`);
       router.refresh();
     } catch {
-      setError("Kayıt güncellenirken bir hata oluştu.");
+      setError(ceviri.hesap.kayitDuzenle.genelHata);
       setSaving(false);
     }
   }
@@ -68,9 +71,7 @@ export default function EditRecordForm({ record }: Props) {
       className="space-y-6 rounded-2xl border border-white/10 bg-white/[0.03] p-6"
     >
       <div>
-        <label className="mb-2 block text-sm text-white/60">
-          Eşya Adı
-        </label>
+        <label className="mb-2 block text-sm text-white/60">{ceviri.kalanlar.esyaAdi}</label>
 
         <input
           value={assetName}
@@ -81,9 +82,7 @@ export default function EditRecordForm({ record }: Props) {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm text-white/60">
-          Sahip Adı
-        </label>
+        <label className="mb-2 block text-sm text-white/60">{ceviri.kalanlar.sahipAdi}</label>
 
         <input
           value={ownerName}
@@ -94,9 +93,7 @@ export default function EditRecordForm({ record }: Props) {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm text-white/60">
-          Telefon
-        </label>
+        <label className="mb-2 block text-sm text-white/60">{ceviri.kalanlar.telefon}</label>
 
         <input
           value={phone}
@@ -107,9 +104,7 @@ export default function EditRecordForm({ record }: Props) {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm text-white/60">
-          E-posta
-        </label>
+        <label className="mb-2 block text-sm text-white/60">{ceviri.kalanlar.eposta}</label>
 
         <input
           type="email"
@@ -120,9 +115,7 @@ export default function EditRecordForm({ record }: Props) {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm text-white/60">
-          Kategori
-        </label>
+        <label className="mb-2 block text-sm text-white/60">{ceviri.kalanlar.kategori}</label>
 
         <input
           value={category}
@@ -132,9 +125,7 @@ export default function EditRecordForm({ record }: Props) {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm text-white/60">
-          Açıklama
-        </label>
+        <label className="mb-2 block text-sm text-white/60">{ceviri.kalanlar.aciklama}</label>
 
         <textarea
           value={description}
@@ -156,7 +147,7 @@ export default function EditRecordForm({ record }: Props) {
           disabled={saving}
           className="rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {saving ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
+          {saving ? "Kaydediliyor..." : ceviri.hesap.kayitDuzenle.kaydet}
         </button>
 
         <button
@@ -164,9 +155,7 @@ export default function EditRecordForm({ record }: Props) {
           onClick={handleCancel}
           disabled={saving}
           className="rounded-xl border border-white/10 bg-white/5 px-5 py-3 font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          İptal
-        </button>
+        >{ceviri.ortak.iptal}</button>
       </div>
     </form>
   );

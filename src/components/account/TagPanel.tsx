@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useSozluk } from "@/lib/i18n/istemci";
 import { QRCodeSVG } from "qrcode.react";
 
 type Urun = {
@@ -20,13 +21,6 @@ type Props = {
   tasinabilirUrunler: Urun[];
 };
 
-const DURUM_ETIKETLERI: Record<string, string> = {
-  unused: "Kullanılmamış",
-  active: "Aktif",
-  inactive: "Pasif",
-  revoked: "İptal edilmiş",
-};
-
 const DURUM_RENKLERI: Record<string, string> = {
   active: "border-green-500/30 bg-green-500/10 text-green-300",
   inactive: "border-amber-500/30 bg-amber-500/10 text-amber-300",
@@ -39,6 +33,8 @@ export default function TagPanel({
   etiketAdresi,
   tasinabilirUrunler,
 }: Props) {
+  const ceviri = useSozluk();
+
   const router = useRouter();
 
   const [durum, setDurum] = useState(tag.status);
@@ -63,7 +59,7 @@ export default function TagPanel({
       const data = await response.json();
 
       if (!response.ok) {
-        setHata(data.error || "İşlem tamamlanamadı.");
+        setHata(data.error || ceviri.ortak.genelHata);
         return;
       }
 
@@ -76,7 +72,7 @@ export default function TagPanel({
       setTasimaAcik(false);
       router.refresh();
     } catch {
-      setHata("Bağlantı kurulamadı. Lütfen tekrar deneyin.");
+      setHata(ceviri.ortak.baglantiHatasi);
     } finally {
       setCalisiyor(false);
     }
@@ -88,7 +84,7 @@ export default function TagPanel({
     <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold">Etiket</h2>
+          <h2 className="text-xl font-semibold">{ceviri.hesap.etiket}</h2>
 
           <p className="mt-1 font-mono text-sm tracking-wider text-white/60">
             {tag.code}
@@ -100,7 +96,7 @@ export default function TagPanel({
             DURUM_RENKLERI[durum] ?? DURUM_RENKLERI.unused
           }`}
         >
-          {DURUM_ETIKETLERI[durum] ?? durum}
+          {ceviri.hesap.etiketPaneli.etiketDurumlari[durum as keyof typeof ceviri.hesap.etiketPaneli.etiketDurumlari] ?? durum}
         </span>
       </div>
 
@@ -111,7 +107,7 @@ export default function TagPanel({
           </div>
 
           <div className="min-w-0">
-            <p className="text-sm text-white/40">QR kodun açtığı adres</p>
+            <p className="text-sm text-white/40">{ceviri.kalanlar.qrAdresi}</p>
             <p className="mt-1 break-all text-sm text-white/70">
               {etiketAdresi}
             </p>
@@ -138,10 +134,7 @@ export default function TagPanel({
       )}
 
       {iptalEdilmis ? (
-        <p className="mt-6 text-sm leading-6 text-white/50">
-          Bu etiket kalıcı olarak iptal edildi ve tekrar kullanılamaz. Yeni bir
-          etiket edinip ürününe bağlayabilirsin.
-        </p>
+        <p className="mt-6 text-sm leading-6 text-white/50">{ceviri.kalanlar.etiketIptalEdildi}</p>
       ) : (
         <div className="mt-6 flex flex-wrap gap-3">
           {durum === "active" ? (
@@ -150,18 +143,14 @@ export default function TagPanel({
               onClick={() => islemYap({ islem: "pasiflestir" })}
               disabled={calisiyor}
               className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10 disabled:opacity-60"
-            >
-              Pasife Al
-            </button>
+            >{ceviri.kalanlar.pasifeAl}</button>
           ) : (
             <button
               type="button"
               onClick={() => islemYap({ islem: "etkinlestir" })}
               disabled={calisiyor}
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-60"
-            >
-              Yeniden Etkinleştir
-            </button>
+            >{ceviri.kalanlar.yenidenEtkinlestir}</button>
           )}
 
           {tasinabilirUrunler.length > 0 && (
@@ -171,9 +160,7 @@ export default function TagPanel({
               disabled={calisiyor}
               aria-expanded={tasimaAcik}
               className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10 disabled:opacity-60"
-            >
-              Başka Ürüne Taşı
-            </button>
+            >{ceviri.kalanlar.baskaUruneTasi}</button>
           )}
 
           <button
@@ -181,9 +168,7 @@ export default function TagPanel({
             onClick={() => setIptalOnayi(true)}
             disabled={calisiyor}
             className="rounded-lg border border-red-500/25 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-300 transition hover:bg-red-500/20 disabled:opacity-60"
-          >
-            Etiketi İptal Et
-          </button>
+          >{ceviri.kalanlar.etiketiIptalEt}</button>
         </div>
       )}
 
@@ -202,9 +187,7 @@ export default function TagPanel({
           <label
             htmlFor="itemRecordId"
             className="mb-2 block text-sm font-medium text-white/80"
-          >
-            Etiket hangi ürüne taşınsın?
-          </label>
+          >{ceviri.kalanlar.hangiUruneTasinsin}</label>
 
           <select
             id="itemRecordId"
@@ -219,25 +202,21 @@ export default function TagPanel({
             ))}
           </select>
 
-          <p className="mt-3 text-xs leading-5 text-white/40">
-            Yalnızca henüz etiketi olmayan ürünlerin listelenir. Taşıma işlemi
-            etiket geçmişine kaydedilir.
-          </p>
+          <p className="mt-3 text-xs leading-5 text-white/40">{ceviri.kalanlar.tasimaYardim}</p>
 
           <button
             type="submit"
             disabled={calisiyor}
             className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-60"
           >
-            {calisiyor ? "Taşınıyor..." : "Taşı"}
+            {calisiyor ? ceviri.hesap.etiketPaneli.tasiniyor : "Taşı"}
           </button>
         </form>
       )}
 
       {iptalOnayi && !iptalEdilmis && (
         <div className="mt-5 rounded-xl border border-red-500/25 bg-red-500/10 p-4">
-          <p className="text-sm leading-6 text-red-100">
-            Etiketi iptal etmek <strong>geri alınamaz</strong>. QR kodu bir daha
+          <p className="text-sm leading-6 text-red-100">{ceviri.kalanlar.etiketiIptalEtmek}<strong>geri alınamaz</strong>. QR kodu bir daha
             çalışmaz ve bu etiket yeniden etkinleştirilemez. Devam edilsin mi?
           </p>
 
@@ -248,7 +227,7 @@ export default function TagPanel({
               disabled={calisiyor}
               className="rounded-lg bg-red-500/90 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500 disabled:opacity-60"
             >
-              {calisiyor ? "İptal ediliyor..." : "Evet, kalıcı olarak iptal et"}
+              {calisiyor ? "İptal ediliyor..." : ceviri.hesap.etiketPaneli.iptalOnayi}
             </button>
 
             <button
@@ -256,9 +235,7 @@ export default function TagPanel({
               onClick={() => setIptalOnayi(false)}
               disabled={calisiyor}
               className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10 disabled:opacity-60"
-            >
-              Vazgeç
-            </button>
+            >{ceviri.kalanlar.vazgec}</button>
           </div>
         </div>
       )}

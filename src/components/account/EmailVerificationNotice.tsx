@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSozluk } from "@/lib/i18n/istemci";
 
 type Durum =
   | { tip: "bekliyor" }
@@ -9,6 +10,8 @@ type Durum =
   | { tip: "hata"; mesaj: string };
 
 export default function EmailVerificationNotice() {
+  const ceviri = useSozluk();
+
   const [durum, setDurum] = useState<Durum>({ tip: "bekliyor" });
 
   async function tekrarGonder() {
@@ -24,7 +27,7 @@ export default function EmailVerificationNotice() {
       if (!response.ok) {
         setDurum({
           tip: "hata",
-          mesaj: data.error || "E-posta gönderilemedi.",
+          mesaj: data.error || ceviri.hesap.epostaDogrulama.hata,
         });
         return;
       }
@@ -33,7 +36,7 @@ export default function EmailVerificationNotice() {
     } catch {
       setDurum({
         tip: "hata",
-        mesaj: "Bağlantı kurulamadı. Lütfen tekrar deneyin.",
+        mesaj: ceviri.ortak.baglantiHatasi,
       });
     }
   }
@@ -42,14 +45,9 @@ export default function EmailVerificationNotice() {
     <div className="mb-8 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="font-semibold text-amber-200">
-            E-posta adresin doğrulanmadı
-          </h2>
+          <h2 className="font-semibold text-amber-200">{ceviri.kalanlar.epostaDogrulanmadi}</h2>
 
-          <p className="mt-1 text-sm leading-6 text-amber-100/70">
-            Eşyan bulunduğunda bildirimlerin sana ulaşabilmesi için e-posta
-            adresini doğrulaman gerekiyor.
-          </p>
+          <p className="mt-1 text-sm leading-6 text-amber-100/70">{ceviri.kalanlar.epostaDogrulamaAciklama}</p>
         </div>
 
         {durum.tip !== "basarili" && (
@@ -61,7 +59,7 @@ export default function EmailVerificationNotice() {
           >
             {durum.tip === "gonderiliyor"
               ? "Gönderiliyor..."
-              : "Doğrulama e-postası gönder"}
+              : ceviri.hesap.epostaDogrulama.gonder}
           </button>
         )}
       </div>

@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import SayfaUstBari from "@/components/SayfaUstBari";
+import { sozluk } from "@/lib/i18n";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import BolumGecisi from "@/components/animasyon/BolumGecisi";
@@ -26,26 +28,36 @@ const URUN_KODU = "arac-stickeri";
 
 const urun = SIPARIS_URUNLERI.find((u) => u.kod === URUN_KODU);
 
-export const metadata: Metadata = {
-  title: "Araç İletişim QR Sticker'ı",
+export function generateMetadata(): Metadata {
+  const ceviri = sozluk();
+
+  return {
+  title: ceviri.aracSayfasi.baslik,
   description:
-    "Telefon numaranızı aracınızda açıkça göstermeden, aracınızla ilgili durumlarda size ARKVIUM üzerinden güvenli mesaj gönderilmesini sağlayın.",
+    ceviri.aracSayfasi.altyazi,
   // Sayfa kendi canonical adresini gösterir.
   alternates: { canonical: `${CANLI_ADRES}/urun/arac-stickeri` },
   openGraph: {
-    title: "Araç İletişim QR Sticker'ı | ARKVIUM",
+    title: ceviri.aracSayfasi.metaBaslik,
     description:
-      "Telefon numaranız görünmeden aracınızla ilgili güvenli bildirim alın.",
+      ceviri.aracSayfasi.metaAciklama,
     type: "website",
     url: `${CANLI_ADRES}/urun/arac-stickeri`,
     siteName: "ARKVIUM",
     locale: "tr_TR",
     images: [PAYLASIM_GORSELI],
   },
-};
+  };
+}
 
 /** Satın alma düğmesi — mevcut sipariş akışına gider. */
-function SatinAlDugmesi({ tamGenislik = false }: { tamGenislik?: boolean }) {
+function SatinAlDugmesi({
+  tamGenislik = false,
+  metin,
+}: {
+  tamGenislik?: boolean;
+  metin: string;
+}) {
   return (
     <Link
       href={`/siparis?urun=${URUN_KODU}`}
@@ -53,101 +65,110 @@ function SatinAlDugmesi({ tamGenislik = false }: { tamGenislik?: boolean }) {
         tamGenislik ? "w-full" : ""
       }`}
     >
-      Satın Al
+      {metin}
     </Link>
   );
 }
 
-const FAYDALAR = [
-  {
-    baslik: "Numaranız açıkta durmaz",
-    metin:
-      "Araç camında telefon numarası yazmaz. QR kodu okutan kişi size ARKVIUM üzerinden mesaj gönderir.",
-  },
-  {
-    baslik: "Telefon kamerasıyla okunur",
-    metin:
-      "QR kod, telefonun kendi kamerasıyla okutulur ve tarayıcıda açılır.",
-  },
-  {
-    baslik: "Uygulama kurulumu gerekmez",
-    metin:
-      "Mesaj gönderen kişinin uygulama yüklemesine veya hesap açmasına gerek yoktur.",
-  },
-  {
-    baslik: "Etiket hesabınıza bağlıdır",
-    metin:
-      "Etiketi ARKVIUM hesabınızda etkinleştirirsiniz; bağ yalnızca sizin hesabınızla kurulur.",
-  },
-  {
-    baslik: "Mesaj ARKVIUM üzerinden gelir",
-    metin:
-      "Bildirim size ARKVIUM üzerinden iletilir; iletişim doğrudan kurulmaz.",
-  },
-];
 
-const ADIMLAR = [
-  { no: "01", baslik: "Ürünü satın al", metin: "Sticker'ı sipariş edersin." },
-  {
-    no: "02",
-    baslik: "Hesabında etkinleştir",
-    metin: "Etiket eline ulaştığında hesabına giriş yapıp etiketi bağlarsın.",
-  },
-  {
-    no: "03",
-    baslik: "Aracına uygula",
-    metin: "Sticker'ı aracında dışarıdan okunabilecek bir yere yapıştırırsın.",
-  },
-  {
-    no: "04",
-    baslik: "Güvenli mesaj al",
-    metin:
-      "QR kod okutulduğunda gönderilen mesaj sana ARKVIUM üzerinden ulaşır.",
-  },
-];
 
-const SENARYOLAR = [
-  "Hatalı ya da yolu kapatan park",
-  "Açık unutulan far veya cam",
-  "Araçta fark edilen hasar",
-  "Aracın çekilme riski veya yerinin değişmesi",
-];
 
-const SSS = [
-  {
-    soru: "QR kodu okutan kişinin uygulama yüklemesi gerekir mi?",
-    cevap:
-      "Hayır. QR kod tarayıcıda bir sayfa açar; mesaj formu doğrudan orada doldurulur. Uygulama kurulumu veya hesap açma gerekmez.",
-  },
-  {
-    soru: "Telefon numaram görünür mü?",
-    cevap:
-      "QR kodun açtığı sayfada telefon numaranız ve e-posta adresiniz gösterilmez. Mesaj gönderen kişi kendi iletişim bilgisini bırakır.",
-  },
-  {
-    soru: "Etiketi nasıl etkinleştiririm?",
-    cevap:
-      "ARKVIUM hesabınıza giriş yapıp etiketin üzerindeki aktivasyon kodunu girersiniz. Etkinleştirme için giriş yapmanız gerekir.",
-  },
-  {
-    soru: "Mesaj bana nasıl ulaşır?",
-    cevap:
-      "Gönderilen bildirim ARKVIUM tarafından hesabınızdaki e-posta adresine iletilir ve hesabınızda görüntülenir.",
-  },
-  {
-    soru: "Aracımı değiştirirsem ne olur?",
-    cevap:
-      "Etiketi hesabınızdaki başka bir kayda taşıyabilirsiniz; etiket iptal olmadan yeni kaydınıza bağlanır.",
-  },
-];
 
 export default function AracStickeriPage() {
+  const ceviri = sozluk();
+
+  const FAYDALAR = [
+    {
+      baslik: ceviri.aracSayfasi.fayda1Baslik,
+      metin:
+        ceviri.aracSayfasi.fayda1Metin,
+    },
+    {
+      baslik: ceviri.aracSayfasi.fayda2Baslik,
+      metin:
+        ceviri.aracSayfasi.fayda2Metin,
+    },
+    {
+      baslik: ceviri.aracSayfasi.fayda3Baslik,
+      metin:
+        ceviri.aracSayfasi.fayda3Metin,
+    },
+    {
+      baslik: ceviri.aracSayfasi.fayda4Baslik,
+      metin:
+        ceviri.aracSayfasi.fayda4Metin,
+    },
+    {
+      baslik: ceviri.aracSayfasi.fayda5Baslik,
+      metin:
+        ceviri.aracSayfasi.fayda5Metin,
+    },
+  ];
+
+  const ADIMLAR = [
+    { no: "01", baslik: ceviri.aracSayfasi.adim1Baslik, metin: ceviri.aracSayfasi.adim1Metin },
+    {
+      no: "02",
+      baslik: ceviri.aracSayfasi.adim2Baslik,
+      metin: ceviri.aracSayfasi.adim2Metin,
+    },
+    {
+      no: "03",
+      baslik: ceviri.aracSayfasi.adim3Baslik,
+      metin: ceviri.aracSayfasi.adim3Metin,
+    },
+    {
+      no: "04",
+      baslik: ceviri.aracSayfasi.adim4Baslik,
+      metin:
+        ceviri.aracSayfasi.adim4Metin,
+    },
+  ];
+
+  const SENARYOLAR = [
+    ceviri.aracSayfasi.senaryo1,
+    ceviri.aracSayfasi.senaryo2,
+    ceviri.aracSayfasi.senaryo3,
+    ceviri.aracSayfasi.senaryo4,
+  ];
+
+  const SSS = [
+    {
+      soru: ceviri.aracSayfasi.sss1Soru,
+      cevap:
+        ceviri.aracSayfasi.sss1Cevap,
+    },
+    {
+      soru: ceviri.aracSayfasi.sss2Soru,
+      cevap:
+        ceviri.aracSayfasi.sss2Cevap,
+    },
+    {
+      soru: ceviri.aracSayfasi.sss3Soru,
+      cevap:
+        ceviri.aracSayfasi.sss3Cevap,
+    },
+    {
+      soru: ceviri.aracSayfasi.sss4Soru,
+      cevap:
+        ceviri.aracSayfasi.sss4Cevap,
+    },
+    {
+      soru: ceviri.aracSayfasi.sss5Soru,
+      cevap:
+        ceviri.aracSayfasi.sss5Cevap,
+    },
+  ];
+
+
   if (!urun) {
     notFound();
   }
 
   return (
-    <main className="relative min-h-screen bg-white text-[#101a3d]">
+    <main className="pt-20 relative min-h-screen bg-white text-[#101a3d]">
+      <SayfaUstBari ton="acik" />
+
       <ArkaPlanLogosu />
 
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">
@@ -160,16 +181,12 @@ export default function AracStickeriPage() {
             <Link
               href="/#urunler"
               className="whitespace-nowrap rounded-xl px-2 py-2.5 text-sm font-semibold text-slate-600 transition hover:text-indigo-600 sm:px-4"
-            >
-              Tüm Ürünler
-            </Link>
+            >{ceviri.kalanlar.tumUrunler}</Link>
 
             <Link
               href="/login"
               className="whitespace-nowrap rounded-xl bg-[#101a3d] px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1b2a5c] sm:px-5"
-            >
-              Giriş Yap
-            </Link>
+            >{ceviri.header.girisYap}</Link>
           </div>
         </div>
       </header>
@@ -186,33 +203,33 @@ export default function AracStickeriPage() {
               href="/#urunler"
               className="text-sm text-slate-500 transition hover:text-indigo-600"
             >
-              ← Ürünler
+              {ceviri.kalanlar.urunlereGeri}
             </Link>
 
             <h1 className="mt-4 text-4xl font-bold leading-tight sm:text-5xl">
-              {urun.ad}
+              {ceviri.urunler.ad.aracStickeri}
             </h1>
 
             <p className="mt-5 max-w-xl text-lg leading-relaxed text-slate-600">
-              Telefon numaranızı aracınızda açıkça göstermeden, aracınızla ilgili
-              durumlarda size güvenli mesaj gönderilmesini sağlayın.
+              {ceviri.aracSayfasi.altyazi}
             </p>
 
             <div className="mt-8 flex flex-wrap items-end gap-4">
               <span className="text-3xl font-bold">
                 {fiyatBicimle(urun.fiyatKurus)}
               </span>
-              <span className="pb-1 text-sm text-slate-500">
-                Kargo ücreti ödeme adımında eklenir.
-              </span>
+              <span className="pb-1 text-sm text-slate-500">{ceviri.kalanlar.kargoNotu}</span>
             </div>
 
             <div className="mt-8">
-              <SatinAlDugmesi />
+              <SatinAlDugmesi metin={ceviri.urunler.satinAl} />
             </div>
 
             <p className="mt-4 text-sm text-slate-500">
-              Bu üründe {urun.qrAdedi} adet benzersiz QR etiketi bulunur.
+              {ceviri.kalanlar.siparisQrNotu.replace(
+                "{n}",
+                String(urun.qrAdedi)
+              )}
             </p>
           </div>
 
@@ -224,7 +241,7 @@ export default function AracStickeriPage() {
                   sizes="(min-width: 768px) 48vw, 92vw"
                   oncelikli
                 />
-                <TemsiliRozet />
+                <TemsiliRozet metin={ceviri.gorsel.temsili} />
               </div>
 
             </div>
@@ -235,7 +252,7 @@ export default function AracStickeriPage() {
       {/* B. Temel faydalar */}
       <section className="mx-auto max-w-6xl px-6 py-12 sm:py-16">
         <BolumGecisi>
-          <h2 className="text-center text-3xl font-bold">Ne sağlar?</h2>
+          <h2 className="text-center text-3xl font-bold">{ceviri.aracSayfasi.neSaglar}</h2>
         </BolumGecisi>
 
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -256,7 +273,7 @@ export default function AracStickeriPage() {
       <section className="border-y border-slate-200 bg-slate-50">
         <div className="mx-auto max-w-6xl px-6 py-12 sm:py-16">
           <BolumGecisi>
-            <h2 className="text-center text-3xl font-bold">Nasıl çalışır?</h2>
+            <h2 className="text-center text-3xl font-bold">{ceviri.aracSayfasi.nasilCalisir}</h2>
           </BolumGecisi>
 
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -281,7 +298,7 @@ export default function AracStickeriPage() {
             <div className="mx-auto mt-9 max-w-2xl">
               <div className="relative aspect-[16/9] overflow-hidden rounded-3xl border border-slate-200 bg-slate-100">
                 <Gorsel anahtar="aktivasyon" sizes="(min-width: 768px) 640px, 92vw" />
-                <TemsiliRozet />
+                <TemsiliRozet metin={ceviri.gorsel.temsili} />
               </div>
             </div>
           </BolumGecisi>
@@ -292,7 +309,7 @@ export default function AracStickeriPage() {
       <section className="mx-auto max-w-6xl px-6 py-12 sm:py-16">
         <div className="grid items-center gap-10 md:grid-cols-2">
           <BolumGecisi>
-            <h2 className="text-3xl font-bold">Hangi durumlarda işe yarar?</h2>
+            <h2 className="text-3xl font-bold">{ceviri.aracSayfasi.hangiDurumlarda}</h2>
 
             <ul className="mt-8 space-y-4">
               {SENARYOLAR.map((senaryo) => (
@@ -310,7 +327,7 @@ export default function AracStickeriPage() {
           <BolumGecisi gecikme={120}>
             <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-[#e5e0ff] bg-slate-100">
               <Gorsel anahtar="arac" sizes="(min-width: 768px) 48vw, 92vw" />
-                <TemsiliRozet />
+                <TemsiliRozet metin={ceviri.gorsel.temsili} />
             </div>
           </BolumGecisi>
         </div>
@@ -322,24 +339,17 @@ export default function AracStickeriPage() {
           <BolumGecisi>
             <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-slate-200 bg-slate-100">
               <Gorsel anahtar="mesajlasma" sizes="(min-width: 768px) 48vw, 92vw" />
-                <TemsiliRozet />
+                <TemsiliRozet metin={ceviri.gorsel.temsili} />
             </div>
           </BolumGecisi>
 
           <BolumGecisi gecikme={120}>
-            <h2 className="text-3xl font-bold">Gizlilik nasıl korunur?</h2>
+            <h2 className="text-3xl font-bold">{ceviri.aracSayfasi.gizlilikNasil}</h2>
 
             <ul className="mt-6 space-y-4 text-slate-600">
-              <li className="leading-relaxed">
-                QR kodun içinde telefon numaranız bulunmaz.
-              </li>
-              <li className="leading-relaxed">
-                QR kodun açtığı sayfada kişisel iletişim bilginiz doğrudan
-                gösterilmez.
-              </li>
-              <li className="leading-relaxed">
-                Mesaj ARKVIUM üzerinden iletilir.
-              </li>
+              <li className="leading-relaxed">{ceviri.kalanlar.qrNumaraYok}</li>
+              <li className="leading-relaxed">{ceviri.kalanlar.qrIletisimGizli}</li>
+              <li className="leading-relaxed">{ceviri.kalanlar.mesajArkviumIletilir}</li>
             </ul>
           </BolumGecisi>
         </div>
@@ -348,7 +358,7 @@ export default function AracStickeriPage() {
       {/* F. SSS */}
       <section className="mx-auto max-w-3xl px-6 py-12 sm:py-16">
         <BolumGecisi>
-          <h2 className="text-center text-3xl font-bold">Sık sorulan sorular</h2>
+          <h2 className="text-center text-3xl font-bold">{ceviri.aracSayfasi.sikSorulan}</h2>
         </BolumGecisi>
 
         <div className="mt-8 space-y-3">
@@ -379,22 +389,17 @@ export default function AracStickeriPage() {
       <section className="mx-auto max-w-6xl px-6 pb-16">
         <BolumGecisi>
           <div className="rounded-3xl border border-[#e5e0ff] bg-[#f6f4ff] p-8 text-center sm:p-12">
-            <h2 className="text-3xl font-bold">{urun.ad}</h2>
+            <h2 className="text-3xl font-bold">{ceviri.urunler.ad.aracStickeri}</h2>
 
-            <p className="mx-auto mt-4 max-w-xl text-slate-600">
-              Numaranız görünmeden, aracınızla ilgili bildirimleri ARKVIUM
-              üzerinden alın.
-            </p>
+            <p className="mx-auto mt-4 max-w-xl text-slate-600">{ceviri.kalanlar.aracOzet}</p>
 
             <div className="mt-6 text-3xl font-bold">
               {fiyatBicimle(urun.fiyatKurus)}
             </div>
-            <p className="mt-1 text-sm text-slate-500">
-              Kargo ücreti ödeme adımında eklenir.
-            </p>
+            <p className="mt-1 text-sm text-slate-500">{ceviri.kalanlar.kargoNotu}</p>
 
             <div className="mx-auto mt-8 max-w-xs">
-              <SatinAlDugmesi tamGenislik />
+              <SatinAlDugmesi tamGenislik metin={ceviri.urunler.satinAl} />
             </div>
           </div>
         </BolumGecisi>
@@ -404,7 +409,7 @@ export default function AracStickeriPage() {
         <div className="flex justify-center">
           <ArkviumTamLogo genislik={170} />
         </div>
-        <div className="mt-5">© 2026 ARKVIUM. Tüm hakları saklıdır.</div>
+        <div className="mt-5">{ceviri.aracSayfasi.telifHakki}</div>
       </footer>
     </main>
   );

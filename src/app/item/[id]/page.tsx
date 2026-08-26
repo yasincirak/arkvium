@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import SayfaUstBari from "@/components/SayfaUstBari";
 import { getRecordById } from "@/lib/store";
 import ItemFinderSection from "@/components/ItemFinderSection";
 import KayipUyarisi from "@/components/KayipUyarisi";
+import { sozluk } from "@/lib/i18n";
 import { getUserSession } from "@/lib/session";
 import { taramaBildirimiGonder } from "@/lib/tarama-bildirimi";
-import { ITEM_DURUM_ETIKETLERI } from "@/lib/types";
 import { notFound } from "next/navigation";
 
 type Props = {
@@ -30,17 +31,21 @@ type Props = {
  * Bu sayfa belirli bir kişinin eşyasına ait genel erişim sayfasıdır ve
  * arama motorlarına kapalı tutulur.
  */
-export const metadata: Metadata = {
-  title: "Bulunan Eşya",
-  robots: {
-    index: false,
-    follow: false,
-    nocache: true,
-    googleBot: { index: false, follow: false },
-  },
-};
+export function generateMetadata(): Metadata {
+  return {
+    title: sozluk().qr.baslik,
+    robots: {
+      index: false,
+      follow: false,
+      nocache: true,
+      googleBot: { index: false, follow: false },
+    },
+  };
+}
 
 export default async function ItemPage({ params }: Props) {
+  const s = sozluk();
+
   const record = await getRecordById(params.id);
 
   if (!record) {
@@ -56,36 +61,47 @@ export default async function ItemPage({ params }: Props) {
   );
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#0a0a0f] p-6 text-white">
+    <main className="pt-20 flex min-h-screen items-center justify-center bg-[#0a0a0f] p-6 text-white">
+      <SayfaUstBari ton="koyu" />
+
       <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-white/5 p-8">
         {record.status === "lost" && <KayipUyarisi />}
 
         <h1 className="text-3xl font-bold">{record.assetName}</h1>
 
         <p className="mt-3 text-white/60">
-          Bu eşya ARKVIUM dijital sahiplik sistemine kayıtlıdır.
+          {s.qr.altYazi}
         </p>
 
         <div className="mt-8 space-y-3">
           <div>
-            <span className="text-white/40">Kategori</span>
+            <span className="text-white/40">{s.kalanlar.kategori}</span>
             <p>{record.category}</p>
           </div>
 
           <div>
-            <span className="text-white/40">Durum</span>
-            <p>{ITEM_DURUM_ETIKETLERI[record.status] ?? "Aktif"}</p>
+            <span className="text-white/40">{s.kalanlar.durum}</span>
+            <p>{s.qr.durumlar[record.status as keyof typeof s.qr.durumlar] ??
+              s.qr.durumlar.active}</p>
           </div>
 
           {record.description && (
             <div>
-              <span className="text-white/40">Açıklama</span>
+              <span className="text-white/40">{s.kalanlar.aciklama}</span>
               <p>{record.description}</p>
             </div>
           )}
         </div>
 
-        <ItemFinderSection recordId={record.id} />
+        <ItemFinderSection
+          recordId={record.id}
+          metinler={{
+            buldumDugmesi: s.qr.buEsyayiBuldum,
+            whatsappIleIletisim: s.qr.whatsappIleIletisim,
+            whatsappMesaji: s.qr.whatsappMesaji,
+            form: s.bulanKisi,
+          }}
+        />
       </div>
     </main>
   );

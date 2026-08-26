@@ -10,6 +10,7 @@ import {
   TemsiliRozet,
   type GorselAnahtari,
 } from "@/components/gorsel/UrunGorselleri";
+import { sozluk } from "@/lib/i18n";
 
 /**
  * "Nasıl çalışır" akışı.
@@ -32,57 +33,22 @@ type Adim = {
   gorsel: GorselAnahtari;
 };
 
-const ADIMLAR: Adim[] = [
-  {
-    numara: "01",
-    baslik: "Etiketi eşyana uygula",
-    // Metin görselle uyumlu tutulur: fotoğrafta yalnızca sticker'lar var,
-    // bu yüzden künye/anahtarlık burada sayılmaz — ürün çeşitleri "Ürün
-    // ailesi" bölümünde kendi fotoğraflarıyla anlatılıyor.
-    metin:
-      "Yapıştır ya da tak, işlem bu kadar. Kurulum, uygulama indirme veya pil gerekmez.",
-    gorsel: "sticker-seti",
-  },
-  {
-    numara: "02",
-    baslik: "Hesabına bağla",
-    metin:
-      "Etiketin üzerindeki aktivasyon kodunu ARKVIUM hesabına girersin ve etiketi eşyanla eşleştirirsin. Bir kez yapılır.",
-    gorsel: "aktivasyon",
-  },
-  {
-    numara: "03",
-    baslik: "QR okutulduğunda güvenli mesaj al",
-    metin:
-      "Eşyanı bulan kişi QR'ı telefonuyla okutur ve sana mesaj bırakır. Bildirim sana ARKVIUM üzerinden ulaşır.",
-    gorsel: "mesajlasma",
-  },
-];
-
-const FAYDALAR = [
-  {
-    Ikon: IkonTarama,
-    baslik: "Kurulum gerektirmez",
-    metin: "QR tarayıcıda açılır; karşı taraf uygulama yüklemez.",
-  },
-  {
-    Ikon: IkonKalkan,
-    baslik: "Numaran açıkta durmaz",
-    metin: "Etikette telefon numaran yazmaz.",
-  },
-  {
-    Ikon: IkonTasima,
-    baslik: "Etiketi taşıyabilirsin",
-    metin: "Eşyan değişirse etiketi başka bir kayda bağlarsın.",
-  },
-  {
-    Ikon: IkonPanel,
-    baslik: "Tek panelden yönetirsin",
-    metin: "Eşyalar, kayıp durumu ve bildirimler aynı yerde.",
-  },
-];
-
 export default function AkisBolumu() {
+  const s = sozluk();
+
+  const ADIMLAR: Adim[] = [
+    { numara: "01", ...s.akis.adim1, gorsel: "sticker-seti" },
+    { numara: "02", ...s.akis.adim2, gorsel: "aktivasyon" },
+    { numara: "03", ...s.akis.adim3, gorsel: "mesajlasma" },
+  ];
+
+  const FAYDALAR = [
+    { Ikon: IkonTarama, ...s.akis.faydalar.kurulum },
+    { Ikon: IkonKalkan, ...s.akis.faydalar.numara },
+    { Ikon: IkonTasima, ...s.akis.faydalar.tasima },
+    { Ikon: IkonPanel, ...s.akis.faydalar.panel },
+  ];
+
   return (
     <section
       id="nasil"
@@ -91,15 +57,14 @@ export default function AkisBolumu() {
     >
       <div className="mx-auto max-w-6xl px-6 py-20 sm:px-8 sm:py-28">
         <BolumGecisi className="max-w-2xl">
-          <p className="ark-etiket text-ark-accent">Nasıl çalışır</p>
+          <p className="ark-etiket text-ark-accent">{s.akis.etiket}</p>
 
           <h2 id="nasil-basligi" className="ark-baslik mt-3 text-ark-ink">
-            Üç adım, sonra unut
+            {s.akis.baslik}
           </h2>
 
           <p className="ark-giris mt-4 text-ark-ink-2">
-            Etiketi bir kez kurarsın. Gerisi, eşyan kaybolduğu gün kendiliğinden
-            çalışır.
+            {s.akis.giris}
           </p>
         </BolumGecisi>
 
@@ -144,7 +109,7 @@ export default function AkisBolumu() {
                         anahtar={adim.gorsel}
                         sizes="(min-width: 768px) 48vw, 90vw"
                       />
-                      <TemsiliRozet />
+                      <TemsiliRozet metin={s.gorsel.temsili} />
                     </div>
                   </BolumGecisi>
                 </div>

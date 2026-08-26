@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useSozluk } from "@/lib/i18n/istemci";
 import { changeRecordStatus } from "@/lib/actions";
 import type { ItemRecordStatus } from "@/lib/types";
 
@@ -20,6 +21,8 @@ type DurumPanelProps = {
 };
 
 export default function DurumPanel({ itemRecordId, durum }: DurumPanelProps) {
+  const ceviri = useSozluk();
+
   const router = useRouter();
 
   const [calisiyor, setCalisiyor] = useState(false);
@@ -35,7 +38,7 @@ export default function DurumPanel({ itemRecordId, durum }: DurumPanelProps) {
       await changeRecordStatus(itemRecordId, yeniDurum);
       router.refresh();
     } catch {
-      setHata("Durum değiştirilemedi. Lütfen tekrar deneyin.");
+      setHata(ceviri.hesap.durum.hata);
     } finally {
       setCalisiyor(false);
     }
@@ -50,13 +53,13 @@ export default function DurumPanel({ itemRecordId, durum }: DurumPanelProps) {
       }`}
     >
       <h2 className="text-xl font-semibold">
-        {kayipMi ? "Bu eşya kayıp olarak işaretli" : "Kayıp Bildirimi"}
+        {kayipMi ? ceviri.hesap.durum.kayipBaslik : "Kayıp Bildirimi"}
       </h2>
 
       <p className="mt-2 text-sm leading-6 text-white/60">
         {kayipMi
-          ? "QR kodunu okutan kişi, eşyanın arandığını belirten bir uyarı görüyor. Eşyaya kavuştuğunda bu işareti kaldır."
-          : "Eşyanı kaybettiysen burada işaretle. QR kodunu okutan kişi eşyanın arandığını görür ve sana daha kolay ulaşır."}
+          ? ceviri.hesap.durum.kayipMetin
+          : ceviri.hesap.durum.normalMetin}
       </p>
 
       {hata && (
@@ -78,8 +81,8 @@ export default function DurumPanel({ itemRecordId, durum }: DurumPanelProps) {
         {calisiyor
           ? "Kaydediliyor..."
           : kayipMi
-            ? "Eşyamı buldum"
-            : "Bu eşyayı kaybettim"}
+            ? ceviri.hesap.durum.buldum
+            : ceviri.hesap.durum.kaybettim}
       </button>
     </div>
   );

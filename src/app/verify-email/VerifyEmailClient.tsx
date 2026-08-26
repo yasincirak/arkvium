@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useSozluk } from "@/lib/i18n/istemci";
 
 type Durum =
   | { tip: "yukleniyor" }
@@ -10,6 +11,8 @@ type Durum =
   | { tip: "hata"; mesaj: string };
 
 export default function VerifyEmailClient() {
+  const s = useSozluk();
+
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
 
@@ -29,7 +32,7 @@ export default function VerifyEmailClient() {
     if (!token) {
       setDurum({
         tip: "hata",
-        mesaj: "Bu doğrulama bağlantısı geçersiz görünüyor.",
+        mesaj: s.kimlik.dogrulamaGecersiz,
       });
       return;
     }
@@ -47,7 +50,7 @@ export default function VerifyEmailClient() {
         if (!response.ok) {
           setDurum({
             tip: "hata",
-            mesaj: data.error || "Doğrulama tamamlanamadı.",
+            mesaj: data.error || s.kimlik.dogrulamaHatasi,
           });
           return;
         }
@@ -56,18 +59,18 @@ export default function VerifyEmailClient() {
       } catch {
         setDurum({
           tip: "hata",
-          mesaj: "Bağlantı kurulamadı. Lütfen tekrar deneyin.",
+          mesaj: s.ortak.baglantiHatasi,
         });
       }
     }
 
     dogrula();
-  }, [token]);
+  }, [token, s]);
 
   if (durum.tip === "yukleniyor") {
     return (
       <p role="status" className="text-center text-sm text-white/60">
-        E-posta adresiniz doğrulanıyor...
+        {s.kimlik.dogrulaniyor}
       </p>
     );
   }
@@ -84,7 +87,7 @@ export default function VerifyEmailClient() {
           href="/account"
           className="mt-3 inline-block font-medium text-green-100 underline"
         >
-          Hesabıma git
+          {s.kimlik.hesabimaGit}
         </Link>
       </div>
     );
@@ -101,7 +104,7 @@ export default function VerifyEmailClient() {
         href="/account"
         className="mt-3 inline-block font-medium text-red-100 underline"
       >
-        Hesabıma git
+        {s.kimlik.hesabimaGit}
       </Link>
     </div>
   );

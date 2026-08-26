@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import SayfaUstBari from "@/components/SayfaUstBari";
+import { sozluk } from "@/lib/i18n";
 import Link from "next/link";
 import { GIZLI_SAYFA_ROBOTS } from "@/lib/seo";
 import { notFound } from "next/navigation";
@@ -27,6 +29,8 @@ export default function SiparisPage({
 }: {
   searchParams: { urun?: string };
 }) {
+  const ceviri = sozluk();
+
   const kod = String(searchParams?.urun ?? "").trim();
   const urun = SIPARIS_URUNLERI.find((u) => u.kod === kod);
 
@@ -34,29 +38,53 @@ export default function SiparisPage({
     notFound();
   }
 
+  /**
+   * Ürün adı ve açıklaması SEÇİLEN DİLDE gösterilir.
+   *
+   * Fiyat, ürün kodu ve sipariş hesaplaması `@/lib/siparis` içindeki tek
+   * kaynaktan gelmeye devam eder — burada YALNIZCA görünen metin çevrilir.
+   * Sözlükte karşılığı yoksa katalogdaki Türkçe metin kullanılır.
+   */
+  const URUN_ANAHTARI: Record<string, keyof typeof ceviri.urunler.ad> = {
+    "sticker-seti": "stickerSeti",
+    "arac-stickeri": "aracStickeri",
+    "metal-anahtarlik": "metalAnahtarlik",
+    "evcil-hayvan-kunyesi": "evcilHayvanKunyesi",
+    "valiz-etiketi": "valizEtiketi",
+  };
+
+  const anahtar = URUN_ANAHTARI[urun.kod];
+  const urunAdi = anahtar ? ceviri.urunler.ad[anahtar] : urun.ad;
+  const urunAciklamasi = anahtar
+    ? ceviri.urunler.aciklama[anahtar]
+    : urun.aciklama;
+
   return (
-    <main className="min-h-screen bg-[#f6f4ff] text-[#101a3d]">
+    <main className="pt-20 min-h-screen bg-[#f6f4ff] text-[#101a3d]">
+      <SayfaUstBari ton="acik" />
+
       <div className="mx-auto max-w-3xl px-6 py-12 sm:py-16">
         <Link
           href="/#urunler"
           className="text-sm text-slate-500 transition hover:text-slate-900"
         >
-          ← Ürünlere Dön
+          {ceviri.kalanlar.urunlereDon}
         </Link>
 
-        <h1 className="mt-4 text-3xl font-bold">{urun.ad}</h1>
+        <h1 className="mt-4 text-3xl font-bold">{urunAdi}</h1>
 
-        <p className="mt-3 leading-relaxed text-slate-600">{urun.aciklama}</p>
+        <p className="mt-3 leading-relaxed text-slate-600">{urunAciklamasi}</p>
 
         <p className="mt-3 text-sm text-slate-500">
-          Bu üründe {urun.qrAdedi} adet benzersiz QR etiketi bulunur. Ödeme
-          kuruluşu iyzico üzerinden alınır; kart bilgileriniz ARKVIUM
-          sunucusuna hiç gelmez.
+          {ceviri.kalanlar.siparisQrNotu.replace(
+            "{n}",
+            String(urun.qrAdedi)
+          )}
         </p>
 
         <SiparisFormu
           urunKodu={urun.kod}
-          urunAdi={urun.ad}
+          urunAdi={urunAdi}
           fiyatKurus={urun.fiyatKurus}
           kargoKurus={KARGO_UCRETI_KURUS}
         />

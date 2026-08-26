@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { useSozluk } from "@/lib/i18n/istemci";
 
 type Urun = {
   id: string;
@@ -23,6 +24,8 @@ export default function ActivateTagForm({
   etiketsizUrunler,
   etiketKodu = "",
 }: Props) {
+  const ceviri = useSozluk();
+
   const [hedef, setHedef] = useState<"yeni" | "mevcut">(
     etiketsizUrunler.length > 0 ? "mevcut" : "yeni"
   );
@@ -52,13 +55,13 @@ export default function ActivateTagForm({
       const data = await response.json();
 
       if (!response.ok) {
-        setHata(data.error || "Etiket etkinleştirilemedi.");
+        setHata(data.error || ceviri.hesap.aktivasyon.hata);
         return;
       }
 
       setSonuc({ mesaj: data.message, itemRecordId: data.itemRecordId });
     } catch {
-      setHata("Bağlantı kurulamadı. Lütfen tekrar deneyin.");
+      setHata(ceviri.ortak.baglantiHatasi);
     } finally {
       setGonderiliyor(false);
     }
@@ -72,25 +75,18 @@ export default function ActivateTagForm({
       >
         <p className="text-lg font-semibold text-green-100">{sonuc.mesaj}</p>
 
-        <p className="mt-2">
-          Etiket artık ürününe bağlı. QR kodu okutulduğunda bulan kişi güvenli
-          iletişim sayfasına ulaşacak.
-        </p>
+        <p className="mt-2">{ceviri.kalanlar.aktivasyonBasarili}</p>
 
         <div className="mt-5 flex flex-wrap gap-3">
           <Link
             href={`/account/records/${sonuc.itemRecordId}`}
             className="rounded-lg bg-green-500/20 px-4 py-2 font-medium text-green-100 transition hover:bg-green-500/30"
-          >
-            Ürünü Aç
-          </Link>
+          >{ceviri.kalanlar.urunuAc}</Link>
 
           <Link
             href="/account"
             className="rounded-lg border border-green-500/30 px-4 py-2 font-medium text-green-100 transition hover:bg-green-500/10"
-          >
-            Hesabıma Dön
-          </Link>
+          >{ceviri.kalanlar.hesabimaDon}</Link>
         </div>
       </div>
     );
@@ -105,9 +101,7 @@ export default function ActivateTagForm({
         <label
           htmlFor="tagCode"
           className="mb-2 block text-sm font-medium text-white/80"
-        >
-          Etiket Kodu
-        </label>
+        >{ceviri.kalanlar.etiketKodu}</label>
 
         <input
           id="tagCode"
@@ -116,24 +110,19 @@ export default function ActivateTagForm({
           required
           autoComplete="off"
           spellCheck={false}
-          placeholder="ARK-XXXX-XXXX"
+          placeholder={ceviri.hesap.aktivasyon.etiketKodu}
           aria-describedby="tagCode-yardim"
           className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 font-mono tracking-wider text-white outline-none transition focus:border-indigo-500"
         />
 
-        <p id="tagCode-yardim" className="mt-2 text-xs text-white/40">
-          Etiketin üzerinde yazan koddur. Büyük/küçük harf ve tire farkı
-          önemli değildir.
-        </p>
+        <p id="tagCode-yardim" className="mt-2 text-xs text-white/40">{ceviri.kalanlar.etiketKoduYardim}</p>
       </div>
 
       <div>
         <label
           htmlFor="activationCode"
           className="mb-2 block text-sm font-medium text-white/80"
-        >
-          Aktivasyon Kodu
-        </label>
+        >{ceviri.kalanlar.aktivasyonKodu}</label>
 
         <input
           id="activationCode"
@@ -141,21 +130,16 @@ export default function ActivateTagForm({
           required
           autoComplete="off"
           spellCheck={false}
-          placeholder="XXXX-XXXX-XXXX"
+          placeholder={ceviri.hesap.aktivasyon.aktivasyonKodu}
           aria-describedby="activationCode-yardim"
           className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 font-mono tracking-wider text-white outline-none transition focus:border-indigo-500"
         />
 
-        <p id="activationCode-yardim" className="mt-2 text-xs text-white/40">
-          Etiketin arkasındaki kazınarak açılan gizli koddur. Bu kodu kimseyle
-          paylaşmayın.
-        </p>
+        <p id="activationCode-yardim" className="mt-2 text-xs text-white/40">{ceviri.kalanlar.aktivasyonKoduYardim}</p>
       </div>
 
       <fieldset className="rounded-xl border border-white/10 p-4">
-        <legend className="px-2 text-sm font-medium text-white/80">
-          Etiket hangi ürüne bağlansın?
-        </legend>
+        <legend className="px-2 text-sm font-medium text-white/80">{ceviri.kalanlar.hangiUruneBaglansin}</legend>
 
         {etiketsizUrunler.length > 0 && (
           <label className="mt-2 flex cursor-pointer items-start gap-3">
@@ -167,7 +151,7 @@ export default function ActivateTagForm({
               className="mt-1 h-4 w-4"
             />
 
-            <span className="text-sm text-white/70">Mevcut bir ürünüme</span>
+            <span className="text-sm text-white/70">{ceviri.hesap.aktivasyon.mevcutUrune}</span>
           </label>
         )}
 
@@ -175,7 +159,7 @@ export default function ActivateTagForm({
           <select
             name="itemRecordId"
             required
-            aria-label="Ürün seçin"
+            aria-label={ceviri.hesap.aktivasyon.urunSecin}
             className="mt-3 w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none focus:border-indigo-500"
           >
             {etiketsizUrunler.map((urun) => (
@@ -195,7 +179,7 @@ export default function ActivateTagForm({
             className="mt-1 h-4 w-4"
           />
 
-          <span className="text-sm text-white/70">Yeni bir ürüne</span>
+          <span className="text-sm text-white/70">{ceviri.hesap.aktivasyon.yeniUrune}</span>
         </label>
 
         {hedef === "yeni" && (
@@ -203,8 +187,8 @@ export default function ActivateTagForm({
             name="assetName"
             required
             maxLength={100}
-            placeholder="Örn. Laptop çantası"
-            aria-label="Yeni ürün adı"
+            placeholder={ceviri.hesap.aktivasyon.yeniUrunOrnek}
+            aria-label={ceviri.hesap.aktivasyon.yeniUrunAdi}
             className="mt-3 w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none focus:border-indigo-500"
           />
         )}
@@ -224,7 +208,7 @@ export default function ActivateTagForm({
         disabled={gonderiliyor}
         className="w-full rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {gonderiliyor ? "Etkinleştiriliyor..." : "Etiketi Etkinleştir"}
+        {gonderiliyor ? ceviri.hesap.aktivasyon.etkinlestiriliyor : ceviri.hesap.aktivasyon.etkinlestir}
       </button>
     </form>
   );

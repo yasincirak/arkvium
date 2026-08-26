@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useSozluk } from "@/lib/i18n/istemci";
 import { devirDavetiKabul } from "@/lib/ownership-transfer-actions";
 
 /**
@@ -9,6 +10,8 @@ import { devirDavetiKabul } from "@/lib/ownership-transfer-actions";
  * Token yalnızca action'a parametre olarak geçer; ekranda gösterilmez.
  */
 export default function AcceptForm({ token }: { token: string }) {
+  const ceviri = useSozluk();
+
   const [durum, setDurum] = useState<"bekliyor" | "gonderiliyor" | "tamam">(
     "bekliyor"
   );
@@ -32,16 +35,12 @@ export default function AcceptForm({ token }: { token: string }) {
   if (durum === "tamam") {
     return (
       <div className="space-y-5">
-        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-          Devir tamamlandı. Ürün artık hesabınıza bağlı.
-        </div>
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">{ceviri.kalanlar.devirTamamlandi}</div>
 
         <Link
           href="/account"
           className="block w-full rounded-xl bg-indigo-600 px-4 py-3 text-center font-semibold text-white transition hover:bg-indigo-500"
-        >
-          Hesabıma Git
-        </Link>
+        >{ceviri.kalanlar.hesabimaGit}</Link>
       </div>
     );
   }
@@ -52,10 +51,7 @@ export default function AcceptForm({ token }: { token: string }) {
         <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
           <p>{hata}</p>
 
-          <p className="mt-2 text-red-300/70">
-            En sık nedeni: davetin gönderildiği hesaptan farklı bir hesapla
-            giriş yapılmış olmasıdır. Yukarıdaki hesabı kontrol edin.
-          </p>
+          <p className="mt-2 text-red-300/70">{ceviri.kalanlar.devirHataNeden}</p>
         </div>
       )}
 
@@ -65,15 +61,13 @@ export default function AcceptForm({ token }: { token: string }) {
         disabled={durum === "gonderiliyor"}
         className="w-full rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {durum === "gonderiliyor" ? "Devir tamamlanıyor..." : "Sahipliği Kabul Et"}
+        {durum === "gonderiliyor" ? ceviri.devirDaveti.tamamlaniyor : ceviri.devirDaveti.kabulEt}
       </button>
 
       <Link
         href="/account"
         className="block text-center text-sm font-medium text-white/50 hover:text-white/70"
-      >
-        Vazgeç
-      </Link>
+      >{ceviri.kalanlar.vazgec}</Link>
     </div>
   );
 }

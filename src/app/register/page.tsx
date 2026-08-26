@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import SayfaUstBari from "@/components/SayfaUstBari";
 import { FormEvent, useState } from "react";
+import { useSozluk } from "@/lib/i18n/istemci";
 
 /**
  * Kayıt sonrası dönülecek adres.
@@ -24,6 +26,8 @@ function guvenliDonusAdresi(deger: string | null): string {
 }
 
 export default function RegisterPage() {
+  const s = useSozluk();
+
   const [error, setError] = useState("");
   const [basariMesaji, setBasariMesaji] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,7 +56,7 @@ export default function RegisterPage() {
     const data = await response.json();
 
     if (!response.ok) {
-      setError(data.error || "Kayıt oluşturulamadı.");
+      setError(data.error || s.kimlik.kayitHatasi);
       setIsSubmitting(false);
       return;
     }
@@ -69,12 +73,14 @@ export default function RegisterPage() {
 
     // Kullanıcı, doğrulama e-postasının gönderilip gönderilmediğini görmeden
     // yönlendirilmemelidir.
-    setBasariMesaji(data.message || "Hesabınız oluşturuldu.");
+    setBasariMesaji(data.message || s.kimlik.kayitBasarili);
     setIsSubmitting(false);
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#09090f] px-4 py-12 text-white">
+    <main className="pt-20 flex min-h-screen items-center justify-center bg-[#09090f] px-4 py-12 text-white">
+      <SayfaUstBari ton="koyu" />
+
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.03] p-8 shadow-2xl">
         <div className="mb-8 text-center">
           <Link
@@ -84,10 +90,10 @@ export default function RegisterPage() {
             ARKVIUM
           </Link>
 
-          <h1 className="mt-6 text-3xl font-bold">Hesap Oluştur</h1>
+          <h1 className="mt-6 text-3xl font-bold">{s.kimlik.kayitBaslik}</h1>
 
           <p className="mt-2 text-sm text-white/50">
-            Ürünlerini ve dijital sahiplik kayıtlarını yönet.
+            {s.kimlik.kayitAltyazi}
           </p>
         </div>
 
@@ -102,7 +108,7 @@ export default function RegisterPage() {
               href={girisAdresi}
               className="mt-3 inline-block font-medium text-green-100 underline"
             >
-              Giriş yap
+              {s.kimlik.girisYap}
             </Link>
           </div>
         ) : (
@@ -112,7 +118,7 @@ export default function RegisterPage() {
               htmlFor="fullName"
               className="mb-2 block text-sm font-medium text-white/80"
             >
-              Ad Soyad
+              {s.kimlik.adSoyad}
             </label>
 
             <input
@@ -122,7 +128,7 @@ export default function RegisterPage() {
               required
               autoComplete="name"
               className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-indigo-500"
-              placeholder="Adınız ve soyadınız"
+              placeholder={s.kimlik.adSoyadOrnek}
             />
           </div>
 
@@ -131,7 +137,7 @@ export default function RegisterPage() {
               htmlFor="email"
               className="mb-2 block text-sm font-medium text-white/80"
             >
-              E-posta
+              {s.kimlik.eposta}
             </label>
 
             <input
@@ -141,7 +147,7 @@ export default function RegisterPage() {
               required
               autoComplete="email"
               className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-indigo-500"
-              placeholder="ornek@email.com"
+              placeholder={s.kimlik.epostaOrnek}
             />
           </div>
 
@@ -150,7 +156,7 @@ export default function RegisterPage() {
               htmlFor="phone"
               className="mb-2 block text-sm font-medium text-white/80"
             >
-              Telefon
+              {s.kimlik.telefon}
             </label>
 
             <input
@@ -159,7 +165,7 @@ export default function RegisterPage() {
               type="tel"
               autoComplete="tel"
               className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-indigo-500"
-              placeholder="05xxxxxxxxx"
+              placeholder={s.kimlik.telefonOrnek}
             />
           </div>
 
@@ -167,9 +173,7 @@ export default function RegisterPage() {
             <label
               htmlFor="password"
               className="mb-2 block text-sm font-medium text-white/80"
-            >
-              Şifre
-            </label>
+            >{s.kalanlar.sifre}</label>
 
             <input
               id="password"
@@ -179,7 +183,7 @@ export default function RegisterPage() {
               minLength={8}
               autoComplete="new-password"
               className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-indigo-500"
-              placeholder="En az 8 karakter"
+              placeholder={s.kimlik.sifreEnAz}
             />
           </div>
 
@@ -197,18 +201,18 @@ export default function RegisterPage() {
             disabled={isSubmitting}
             className="w-full rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting ? "Hesap oluşturuluyor..." : "Hesap Oluştur"}
+            {isSubmitting ? s.kimlik.kayitYapiliyor : s.kimlik.kayitDugme}
           </button>
         </form>
         )}
 
         <p className="mt-6 text-center text-sm text-white/50">
-          Zaten hesabın var mı?{" "}
+          {s.kimlik.zatenHesapVar}{" "}
           <Link
             href="/login"
             className="font-medium text-indigo-400 hover:text-indigo-300"
           >
-            Giriş yap
+            {s.kimlik.girisYap}
           </Link>
         </p>
       </div>

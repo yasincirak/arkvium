@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import SayfaUstBari from "@/components/SayfaUstBari";
+import { sozluk, type Sozluk } from "@/lib/i18n";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -41,34 +43,36 @@ type Gorunum = {
 };
 
 /** Sipariş durumundan kullanıcıya gösterilecek metni üretir. */
-function gorunumSec(durum: string): Gorunum {
+function gorunumSec(durum: string, ceviri: Sozluk): Gorunum {
   if (durum === "paid" || durum === "preparing" || durum === "shipped") {
     return {
       ton: "basarili",
-      baslik: "Ödemeniz alındı",
+      baslik: ceviri.odeme.basariBaslik,
       aciklama:
-        "Siparişiniz oluşturuldu ve hazırlanmaya alınacak. Onay e-postasını gelen kutunuzda bulabilirsiniz.",
+        ceviri.odeme.basariMetin,
     };
   }
 
   if (durum === "failed" || durum === "cancelled") {
     return {
       ton: "uyari",
-      baslik: "Ödeme tamamlanamadı",
+      baslik: ceviri.odeme.hataBaslik,
       aciklama:
-        "Kartınızdan tutar çekilmediyse endişelenmenize gerek yok. Dilerseniz siparişi yeniden oluşturabilirsiniz.",
+        ceviri.odeme.hataMetin,
     };
   }
 
   return {
     ton: "notr",
-    baslik: "Ödemeniz kontrol ediliyor",
+    baslik: ceviri.odeme.bekliyorBaslik,
     aciklama:
-      "Bankanızdan onay bekleniyor. Bu sayfayı birkaç dakika sonra yenileyerek güncel durumu görebilirsiniz.",
+      ceviri.odeme.bekliyorMetin,
   };
 }
 
 export default async function OdemeSonucPage({ params }: Props) {
+  const ceviri = sozluk();
+
   const siparis = await prisma.order.findUnique({
     where: { publicToken: params.token },
     select: {
@@ -86,7 +90,7 @@ export default async function OdemeSonucPage({ params }: Props) {
     notFound();
   }
 
-  const gorunum = gorunumSec(siparis.status);
+  const gorunum = gorunumSec(siparis.status, ceviri);
 
   const kutuSinifi =
     gorunum.ton === "basarili"
@@ -96,7 +100,9 @@ export default async function OdemeSonucPage({ params }: Props) {
         : "border-white/10 bg-white/5 text-white/70";
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] px-4 py-12 text-white">
+    <main className="pt-20 min-h-screen bg-[#0a0a0f] px-4 py-12 text-white">
+      <SayfaUstBari ton="acik" />
+
       <div className="mx-auto max-w-2xl">
         <div className={`rounded-2xl border p-8 ${kutuSinifi}`}>
           <h1 className="text-2xl font-bold">{gorunum.baslik}</h1>
@@ -104,16 +110,16 @@ export default async function OdemeSonucPage({ params }: Props) {
         </div>
 
         <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-          <h2 className="text-lg font-semibold">Sipariş Özeti</h2>
+          <h2 className="text-lg font-semibold">{ceviri.odeme.ozet}</h2>
 
           <div className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
             <div>
-              <p className="text-white/40">Sipariş numarası</p>
+              <p className="text-white/40">{ceviri.odeme.numara}</p>
               <p className="mt-1 font-mono">{siparis.orderNumber}</p>
             </div>
 
             <div>
-              <p className="text-white/40">Sipariş tarihi</p>
+              <p className="text-white/40">{ceviri.odeme.tarih}</p>
               <p className="mt-1">
                 {siparis.createdAt.toLocaleDateString("tr-TR")}
               </p>
@@ -134,7 +140,7 @@ export default async function OdemeSonucPage({ params }: Props) {
             ))}
 
             <div className="flex justify-between gap-4 border-t border-white/10 pt-3 font-semibold">
-              <span>Toplam (kargo dâhil)</span>
+              <span>{ceviri.odeme.toplamKargoDahil}</span>
               <span>{fiyatBicimle(siparis.totalKurus)}</span>
             </div>
           </div>
@@ -142,25 +148,18 @@ export default async function OdemeSonucPage({ params }: Props) {
 
         {gorunum.ton === "basarili" && (
           <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-            <h2 className="text-lg font-semibold">Sıradaki adım</h2>
+            <h2 className="text-lg font-semibold">{ceviri.odeme.siradakiAdim}</h2>
 
-            <p className="mt-2 text-sm leading-6 text-white/60">
-              Ürününüz elinize ulaştığında QR etiketini ARKVIUM hesabınızdan
-              etkinleştirin. Hesabınız yoksa önce ücretsiz hesap oluşturun.
-            </p>
+            <p className="mt-2 text-sm leading-6 text-white/60">{ceviri.kalanlar.siparisSonrasi}</p>
 
             <Link
               href="/account/tags/activate"
               className="mt-4 inline-flex rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-500"
-            >
-              Etiketini Etkinleştir
-            </Link>
+            >{ceviri.kalanlar.etiketiniEtkinlestir}</Link>
           </div>
         )}
 
-        <p className="mt-8 text-center text-sm text-white/40">
-          ARKVIUM — Dijital Sahiplik Platformu
-        </p>
+        <p className="mt-8 text-center text-sm text-white/40">{ceviri.qr.markaAlt}</p>
       </div>
     </main>
   );

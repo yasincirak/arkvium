@@ -50,105 +50,40 @@ type Slayt = {
   beyanUyarisi?: string;
 };
 
-const SLAYTLAR: Slayt[] = [
-  {
-    kod: "marka",
-    etiket: "ARKVIUM",
-    markaSlayti: true,
-  },
-  {
-    kod: "acil-durum",
-    etiket: "Acil Durum Profili",
-    baslik: "Acil durumda saniyeler önemlidir",
-    metin:
-      "Sağlık personeli veya yardım eden kişi QR'ı okutarak kullanıcının paylaşmayı seçtiği sağlık bilgilerini görebilir ve acil durumda aranacak yakınlarına tek dokunuşla ulaşabilir.",
-    bilgiEtiketleri: [
-      "Kan grubu",
-      "Alerjiler",
-      "Kullanılan ilaçlar",
-      "Acil durum kişileri",
-    ],
-    gorsel: "acil-durum",
-    dugmeler: [
-      {
-        metin: "Acil Durum Profilini İncele",
-        href: "#acil-durum",
-        tur: "birincil",
-      },
-      { metin: "Nasıl Çalışır?", href: "#nasil", tur: "ikincil" },
-    ],
-    beyanUyarisi:
-      "Gösterilen bilgiler kullanıcının kendi beyanıdır; doğrulanmış tıbbi kayıt değildir.",
-  },
-  {
-    kod: "kayip-esya",
-    etiket: "Kayıp eşya",
-    baslik: "Eşyaların kaybolsa bile sana geri dönsün",
-    metin:
-      "ARKVIUM etiketini eşyanla eşleştir. Bulan kişi QR'ı okutarak uygulama indirmeden sana güvenli şekilde ulaşsın.",
-    gorsel: "hero",
-    dugmeler: [
-      { metin: "QR Etiketleri İncele", href: "#urunler", tur: "birincil" },
-    ],
-  },
-  {
-    kod: "evcil-hayvan",
-    etiket: "Evcil hayvan",
-    baslik: "Kaybolduğunda ona ulaşmanın bir yolu olsun",
-    metin:
-      "Künyedeki QR kod okutulduğunda bulan kişi, paylaşmayı seçtiğin bilgiler üzerinden sana ulaşabilsin.",
-    gorsel: "evcil-hayvan",
-    dugmeler: [
-      {
-        metin: "Evcil Hayvan Künyesini İncele",
-        href: "#urunler",
-        tur: "birincil",
-      },
-    ],
-  },
-  {
-    kod: "valiz",
-    etiket: "Valiz ve seyahat",
-    baslik: "Valizin kaybolduğunda iletişim bilgilerin açıkta kalmasın",
-    metin:
-      "QR valiz etiketi sayesinde valizi bulan kişi, telefon numaranı doğrudan görmeden sana ulaşabilsin.",
-    gorsel: "valiz",
-    dugmeler: [
-      { metin: "Valiz Etiketini İncele", href: "#urunler", tur: "birincil" },
-    ],
-  },
-  {
-    kod: "arac",
-    etiket: "Araç ve motosiklet",
-    baslik: "Aracın için güvenli iletişim ve acil durum bağlantısı",
-    metin:
-      "QR etiketi; gerektiğinde araç sahibiyle gizli iletişim kurulmasını ve izin verilen acil durum bilgilerinin görüntülenmesini sağlar.",
-    gorsel: "arac",
-    dugmeler: [
-      {
-        metin: "Araç Etiketini İncele",
-        href: "/urun/arac-stickeri",
-        tur: "birincil",
-      },
-    ],
-  },
-];
-
-/** `h1` ve öncelikli görsel, marka slaytından sonraki ilk içerik slaytındadır. */
-const ANA_BASLIK_SIRASI = SLAYTLAR.findIndex((slayt) => !slayt.markaSlayti);
-
 const GECIS_SURESI = 6000;
 const KAYDIRMA_ESIGI = 48;
 
-export default function HeroKaydirici() {
+/** Metinler sunucudaki sözlükten prop olarak gelir. */
+export type HeroMetinleri = {
+  oncekiSlayt: string;
+  sonrakiSlayt: string;
+  slaydiGoster: string;
+  temsiliGorsel: string;
+  slaytlar: Slayt[];
+};
+
+export default function HeroKaydirici({
+  metinler,
+}: {
+  metinler: HeroMetinleri;
+}) {
+  const SLAYTLAR = metinler.slaytlar;
+  const slaytSayisi = SLAYTLAR.length;
+
+  /** `h1` ve öncelikli görsel, marka slaytından sonraki ilk içerik slaytındadır. */
+  const ANA_BASLIK_SIRASI = SLAYTLAR.findIndex((slayt) => !slayt.markaSlayti);
+
   const [etkin, setEtkin] = useState(0);
   const [duraklat, setDuraklat] = useState(false);
   const [azaltilmisHareket, setAzaltilmisHareket] = useState(false);
   const dokunusBaslangici = useRef<number | null>(null);
 
-  const git = useCallback((hedef: number) => {
-    setEtkin((hedef + SLAYTLAR.length) % SLAYTLAR.length);
-  }, []);
+  const git = useCallback(
+    (hedef: number) => {
+      setEtkin((hedef + slaytSayisi) % slaytSayisi);
+    },
+    [slaytSayisi]
+  );
 
   // Hareket azaltma tercihi: otomatik geçiş hiç başlamaz.
   useEffect(() => {
@@ -176,11 +111,11 @@ export default function HeroKaydirici() {
     }
 
     const zamanlayici = window.setTimeout(() => {
-      setEtkin((mevcut) => (mevcut + 1) % SLAYTLAR.length);
+      setEtkin((mevcut) => (mevcut + 1) % slaytSayisi);
     }, GECIS_SURESI);
 
     return () => window.clearTimeout(zamanlayici);
-  }, [etkin, duraklat, azaltilmisHareket]);
+  }, [etkin, duraklat, azaltilmisHareket, slaytSayisi]);
 
   return (
     <section
@@ -358,7 +293,7 @@ export default function HeroKaydirici() {
                           oncelikli={sira === ANA_BASLIK_SIRASI}
                           sizes="(min-width: 1024px) 560px, 92vw"
                         />
-                        <TemsiliRozet />
+                        <TemsiliRozet metin={metinler.temsiliGorsel} />
                       </div>
                     </div>
                   </div>
@@ -375,7 +310,7 @@ export default function HeroKaydirici() {
             <button
               type="button"
               onClick={() => git(etkin - 1)}
-              aria-label="Önceki slayt"
+              aria-label={metinler.oncekiSlayt}
               className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-ark-line-dark text-ark-on-dark transition duration-200 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent-on-dark"
             >
               <span aria-hidden="true" className="text-lg leading-none">
@@ -386,7 +321,7 @@ export default function HeroKaydirici() {
             <button
               type="button"
               onClick={() => git(etkin + 1)}
-              aria-label="Sonraki slayt"
+              aria-label={metinler.sonrakiSlayt}
               className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-ark-line-dark text-ark-on-dark transition duration-200 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent-on-dark"
             >
               <span aria-hidden="true" className="text-lg leading-none">
@@ -401,7 +336,7 @@ export default function HeroKaydirici() {
                 key={slayt.kod}
                 type="button"
                 onClick={() => git(sira)}
-                aria-label={`${slayt.etiket} slaydını göster`}
+                aria-label={`${slayt.etiket} — ${metinler.slaydiGoster}`}
                 aria-current={sira === etkin}
                 className="inline-flex h-11 w-8 items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent-on-dark"
               >

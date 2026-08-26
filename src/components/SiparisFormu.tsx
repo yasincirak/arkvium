@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useSozluk } from "@/lib/i18n/istemci";
 import { fiyatBicimle } from "@/lib/siparis";
 
 /**
@@ -32,6 +33,8 @@ export default function SiparisFormu({
   fiyatKurus: number;
   kargoKurus: number;
 }) {
+  const ceviri = useSozluk();
+
   const [alanlar, setAlanlar] = useState(BOS_FORM);
   // Sipariş gövdesinden AYRI: kimlik numarası siparişe yazılmaz, yalnızca
   // ödeme adımında sağlayıcıya iletilir.
@@ -51,7 +54,7 @@ export default function SiparisFormu({
     setCalisiyor(true);
 
     try {
-      setDurum("Siparişiniz hazırlanıyor...");
+      setDurum(ceviri.siparis.hazirlaniyor);
 
       const siparisYanit = await fetch("/api/siparis", {
         method: "POST",
@@ -62,12 +65,12 @@ export default function SiparisFormu({
       const siparisVeri = await siparisYanit.json();
 
       if (!siparisYanit.ok) {
-        setHata(siparisVeri.error || "Sipariş oluşturulamadı.");
+        setHata(siparisVeri.error || ceviri.siparis.olusturulamadi);
 
         return;
       }
 
-      setDurum("Ödeme sayfasına yönlendiriliyorsunuz...");
+      setDurum(ceviri.siparis.yonlendiriliyor);
 
       const odemeYanit = await fetch("/api/payment/start", {
         method: "POST",
@@ -79,7 +82,7 @@ export default function SiparisFormu({
 
       if (!odemeYanit.ok) {
         setHata(
-          `${odemeVeri.error || "Ödeme başlatılamadı."} Sipariş numaranız: ${
+          `${odemeVeri.error || ceviri.siparis.odemeBaslatilamadi} Sipariş numaranız: ${
             siparisVeri.orderNumber
           }`
         );
@@ -97,7 +100,7 @@ export default function SiparisFormu({
         `Ödeme sayfası açılamadı. Sipariş numaranız: ${siparisVeri.orderNumber}`
       );
     } catch {
-      setHata("İşlem tamamlanamadı. Bağlantınızı kontrol edin.");
+      setHata(ceviri.siparis.baglantiHatasi);
     } finally {
       setCalisiyor(false);
       setDurum("");
@@ -110,13 +113,11 @@ export default function SiparisFormu({
   return (
     <form onSubmit={gonder} className="mt-8">
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold">Teslimat Bilgileri</h2>
+        <h2 className="text-lg font-semibold">{ceviri.siparis.teslimatBilgileri}</h2>
 
         <div className="mt-5 grid gap-5 sm:grid-cols-2">
           <div>
-            <label htmlFor="fullName" className="mb-2 block text-sm text-slate-600">
-              Ad soyad
-            </label>
+            <label htmlFor="fullName" className="mb-2 block text-sm text-slate-600">{ceviri.kalanlar.adSoyad}</label>
             <input
               id="fullName"
               required
@@ -127,9 +128,7 @@ export default function SiparisFormu({
           </div>
 
           <div>
-            <label htmlFor="phone" className="mb-2 block text-sm text-slate-600">
-              Telefon
-            </label>
+            <label htmlFor="phone" className="mb-2 block text-sm text-slate-600">{ceviri.kalanlar.telefon}</label>
             <input
               id="phone"
               required
@@ -140,9 +139,7 @@ export default function SiparisFormu({
           </div>
 
           <div className="sm:col-span-2">
-            <label htmlFor="email" className="mb-2 block text-sm text-slate-600">
-              E-posta
-            </label>
+            <label htmlFor="email" className="mb-2 block text-sm text-slate-600">{ceviri.kalanlar.eposta}</label>
             <input
               id="email"
               type="email"
@@ -157,9 +154,7 @@ export default function SiparisFormu({
             <label
               htmlFor="addressLine"
               className="mb-2 block text-sm text-slate-600"
-            >
-              Adres
-            </label>
+            >{ceviri.kalanlar.adres}</label>
             <input
               id="addressLine"
               required
@@ -170,9 +165,7 @@ export default function SiparisFormu({
           </div>
 
           <div>
-            <label htmlFor="district" className="mb-2 block text-sm text-slate-600">
-              İlçe
-            </label>
+            <label htmlFor="district" className="mb-2 block text-sm text-slate-600">{ceviri.kalanlar.ilce}</label>
             <input
               id="district"
               required
@@ -183,9 +176,7 @@ export default function SiparisFormu({
           </div>
 
           <div>
-            <label htmlFor="city" className="mb-2 block text-sm text-slate-600">
-              İl
-            </label>
+            <label htmlFor="city" className="mb-2 block text-sm text-slate-600">{ceviri.kalanlar.il}</label>
             <input
               id="city"
               required
@@ -199,9 +190,7 @@ export default function SiparisFormu({
             <label
               htmlFor="postalCode"
               className="mb-2 block text-sm text-slate-600"
-            >
-              Posta kodu (isteğe bağlı)
-            </label>
+            >{ceviri.kalanlar.postaKodu}</label>
             <input
               id="postalCode"
               value={alanlar.postalCode}
@@ -211,9 +200,7 @@ export default function SiparisFormu({
           </div>
 
           <div>
-            <label htmlFor="kimlikNo" className="mb-2 block text-sm text-slate-600">
-              T.C. kimlik numarası
-            </label>
+            <label htmlFor="kimlikNo" className="mb-2 block text-sm text-slate-600">{ceviri.kalanlar.kimlikNumarasi}</label>
             <input
               id="kimlikNo"
               required
@@ -222,10 +209,7 @@ export default function SiparisFormu({
               onChange={(e) => setKimlikNo(e.target.value)}
               className={girdiSinifi}
             />
-            <p className="mt-2 text-xs text-slate-500">
-              Ödeme kuruluşu zorunlu tutar. Saklanmaz; yalnızca ödeme isteğinde
-              iletilir.
-            </p>
+            <p className="mt-2 text-xs text-slate-500">{ceviri.kalanlar.kimlikAciklama}</p>
           </div>
         </div>
       </div>
@@ -237,12 +221,12 @@ export default function SiparisFormu({
         </div>
 
         <div className="mt-3 flex items-center justify-between text-sm">
-          <span className="text-slate-600">Kargo</span>
+          <span className="text-slate-600">{ceviri.kalanlar.kargo}</span>
           <span>{fiyatBicimle(kargoKurus)}</span>
         </div>
 
         <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-4 font-semibold">
-          <span>Toplam</span>
+          <span>{ceviri.siparis.toplam}</span>
           <span>{fiyatBicimle(fiyatKurus + kargoKurus)}</span>
         </div>
 
@@ -251,7 +235,7 @@ export default function SiparisFormu({
           disabled={calisiyor}
           className="mt-6 w-full rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {calisiyor ? durum || "İşleniyor..." : "Ödemeye Geç"}
+          {calisiyor ? durum || "İşleniyor..." : ceviri.siparis.odemeyeGec}
         </button>
 
         {hata && (

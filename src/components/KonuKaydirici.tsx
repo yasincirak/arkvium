@@ -30,76 +30,37 @@ type Slayt = {
   maddeler: string[];
   gorsel: GorselAnahtari;
   /**
-   * Yalnızca sağlık verisi taşıyan slaytta gösterilen beyan uyarısı.
+   * Yalnızca sağlık verisi taşıyan slaytta gösterilen beyan uyarısı metni.
    * Bu cümle kaldırılmamalıdır.
    */
-  beyanUyarisi?: boolean;
+  beyanUyarisi?: string;
 };
 
-const SLAYTLAR: Slayt[] = [
-  {
-    kod: "acil-durum",
-    etiket: "Acil Durum Profili",
-    baslik: "Araç ve motosiklette, kaza anında bilinmesi gerekenler",
-    metin:
-      "Etiketine, sana yardım etmeye çalışan kişinin görmesini istediğin bilgileri ekleyebilirsin. Her alan ayrı ayrı açılır; kapalı bıraktığın hiçbir bilgi QR sayfasında görünmez.",
-    maddeler: [
-      "Kan grubu, alerjiler, kullanılan ilaçlar",
-      "Önemli sağlık durumları ve acil durum notu",
-      "Acil durumda aranacak kişiler",
-    ],
-    gorsel: "arac",
-    beyanUyarisi: true,
-  },
-  {
-    kod: "kayip-esya",
-    etiket: "Kayıp eşya",
-    baslik: "Eşyan kaybolduğunda bulan kişi sana ulaşsın",
-    metin:
-      "Çanta, anahtar, valiz veya günlük eşyalarını etiketlersin. Bulan kişi QR'ı okutur ve sana mesaj bırakır.",
-    maddeler: [
-      "QR'ı okutan kişi uygulama indirmez",
-      "Eşyanı kayıp işaretleyebilirsin",
-      "Etiketi başka eşyaya taşıyabilirsin",
-    ],
-    gorsel: "hero",
-  },
-  {
-    kod: "evcil-hayvan",
-    etiket: "Evcil hayvan",
-    baslik: "Künyeyi okutan kişi seninle güvenle iletişime geçsin",
-    metin:
-      "Tasmaya takılan QR künye, dostunu bulan kişinin sana ulaşmasını sağlar.",
-    maddeler: [
-      "Künyede telefon numaran yazmaz",
-      "Bildirim sana ARKVIUM üzerinden gelir",
-      "Bilgileri istediğin an güncellersin",
-    ],
-    gorsel: "evcil-hayvan",
-  },
-  {
-    kod: "guvenli-iletisim",
-    etiket: "Güvenli iletişim",
-    baslik: "Numaran görünmeden mesaj al",
-    metin:
-      "Sana ulaşmak isteyen kişi mesajını ARKVIUM üzerinden gönderir; iletişim bilgilerin ona gösterilmez.",
-    maddeler: [
-      "Telefon numaran QR kodda yer almaz",
-      "Kişisel iletişim bilgilerin doğrudan gösterilmez",
-      "Mesaj ARKVIUM üzerinden iletilir",
-    ],
-    gorsel: "mesajlasma",
-  },
-];
+/** Metinler sunucudaki sözlükten prop olarak gelir. */
+export type KonuMetinleri = {
+  etiket: string;
+  baslik: string;
+  onceki: string;
+  sonraki: string;
+  basliklar: string;
+  konuyuGoster: string;
+  temsiliGorsel: string;
+  slaytlar: Slayt[];
+};
 
-export default function KonuKaydirici() {
+export default function KonuKaydirici({ metinler }: { metinler: KonuMetinleri }) {
+  const SLAYTLAR = metinler.slaytlar;
+  const slaytSayisi = SLAYTLAR.length;
   const [etkin, setEtkin] = useState(0);
   const bolgeId = useId();
 
-  const git = useCallback((hedef: number) => {
-    // Baştan sona ve sondan başa döner; kullanıcı çıkmaza girmez.
-    setEtkin((hedef + SLAYTLAR.length) % SLAYTLAR.length);
-  }, []);
+  const git = useCallback(
+    (hedef: number) => {
+      // Baştan sona ve sondan başa döner; kullanıcı çıkmaza girmez.
+      setEtkin((hedef + slaytSayisi) % slaytSayisi);
+    },
+    [slaytSayisi]
+  );
 
   return (
     <section
@@ -110,13 +71,13 @@ export default function KonuKaydirici() {
       <div className="mx-auto max-w-6xl px-6 py-20 sm:px-8 sm:py-28">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div className="max-w-2xl">
-            <p className="ark-etiket text-ark-accent">ARKVIUM ne yapar?</p>
+            <p className="ark-etiket text-ark-accent">{metinler.etiket}</p>
 
             <h2
               id={`${bolgeId}-baslik`}
               className="ark-baslik mt-3 text-ark-ink"
             >
-              Tek etiket, dört ayrı işe yarar
+              {metinler.baslik}
             </h2>
           </div>
 
@@ -125,7 +86,7 @@ export default function KonuKaydirici() {
             <button
               type="button"
               onClick={() => git(etkin - 1)}
-              aria-label="Önceki konu"
+              aria-label={metinler.onceki}
               aria-controls={`${bolgeId}-icerik`}
               className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-ark-line-strong bg-ark-surface text-ark-ink transition duration-200 hover:bg-ark-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent"
             >
@@ -137,7 +98,7 @@ export default function KonuKaydirici() {
             <button
               type="button"
               onClick={() => git(etkin + 1)}
-              aria-label="Sonraki konu"
+              aria-label={metinler.sonraki}
               aria-controls={`${bolgeId}-icerik`}
               className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-ark-line-strong bg-ark-surface text-ark-ink transition duration-200 hover:bg-ark-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent"
             >
@@ -151,7 +112,7 @@ export default function KonuKaydirici() {
         {/* Konu başlıkları: hangi slaytta olduğunu gösterir ve doğrudan geçiş sağlar. */}
         <div
           role="tablist"
-          aria-label="Konu başlıkları"
+          aria-label={metinler.basliklar}
           className="mt-8 flex flex-wrap gap-2"
         >
           {SLAYTLAR.map((slayt, sira) => (
@@ -234,10 +195,7 @@ export default function KonuKaydirici() {
 
                     {slayt.beyanUyarisi && (
                       <p className="mt-6 rounded-2xl bg-ark-accent-soft p-4 text-sm leading-relaxed text-ark-ink-2">
-                        Bu bilgiler{" "}
-                        <strong className="text-ark-ink">senin beyanındır</strong>
-                        ; doğrulanmış tıbbi kayıt değildir. Özellik tamamen
-                        isteğe bağlıdır ve varsayılan olarak kapalıdır.
+                        {slayt.beyanUyarisi}
                       </p>
                     )}
                   </div>
@@ -247,7 +205,7 @@ export default function KonuKaydirici() {
                       anahtar={slayt.gorsel}
                       sizes="(min-width: 1024px) 512px, 90vw"
                     />
-                    <TemsiliRozet />
+                    <TemsiliRozet metin={metinler.temsiliGorsel} />
                   </div>
                 </div>
               </div>
@@ -262,7 +220,7 @@ export default function KonuKaydirici() {
               key={slayt.kod}
               type="button"
               onClick={() => git(sira)}
-              aria-label={`${slayt.etiket} konusunu göster`}
+              aria-label={`${slayt.etiket} — ${metinler.konuyuGoster}`}
               aria-current={sira === etkin}
               className="inline-flex h-11 w-11 items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent"
             >

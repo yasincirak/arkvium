@@ -5,9 +5,27 @@ import { createFinderMessage } from "@/lib/actions";
 
 type FinderFormProps = {
   recordId: string;
+  /** Metinler sunucudaki sözlükten prop olarak gelir. */
+  metinler: {
+    baslik: string;
+    aciklama: string;
+    adSoyad: string;
+    telefon: string;
+    konum: string;
+    not: string;
+    onay: string;
+    gonder: string;
+    gonderiliyor: string;
+    eksikAlan: string;
+    onayGerekli: string;
+    gonderimHatasi: string;
+    basariBaslik: string;
+    basariMetin: string;
+    basariNot: string;
+  };
 };
 
-export default function FinderForm({ recordId }: FinderFormProps) {
+export default function FinderForm({ recordId, metinler }: FinderFormProps) {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [location, setLocation] = useState("");
@@ -19,13 +37,13 @@ export default function FinderForm({ recordId }: FinderFormProps) {
 
   async function handleSubmit() {
     if (!fullName || !phone || !location) {
-      alert("Lütfen ad soyad, telefon ve konum alanlarını doldurun.");
+      alert(metinler.eksikAlan);
       return;
     }
 
     if (!consent) {
       alert(
-        "Devam etmek için iletişim bilgilerinizin eşya sahibine iletilmesini kabul etmelisiniz."
+        metinler.onayGerekli
       );
       return;
     }
@@ -48,7 +66,7 @@ export default function FinderForm({ recordId }: FinderFormProps) {
 
       setIsSent(true);
     } catch {
-      alert("Bildirim gönderilirken bir hata oluştu. Lütfen tekrar deneyin.");
+      alert(metinler.gonderimHatasi);
     } finally {
       isSubmittingRef.current = false;
       setIsSending(false);
@@ -59,15 +77,15 @@ export default function FinderForm({ recordId }: FinderFormProps) {
     return (
       <div className="rounded-2xl border border-green-500/20 bg-green-500/10 p-6 text-center">
         <h2 className="text-lg font-semibold text-green-300">
-          Bilgileriniz alındı
+          {metinler.basariBaslik}
         </h2>
 
         <p className="mt-2 text-sm text-green-100/70">
-          Bildiriminiz güvenli şekilde eşya sahibine iletilecektir.
+          {metinler.basariMetin}
         </p>
 
         <p className="mt-3 text-xs text-green-100/50">
-          Teşekkür ederiz. Bir eşyanın sahibine geri dönmesine yardımcı oldunuz.
+          {metinler.basariNot}
         </p>
       </div>
     );
@@ -76,16 +94,16 @@ export default function FinderForm({ recordId }: FinderFormProps) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
       <h2 className="text-lg font-semibold text-white">
-        Bulan Kişi Formu
+        {metinler.baslik}
       </h2>
 
       <p className="mt-2 text-sm text-white/50">
-        Eşya sahibine güvenli şekilde ulaşmak için bilgilerinizi bırakın.
+        {metinler.aciklama}
       </p>
 
       <input
         className="mt-5 w-full rounded-lg border border-white/10 bg-[#0a0a0f] px-4 py-2.5 text-sm text-white outline-none transition focus:border-indigo-500/50"
-        placeholder="Ad Soyad"
+        placeholder={metinler.adSoyad}
         value={fullName}
         onChange={(e) => setFullName(e.target.value)}
       />
@@ -93,21 +111,21 @@ export default function FinderForm({ recordId }: FinderFormProps) {
       <input
         type="tel"
         className="mt-4 w-full rounded-lg border border-white/10 bg-[#0a0a0f] px-4 py-2.5 text-sm text-white outline-none transition focus:border-indigo-500/50"
-        placeholder="Telefon"
+        placeholder={metinler.telefon}
         value={phone}
         onChange={(e) => setPhone(e.target.value)}
       />
 
       <input
         className="mt-4 w-full rounded-lg border border-white/10 bg-[#0a0a0f] px-4 py-2.5 text-sm text-white outline-none transition focus:border-indigo-500/50"
-        placeholder="Konum"
+        placeholder={metinler.konum}
         value={location}
         onChange={(e) => setLocation(e.target.value)}
       />
 
       <textarea
         className="mt-4 w-full rounded-lg border border-white/10 bg-[#0a0a0f] px-4 py-2.5 text-sm text-white outline-none transition focus:border-indigo-500/50"
-        placeholder="Eşya hakkında kısa bir not bırakabilirsiniz"
+        placeholder={metinler.not}
         rows={4}
         value={note}
         onChange={(e) => setNote(e.target.value)}
@@ -122,7 +140,7 @@ export default function FinderForm({ recordId }: FinderFormProps) {
         />
 
         <span className="text-sm leading-6 text-white/60">
-          İletişim bilgilerimin eşya sahibine iletilmesini kabul ediyorum.
+          {metinler.onay}
         </span>
       </label>
 
@@ -132,7 +150,7 @@ export default function FinderForm({ recordId }: FinderFormProps) {
         disabled={isSending}
         className="mt-6 w-full rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isSending ? "Gönderiliyor..." : "Gönder"}
+        {isSending ? metinler.gonderiliyor : metinler.gonder}
       </button>
     </div>
   );

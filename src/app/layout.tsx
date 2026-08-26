@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import { aktifDil } from "@/lib/i18n";
+import { DilSaglayici } from "@/lib/i18n/istemci";
 import { CANLI_ADRES, PAYLASIM_GORSELI } from "@/lib/seo";
 
 const geistSans = localFont({
@@ -49,12 +51,16 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Dil SUNUCUDA çözülür; ilk HTML doğru `lang` ile gelir, yanlış dilin
+  // kısa süre görünmesi (flash) ve hidrasyon uyuşmazlığı oluşmaz.
+  const dil = aktifDil();
+
   return (
-    <html lang="tr">
+    <html lang={dil}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <DilSaglayici dil={dil}>{children}</DilSaglayici>
       </body>
     </html>
   );

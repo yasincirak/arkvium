@@ -1,11 +1,14 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useSozluk } from "@/lib/i18n/istemci";
 import LogoutAllButton from "./LogoutAllButton";
 
 const MIN_SIFRE_UZUNLUGU = 8;
 
 export default function ChangePasswordForm() {
+  const ceviri = useSozluk();
+
   const [acik, setAcik] = useState(false);
   const [error, setError] = useState("");
   const [basariMesaji, setBasariMesaji] = useState("");
@@ -22,7 +25,7 @@ export default function ChangePasswordForm() {
     const newPasswordRepeat = String(formData.get("newPasswordRepeat") || "");
 
     if (newPassword !== newPasswordRepeat) {
-      setError("Yeni şifreler eşleşmiyor.");
+      setError(ceviri.hesap.sifre.eslesmiyor);
       return;
     }
 
@@ -41,14 +44,14 @@ export default function ChangePasswordForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "Şifre değiştirilemedi.");
+        setError(data.error || ceviri.hesap.sifre.hata);
         return;
       }
 
       setBasariMesaji(data.message);
       form.reset();
     } catch {
-      setError("Bağlantı kurulamadı. Lütfen tekrar deneyin.");
+      setError(ceviri.ortak.baglantiHatasi);
     } finally {
       setKaydediliyor(false);
     }
@@ -58,11 +61,9 @@ export default function ChangePasswordForm() {
     <div className="mb-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold">Şifre</h2>
+          <h2 className="text-xl font-semibold">{ceviri.kalanlar.sifre}</h2>
 
-          <p className="mt-1 text-sm text-white/50">
-            Şifreni değiştirdiğinde diğer cihazlardaki oturumlar kapanır.
-          </p>
+          <p className="mt-1 text-sm text-white/50">{ceviri.kalanlar.sifreDegistirUyari}</p>
         </div>
 
         <button
@@ -75,7 +76,7 @@ export default function ChangePasswordForm() {
           aria-expanded={acik}
           className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
         >
-          {acik ? "Vazgeç" : "Şifremi Değiştir"}
+          {acik ? ceviri.hesap.sifre.vazgec : ceviri.hesap.sifre.degistir}
         </button>
       </div>
 
@@ -94,9 +95,7 @@ export default function ChangePasswordForm() {
             <label
               htmlFor="currentPassword"
               className="mb-2 block text-sm font-medium text-white/80"
-            >
-              Mevcut Şifre
-            </label>
+            >{ceviri.kalanlar.mevcutSifre}</label>
 
             <input
               id="currentPassword"
@@ -112,9 +111,7 @@ export default function ChangePasswordForm() {
             <label
               htmlFor="newPassword"
               className="mb-2 block text-sm font-medium text-white/80"
-            >
-              Yeni Şifre
-            </label>
+            >{ceviri.kalanlar.yeniSifre}</label>
 
             <input
               id="newPassword"
@@ -136,9 +133,7 @@ export default function ChangePasswordForm() {
             <label
               htmlFor="newPasswordRepeat"
               className="mb-2 block text-sm font-medium text-white/80"
-            >
-              Yeni Şifre (Tekrar)
-            </label>
+            >{ceviri.kalanlar.yeniSifreTekrar}</label>
 
             <input
               id="newPasswordRepeat"
@@ -165,7 +160,7 @@ export default function ChangePasswordForm() {
             disabled={kaydediliyor}
             className="rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {kaydediliyor ? "Kaydediliyor..." : "Şifremi Güncelle"}
+            {kaydediliyor ? "Kaydediliyor..." : ceviri.hesap.sifre.guncelle}
           </button>
         </form>
       )}

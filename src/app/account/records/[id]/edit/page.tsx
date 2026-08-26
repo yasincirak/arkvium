@@ -1,4 +1,6 @@
 import { notFound, redirect } from "next/navigation";
+import SayfaUstBari from "@/components/SayfaUstBari";
+import { sozluk } from "@/lib/i18n";
 import EditRecordForm from "@/components/account/EditRecordForm";
 import { getUserSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
@@ -12,6 +14,8 @@ type Props = {
 };
 
 export default async function AccountEditRecordPage({ params }: Props) {
+  const ceviri = sozluk();
+
   const session = await getUserSession();
 
   if (!session) {
@@ -30,14 +34,14 @@ export default async function AccountEditRecordPage({ params }: Props) {
   }
 
   return (
-    <main className="min-h-screen bg-[#09090f] px-4 py-10 text-white">
+    <main className="pt-20 min-h-screen bg-[#09090f] px-4 py-10 text-white">
+      <SayfaUstBari ton="koyu" />
+
       <div className="mx-auto max-w-3xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold">Ürünü Düzenle</h1>
+          <h1 className="text-3xl font-bold">{ceviri.hesap.urunuDuzenle}</h1>
 
-          <p className="mt-2 text-sm text-white/50">
-            Ürün bilgilerini güncelleyebilirsin.
-          </p>
+          <p className="mt-2 text-sm text-white/50">{ceviri.kalanlar.urunBilgileriniGuncelle}</p>
         </div>
 
         <EditRecordForm record={record} />

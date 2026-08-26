@@ -1,7 +1,5 @@
-import {
-  KAN_GRUBU_ETIKETLERI,
-  type AcilDurumGorunumu,
-} from "@/lib/acil-durum";
+import { type AcilDurumGorunumu } from "@/lib/acil-durum";
+import { sozluk } from "@/lib/i18n";
 
 /**
  * QR okutan kişiye gösterilen acil durum bilgisi bölümü.
@@ -29,6 +27,8 @@ export default function AcilDurumBolumu({
 }: {
   gorunum: AcilDurumGorunumu;
 }) {
+  const s = sozluk();
+
   return (
     <section
       aria-labelledby="acil-durum-basligi"
@@ -38,49 +38,48 @@ export default function AcilDurumBolumu({
         id="acil-durum-basligi"
         className="text-lg font-bold text-red-100"
       >
-        Acil Durum Bilgisi
+        {s.acilDurumGorunum.baslik}
       </h2>
 
       <p className="mt-2 text-sm leading-6 text-red-100/80">
-        Bu bilgiler eşya sahibinin kendi beyanıdır ve sahibi tarafından
-        paylaşılmak üzere yayınlanmıştır. Tıbbi kayıt değildir, doğrulanmamıştır.
+        {s.acilDurumGorunum.beyan}
       </p>
 
       <div className="mt-5 space-y-4">
         {gorunum.displayName && (
-          <Satir baslik="Ad" deger={gorunum.displayName} />
+          <Satir baslik={s.acilDurumGorunum.ad} deger={gorunum.displayName} />
         )}
 
         {gorunum.bloodType && (
           <Satir
-            baslik="Beyan edilen kan grubu"
-            deger={KAN_GRUBU_ETIKETLERI[gorunum.bloodType]}
+            baslik={s.acilDurumGorunum.kanGrubu}
+            deger={s.acilDurumGorunum.kanGruplari[gorunum.bloodType]}
           />
         )}
 
         {gorunum.allergies && (
-          <Satir baslik="Alerjiler" deger={gorunum.allergies} />
+          <Satir baslik={s.acilDurumGorunum.alerjiler} deger={gorunum.allergies} />
         )}
 
         {gorunum.medications && (
-          <Satir baslik="Kullanılan ilaçlar" deger={gorunum.medications} />
+          <Satir baslik={s.acilDurumGorunum.ilaclar} deger={gorunum.medications} />
         )}
 
         {gorunum.medicalConditions && (
           <Satir
-            baslik="Önemli sağlık durumları"
+            baslik={s.acilDurumGorunum.saglikDurumlari}
             deger={gorunum.medicalConditions}
           />
         )}
 
         {gorunum.emergencyNote && (
-          <Satir baslik="Not" deger={gorunum.emergencyNote} />
+          <Satir baslik={s.acilDurumGorunum.not} deger={gorunum.emergencyNote} />
         )}
 
         {gorunum.kisiler.length > 0 && (
           <div>
             <span className="text-xs uppercase tracking-wide text-red-200/70">
-              Acil durumda aranacak kişiler
+              {s.acilDurumGorunum.kisiler}
             </span>
 
             <ul className="mt-2 space-y-2">
@@ -100,7 +99,7 @@ export default function AcilDurumBolumu({
                     </span>
 
                     <span className="text-sm font-semibold text-red-100">
-                      Ara
+                      {s.acilDurumGorunum.ara}
                     </span>
                   </a>
                 </li>
@@ -111,7 +110,7 @@ export default function AcilDurumBolumu({
       </div>
 
       <p className="mt-5 border-t border-red-400/20 pt-4 text-sm font-semibold text-red-100">
-        Hayati tehlike varsa önce 112 Acil Çağrı Merkezi&apos;ni arayın.
+        {s.acilDurumGorunum.acilCagri}
       </p>
     </section>
   );

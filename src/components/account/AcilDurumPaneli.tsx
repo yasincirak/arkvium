@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { useSozluk } from "@/lib/i18n/istemci";
 
 /**
  * Acil Durum Profili yönetim paneli (yalnızca kayıt sahibi görür).
@@ -13,19 +14,6 @@ import { FormEvent, useState } from "react";
  * - Yayına almak İKİ AYRI açık onay ister; onaylar önceden işaretli gelmez.
  * - Veri POST gövdesiyle gönderilir; URL'ye veya konsola yazılmaz.
  */
-
-const KAN_GRUBU_SECENEKLERI = [
-  { deger: "", etiket: "Belirtmek istemiyorum" },
-  { deger: "A_RH_POZITIF", etiket: "A Rh+" },
-  { deger: "A_RH_NEGATIF", etiket: "A Rh−" },
-  { deger: "B_RH_POZITIF", etiket: "B Rh+" },
-  { deger: "B_RH_NEGATIF", etiket: "B Rh−" },
-  { deger: "AB_RH_POZITIF", etiket: "AB Rh+" },
-  { deger: "AB_RH_NEGATIF", etiket: "AB Rh−" },
-  { deger: "SIFIR_RH_POZITIF", etiket: "0 Rh+" },
-  { deger: "SIFIR_RH_NEGATIF", etiket: "0 Rh−" },
-  { deger: "BILINMIYOR", etiket: "Bilinmiyor" },
-] as const;
 
 export type AcilDurumPaneliVerisi = {
   enabled: boolean;
@@ -59,7 +47,15 @@ type Props = {
 const KUTU =
   "mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white placeholder:text-white/30 focus:border-indigo-400 focus:outline-none";
 
-function Gorunurluk({ ad, varsayilan }: { ad: string; varsayilan: boolean }) {
+function Gorunurluk({
+  ad,
+  varsayilan,
+  etiketMetni,
+}: {
+  ad: string;
+  varsayilan: boolean;
+  etiketMetni: string;
+}) {
   return (
     <label className="mt-2 flex min-h-[44px] items-center gap-2 text-sm text-white/60">
       <input
@@ -68,7 +64,7 @@ function Gorunurluk({ ad, varsayilan }: { ad: string; varsayilan: boolean }) {
         defaultChecked={varsayilan}
         className="h-4 w-4 accent-indigo-500"
       />
-      QR sayfasında herkese göster
+      {etiketMetni}
     </label>
   );
 }
@@ -78,6 +74,21 @@ export default function AcilDurumPaneli({
   profil,
   kullanilabilir,
 }: Props) {
+  const ceviri = useSozluk();
+
+  const KAN_GRUBU_SECENEKLERI = [
+    { deger: "", etiket: ceviri.acilDurumPaneli.belirtmekIstemiyorum },
+    { deger: "A_RH_POZITIF", etiket: ceviri.acilDurumGorunum.kanGruplari.A_RH_POZITIF },
+    { deger: "A_RH_NEGATIF", etiket: ceviri.acilDurumGorunum.kanGruplari.A_RH_NEGATIF },
+    { deger: "B_RH_POZITIF", etiket: ceviri.acilDurumGorunum.kanGruplari.B_RH_POZITIF },
+    { deger: "B_RH_NEGATIF", etiket: ceviri.acilDurumGorunum.kanGruplari.B_RH_NEGATIF },
+    { deger: "AB_RH_POZITIF", etiket: ceviri.acilDurumGorunum.kanGruplari.AB_RH_POZITIF },
+    { deger: "AB_RH_NEGATIF", etiket: ceviri.acilDurumGorunum.kanGruplari.AB_RH_NEGATIF },
+    { deger: "SIFIR_RH_POZITIF", etiket: ceviri.acilDurumGorunum.kanGruplari.SIFIR_RH_POZITIF },
+    { deger: "SIFIR_RH_NEGATIF", etiket: ceviri.acilDurumGorunum.kanGruplari.SIFIR_RH_NEGATIF },
+    { deger: "BILINMIYOR", etiket: ceviri.acilDurumGorunum.kanGruplari.BILINMIYOR },
+  ] as const;
+
   const router = useRouter();
 
   const [calisiyor, setCalisiyor] = useState(false);
@@ -99,15 +110,15 @@ export default function AcilDurumPaneli({
       const sonuc = await yanit.json().catch(() => ({}));
 
       if (!yanit.ok) {
-        setHata(sonuc.error || "İşlem tamamlanamadı.");
+        setHata(sonuc.error || ceviri.ortak.genelHata);
 
         return;
       }
 
-      setBilgi(sonuc.message || "İşlem tamamlandı.");
+      setBilgi(sonuc.message || ceviri.acilDurumPaneli.islemTamamlandi);
       router.refresh();
     } catch {
-      setHata("Bağlantı kurulamadı. Lütfen tekrar deneyin.");
+      setHata(ceviri.ortak.baglantiHatasi);
     } finally {
       setCalisiyor(false);
     }
@@ -162,10 +173,10 @@ export default function AcilDurumPaneli({
   if (!kullanilabilir) {
     return (
       <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-        <h2 className="text-xl font-semibold">Acil Durum Profili</h2>
+        <h2 className="text-xl font-semibold">{ceviri.acilDurumPaneli.baslik}</h2>
 
         <p className="mt-2 text-sm leading-6 text-white/50">
-          Bu özellik şu anda kullanıma kapalı. Lütfen daha sonra tekrar deneyin.
+          {ceviri.acilDurumPaneli.kullanimaKapali}
         </p>
       </section>
     );
@@ -177,7 +188,7 @@ export default function AcilDurumPaneli({
   return (
     <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold">Acil Durum Profili</h2>
+        <h2 className="text-xl font-semibold">{ceviri.acilDurumPaneli.baslik}</h2>
 
         <span
           className={`rounded-full px-3 py-1 text-xs font-semibold ${
@@ -186,7 +197,7 @@ export default function AcilDurumPaneli({
               : "bg-white/10 text-white/50"
           }`}
         >
-          {profil?.enabled ? "Yayında" : "Yayında değil"}
+          {profil?.enabled ? ceviri.acilDurumPaneli.yayinda : ceviri.acilDurumPaneli.yayindaDegil}
         </span>
       </div>
 
@@ -199,15 +210,11 @@ export default function AcilDurumPaneli({
       </p>
 
       <p className="mt-3 text-sm leading-6 text-white/50">
-        <strong className="text-white/70">Önemli:</strong> Bilgileri her
-        güncellediğinde profil güvenlik gereği yayından kaldırılır. Yeni
-        bilgilerin paylaşılması için onayları tekrar vermen gerekir.
-      </p>
+        <strong className="text-white/70">{ceviri.kalanlar.onemli}</strong>{ceviri.acilDurumPaneli.kapsamUyarisi}</p>
 
       <div className="mt-4 rounded-xl border border-amber-500/25 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
-        <strong>TASLAK — HUKUKÇU İNCELEMESİ GEREKTİRİR.</strong> Aşağıdaki onay
-        metinleri henüz kesinleşmemiştir ve yalnızca test amaçlıdır.
-      </div>
+        <strong>{ceviri.acilDurumPaneli.taslakUyarisi}</strong>{" "}
+        {ceviri.acilDurumPaneli.taslakMetin}</div>
 
       {hata && (
         <p className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
@@ -224,24 +231,25 @@ export default function AcilDurumPaneli({
       <form onSubmit={kaydet} className="mt-6 space-y-6">
         <div>
           <label className="text-sm font-medium text-white/70">
-            Gösterilecek ad
+            {ceviri.acilDurumPaneli.gosterilecekAd}
             <input
               name="displayName"
               maxLength={80}
               defaultValue={profil?.displayName ?? ""}
-              placeholder="Örn. A. Yılmaz"
+              placeholder={ceviri.acilDurumPaneli.gosterilecekAdOrnek}
               className={KUTU}
             />
           </label>
           <Gorunurluk
             ad="displayNameGorunur"
             varsayilan={profil?.displayNameGorunur ?? false}
+          etiketMetni={ceviri.acilDurumPaneli.gorunurlukEtiketi}
           />
         </div>
 
         <div>
           <label className="text-sm font-medium text-white/70">
-            Beyan ettiğin kan grubu
+            {ceviri.acilDurumPaneli.kanGrubu}
             <select
               name="bloodType"
               defaultValue={profil?.bloodType ?? ""}
@@ -261,13 +269,12 @@ export default function AcilDurumPaneli({
           <Gorunurluk
             ad="bloodTypeGorunur"
             varsayilan={profil?.bloodTypeGorunur ?? false}
+          etiketMetni={ceviri.acilDurumPaneli.gorunurlukEtiketi}
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium text-white/70">
-            Alerjiler
-            <textarea
+          <label className="text-sm font-medium text-white/70">{ceviri.acilDurumPaneli.alerjiler}<textarea
               name="allergies"
               rows={2}
               maxLength={500}
@@ -278,12 +285,13 @@ export default function AcilDurumPaneli({
           <Gorunurluk
             ad="allergiesGorunur"
             varsayilan={profil?.allergiesGorunur ?? false}
+          etiketMetni={ceviri.acilDurumPaneli.gorunurlukEtiketi}
           />
         </div>
 
         <div>
           <label className="text-sm font-medium text-white/70">
-            Kullandığın ilaçlar
+            {ceviri.acilDurumPaneli.ilaclar}
             <textarea
               name="medications"
               rows={2}
@@ -295,12 +303,13 @@ export default function AcilDurumPaneli({
           <Gorunurluk
             ad="medicationsGorunur"
             varsayilan={profil?.medicationsGorunur ?? false}
+          etiketMetni={ceviri.acilDurumPaneli.gorunurlukEtiketi}
           />
         </div>
 
         <div>
           <label className="text-sm font-medium text-white/70">
-            Önemli sağlık durumları
+            {ceviri.acilDurumPaneli.saglikDurumlari}
             <textarea
               name="medicalConditions"
               rows={2}
@@ -312,12 +321,13 @@ export default function AcilDurumPaneli({
           <Gorunurluk
             ad="medicalConditionsGorunur"
             varsayilan={profil?.medicalConditionsGorunur ?? false}
+          etiketMetni={ceviri.acilDurumPaneli.gorunurlukEtiketi}
           />
         </div>
 
         <div>
           <label className="text-sm font-medium text-white/70">
-            Acil durum notu
+            {ceviri.acilDurumPaneli.acilNot}
             <textarea
               name="emergencyNote"
               rows={3}
@@ -329,12 +339,13 @@ export default function AcilDurumPaneli({
           <Gorunurluk
             ad="emergencyNoteGorunur"
             varsayilan={profil?.emergencyNoteGorunur ?? false}
+          etiketMetni={ceviri.acilDurumPaneli.gorunurlukEtiketi}
           />
         </div>
 
         <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
           <h3 className="text-sm font-semibold text-white/80">
-            Acil durumda aranacak kişiler (en fazla 2)
+            {ceviri.acilDurumPaneli.kisiler}
           </h3>
 
           {[
@@ -353,7 +364,7 @@ export default function AcilDurumPaneli({
                 name={`kisi${sira}Yakinlik`}
                 maxLength={60}
                 defaultValue={veri?.relationship ?? ""}
-                placeholder="Yakınlık"
+                placeholder={ceviri.acilDurumPaneli.yakinlik}
                 className={KUTU}
               />
               <input
@@ -361,7 +372,7 @@ export default function AcilDurumPaneli({
                 type="tel"
                 inputMode="tel"
                 defaultValue={veri?.phone ?? ""}
-                placeholder="Telefon"
+                placeholder={ceviri.acilDurumPaneli.telefon}
                 className={KUTU}
               />
             </div>
@@ -370,6 +381,7 @@ export default function AcilDurumPaneli({
           <Gorunurluk
             ad="contactsGorunur"
             varsayilan={profil?.contactsGorunur ?? false}
+          etiketMetni={ceviri.acilDurumPaneli.gorunurlukEtiketi}
           />
         </div>
 
@@ -378,7 +390,7 @@ export default function AcilDurumPaneli({
           disabled={calisiyor}
           className="inline-flex min-h-[44px] items-center rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-50"
         >
-          {calisiyor ? "Kaydediliyor…" : "Bilgileri Kaydet"}
+          {calisiyor ? ceviri.acilDurumPaneli.kaydediliyor : ceviri.acilDurumPaneli.kaydet}
         </button>
       </form>
 
@@ -388,7 +400,7 @@ export default function AcilDurumPaneli({
           className="mt-8 space-y-3 border-t border-white/10 pt-6"
         >
           <h3 className="text-sm font-semibold text-white/80">
-            Yayına alma onayları
+            {ceviri.acilDurumPaneli.onaylarBaslik}
           </h3>
 
           <label className="flex items-start gap-3 text-sm leading-6 text-white/60">
@@ -399,12 +411,9 @@ export default function AcilDurumPaneli({
             />
             <span>
               <strong className="text-white/80">
-                TASLAK — HUKUKÇU İNCELEMESİ GEREKTİRİR:
+                {ceviri.acilDurumPaneli.taslakUyarisi}
               </strong>{" "}
-              İşaretlediğim sağlık bilgilerimin, QR kodumu okutan herkese açık
-              biçimde gösterilmesine açık rıza veriyorum. Bu bilgilerin kendi
-              beyanım olduğunu, doğrulanmış tıbbi kayıt olmadığını ve rızamı
-              istediğim an geri çekebileceğimi biliyorum.
+              {ceviri.acilDurumPaneli.onay1}
             </span>
           </label>
 
@@ -416,10 +425,9 @@ export default function AcilDurumPaneli({
             />
             <span>
               <strong className="text-white/80">
-                TASLAK — HUKUKÇU İNCELEMESİ GEREKTİRİR:
+                {ceviri.acilDurumPaneli.taslakUyarisi}
               </strong>{" "}
-              Eklediğim acil durum kişilerini bilgilendirdiğimi ve iletişim
-              bilgilerinin paylaşılması için onaylarını aldığımı beyan ederim.
+              {ceviri.acilDurumPaneli.onay2}
             </span>
           </label>
 
@@ -428,15 +436,13 @@ export default function AcilDurumPaneli({
             disabled={calisiyor}
             className="inline-flex min-h-[44px] items-center rounded-xl bg-emerald-600 px-5 py-3 font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50"
           >
-            Profili Yayına Al
+            {ceviri.acilDurumPaneli.yayinaAl}
           </button>
         </form>
       ) : (
         <div className="mt-8 border-t border-white/10 pt-6">
           <p className="text-sm leading-6 text-white/50">
-            Profil yayında. Rızanı geri çektiğinde bilgiler QR sayfasında anında
-            görünmez olur; yeniden yayına almak için onayları tekrar vermen
-            gerekir.
+            {ceviri.acilDurumPaneli.yayindaMetin}
           </p>
 
           <button
@@ -445,7 +451,7 @@ export default function AcilDurumPaneli({
             onClick={() => istekGonder({ islem: "rizayi-geri-cek" })}
             className="mt-4 inline-flex min-h-[44px] items-center rounded-xl border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white transition hover:bg-white/10 disabled:opacity-50"
           >
-            Rızayı Geri Çek ve Yayından Kaldır
+            {ceviri.acilDurumPaneli.rizayiGeriCek}
           </button>
         </div>
       )}
@@ -457,7 +463,7 @@ export default function AcilDurumPaneli({
           onClick={() => {
             if (
               window.confirm(
-                "Acil durum profili ve içindeki tüm bilgiler kalıcı olarak silinecek. Devam edilsin mi?"
+                ceviri.acilDurumPaneli.silmeOnayi
               )
             ) {
               void istekGonder({ islem: "sil" });
@@ -465,7 +471,7 @@ export default function AcilDurumPaneli({
           }}
           className="mt-4 inline-flex min-h-[44px] items-center rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-3 text-sm font-semibold text-red-200 transition hover:bg-red-500/20 disabled:opacity-50"
         >
-          Profili Kalıcı Olarak Sil
+          {ceviri.acilDurumPaneli.kaliciSil}
         </button>
       )}
     </section>

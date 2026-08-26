@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { useSozluk } from "@/lib/i18n/istemci";
 
 const MIN_SIFRE_UZUNLUGU = 8;
 
 export default function ResetPasswordForm() {
+  const s = useSozluk();
+
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
 
@@ -24,7 +27,7 @@ export default function ResetPasswordForm() {
     const passwordRepeat = String(formData.get("passwordRepeat") || "");
 
     if (password !== passwordRepeat) {
-      setError("Şifreler eşleşmiyor.");
+      setError(s.kimlik.sifrelerEslesmiyor);
       setIsSubmitting(false);
       return;
     }
@@ -39,13 +42,13 @@ export default function ResetPasswordForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "İşlem tamamlanamadı.");
+        setError(data.error || s.ortak.genelHata);
         return;
       }
 
       setBasariMesaji(data.message);
     } catch {
-      setError("Bağlantı kurulamadı. Lütfen tekrar deneyin.");
+      setError(s.ortak.baglantiHatasi);
     } finally {
       setIsSubmitting(false);
     }
@@ -57,13 +60,13 @@ export default function ResetPasswordForm() {
         role="alert"
         className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-4 text-sm leading-6 text-amber-200"
       >
-        <p>Bu bağlantı geçersiz görünüyor.</p>
+        <p>{s.kimlik.baglantiGecersiz}</p>
 
         <Link
           href="/forgot-password"
           className="mt-3 inline-block font-medium text-amber-100 underline"
         >
-          Yeni sıfırlama bağlantısı iste
+          {s.kimlik.yeniBaglantiIste}
         </Link>
       </div>
     );
@@ -81,7 +84,7 @@ export default function ResetPasswordForm() {
           href="/login"
           className="mt-3 inline-block font-medium text-green-100 underline"
         >
-          Giriş yap
+          {s.kimlik.girisYap}
         </Link>
       </div>
     );
@@ -94,7 +97,7 @@ export default function ResetPasswordForm() {
           htmlFor="password"
           className="mb-2 block text-sm font-medium text-white/80"
         >
-          Yeni Şifre
+          {s.kimlik.yeniSifre}
         </label>
 
         <input
@@ -110,7 +113,10 @@ export default function ResetPasswordForm() {
         />
 
         <p id="password-yardim" className="mt-2 text-xs text-white/40">
-          Şifreniz en az {MIN_SIFRE_UZUNLUGU} karakter olmalıdır.
+          {s.kalanlar.sifreEnAzKarakter.replace(
+            "{n}",
+            String(MIN_SIFRE_UZUNLUGU)
+          )}
         </p>
       </div>
 
@@ -119,7 +125,7 @@ export default function ResetPasswordForm() {
           htmlFor="passwordRepeat"
           className="mb-2 block text-sm font-medium text-white/80"
         >
-          Yeni Şifre (Tekrar)
+          {s.kimlik.yeniSifreTekrar}
         </label>
 
         <input
@@ -130,7 +136,7 @@ export default function ResetPasswordForm() {
           minLength={MIN_SIFRE_UZUNLUGU}
           autoComplete="new-password"
           className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-indigo-500"
-          placeholder="Şifrenizi tekrar girin"
+          placeholder={s.kimlik.sifreTekrarOrnek}
         />
       </div>
 
@@ -148,7 +154,7 @@ export default function ResetPasswordForm() {
         disabled={isSubmitting}
         className="w-full rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isSubmitting ? "Kaydediliyor..." : "Şifremi Güncelle"}
+        {isSubmitting ? "Kaydediliyor..." : s.kimlik.sifreGuncelle}
       </button>
     </form>
   );
