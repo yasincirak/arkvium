@@ -36,16 +36,26 @@ type Dugme = { metin: string; href: string; tur: "birincil" | "ikincil" };
 type Slayt = {
   kod: string;
   etiket: string;
-  baslik: string;
-  metin: string;
-  gorsel: GorselAnahtari;
+  /**
+   * Açılış slaytı: yalnızca ARKVIUM logosunu gösterir.
+   * Başlık, açıklama, düğme veya ek metin TAŞIMAZ.
+   */
+  markaSlayti?: true;
+  baslik?: string;
+  metin?: string;
+  gorsel?: GorselAnahtari;
   bilgiEtiketleri?: string[];
-  dugmeler: Dugme[];
+  dugmeler?: Dugme[];
   /** Sağlık verisi taşıyan slaytta zorunlu hukuki açıklama. */
   beyanUyarisi?: string;
 };
 
 const SLAYTLAR: Slayt[] = [
+  {
+    kod: "marka",
+    etiket: "ARKVIUM",
+    markaSlayti: true,
+  },
   {
     kod: "acil-durum",
     etiket: "Acil Durum Profili",
@@ -123,6 +133,9 @@ const SLAYTLAR: Slayt[] = [
     ],
   },
 ];
+
+/** `h1` ve öncelikli görsel, marka slaytından sonraki ilk içerik slaytındadır. */
+const ANA_BASLIK_SIRASI = SLAYTLAR.findIndex((slayt) => !slayt.markaSlayti);
 
 const GECIS_SURESI = 6000;
 const KAYDIRMA_ESIGI = 48;
@@ -217,23 +230,6 @@ export default function HeroKaydirici() {
       />
 
       <div className="relative mx-auto max-w-6xl px-6 pb-8 pt-10 sm:px-8 sm:pb-10 sm:pt-12 lg:pt-14">
-        {/*
-          Marka kilidi — resmî tam logo (amblem + ARKVIUM + alt slogan).
-
-          Logo siyah-beyaz bir dosyadır; lacivert zeminde kaybolmaması için
-          BEYAZ bir kutunun içinde durur. Dosya, biçim, oranlar ve renkler
-          DEĞİŞTİRİLMEZ — logo yalnızca kendi zeminine oturtulur. Renk
-          filtresi veya yeniden çizim UYGULANMAZ.
-
-          Kaydırıcının üstünde bir kez bulunur; her slaytta tekrarlanmaz.
-        */}
-        <div className="mb-12 flex justify-center rounded-3xl bg-white px-6 py-10 shadow-ark-3 sm:mb-14 sm:px-10 sm:py-14">
-          <ArkviumTamLogo
-            genislik={640}
-            className="h-auto w-[220px] sm:w-[320px] lg:w-[400px]"
-          />
-        </div>
-
         <div className="overflow-hidden">
           <div
             className="flex transition-transform duration-500 ease-out"
@@ -248,6 +244,33 @@ export default function HeroKaydirici() {
                   aria-hidden={gizli}
                   className="w-full shrink-0"
                 >
+                  {slayt.markaSlayti ? (
+                    /*
+                      Açılış slaytı — resmî tam logo.
+
+                      Logo siyah-beyaz bir dosyadır; okunabilirliği için
+                      BEYAZ zemin üzerinde durur. Dosya, biçim, oran ve
+                      renkler DEĞİŞTİRİLMEZ; kırpma, filtre veya yeniden
+                      çizim uygulanmaz — yalnızca ölçeklenir.
+
+                      Slayt, kardeşleriyle aynı esnek satırdadır; `h-full`
+                      ile aynı yüksekliği alır ve logo dikeyde ortalanır.
+                    */
+                    <div className="h-full">
+                      {/*
+                        Beyaz panel slaydın TAMAMINI kaplar (`h-full`).
+                        Aksi hâlde panel, en uzun slaytın yüksekliğine göre
+                        ortalanıp üstünde ve altında büyük boş lacivert alan
+                        bırakıyordu — özellikle mobilde.
+                      */}
+                      <div className="flex h-full w-full items-center justify-center rounded-3xl bg-white px-6 py-14 shadow-ark-3 sm:px-10">
+                        <ArkviumTamLogo
+                          genislik={640}
+                          className="h-auto w-[210px] sm:w-[300px] lg:w-[380px]"
+                        />
+                      </div>
+                    </div>
+                  ) : (
                   <div className="grid items-center gap-10 lg:grid-cols-12 lg:gap-12">
                     {/*
                       Metin KAYNAK sırasında önce gelir (ekran okuyucu ve
@@ -261,7 +284,7 @@ export default function HeroKaydirici() {
                         {slayt.etiket}
                       </p>
 
-                      {sira === 0 ? (
+                      {sira === ANA_BASLIK_SIRASI ? (
                         <h1
                           id="hero-basligi"
                           className="ark-display mt-4 text-balance text-ark-on-dark"
@@ -292,7 +315,7 @@ export default function HeroKaydirici() {
                       )}
 
                       <div className="mt-8 flex flex-wrap gap-3">
-                        {slayt.dugmeler.map((dugme) => (
+                        {slayt.dugmeler?.map((dugme) => (
                           <Link
                             key={dugme.href}
                             href={dugme.href}
@@ -331,14 +354,15 @@ export default function HeroKaydirici() {
                       */}
                       <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-ark-line-dark shadow-ark-3 sm:aspect-[5/4]">
                         <Gorsel
-                          anahtar={slayt.gorsel}
-                          oncelikli={sira === 0}
+                          anahtar={slayt.gorsel!}
+                          oncelikli={sira === ANA_BASLIK_SIRASI}
                           sizes="(min-width: 1024px) 560px, 92vw"
                         />
                         <TemsiliRozet />
                       </div>
                     </div>
                   </div>
+                  )}
                 </div>
               );
             })}
