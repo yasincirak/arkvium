@@ -162,7 +162,6 @@ export default function Home() {
           slaydiGoster: s.hero.slaydiGoster,
           temsiliGorsel: s.gorsel.temsili,
           slaytlar: [
-            { kod: "marka", etiket: s.hero.marka.etiket, markaSlayti: true },
             {
               kod: "acil-durum",
               ...s.hero.acilDurum,
