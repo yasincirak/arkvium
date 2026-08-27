@@ -950,6 +950,12 @@ export const TR = {
     tumUrunler: "Tüm Ürünler",
   },
 
+  whatsapp: {
+    mesaj:
+      "Merhaba, ARKVIUM ürünleri ve QR aktivasyonu hakkında destek almak istiyorum.",
+    erisilebilirAd: "WhatsApp üzerinden ARKVIUM desteğine ulaş",
+  },
+
   seo: {
     anaBaslik: "ARKVIUM — Dijital Sahiplik Platformu",
     anaAciklama:

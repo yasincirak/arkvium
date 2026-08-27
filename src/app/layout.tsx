@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { aktifDil } from "@/lib/i18n";
+import WhatsAppDestekButonu from "@/components/WhatsAppDestekButonu";
 import { DilSaglayici } from "@/lib/i18n/istemci";
 import { CANLI_ADRES, PAYLASIM_GORSELI } from "@/lib/seo";
 
@@ -60,7 +61,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <DilSaglayici dil={dil}>{children}</DilSaglayici>
+        <DilSaglayici dil={dil}>
+          {children}
+
+          {/*
+            Ortak layout'a BİR KEZ eklenir; sayfalara tek tek kopyalanmaz.
+            Yönetim paneli bileşenin kendi içinde rota ile dışlanır.
+          */}
+          <WhatsAppDestekButonu />
+        </DilSaglayici>
       </body>
     </html>
   );

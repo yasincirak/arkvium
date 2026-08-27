@@ -932,6 +932,12 @@ export const EN: DerinKismi<Sozluk> = {
     tumUrunler: "All Products",
   },
 
+  whatsapp: {
+    mesaj:
+      "Hello, I would like support regarding ARKVIUM products and QR activation.",
+    erisilebilirAd: "Contact ARKVIUM support via WhatsApp",
+  },
+
   seo: {
     anaBaslik: "ARKVIUM — Digital Ownership Platform",
     anaAciklama:
