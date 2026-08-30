@@ -4,25 +4,7 @@ import Link from "next/link";
 import SayfaUstBari from "@/components/SayfaUstBari";
 import { FormEvent, useState } from "react";
 import { useSozluk } from "@/lib/i18n/istemci";
-
-/**
- * Giriş sonrası dönülecek adres.
- *
- * Yalnızca uygulama içi, `/` ile başlayan göreli yollar kabul edilir.
- * `//host`, `/\host`, `http://...` gibi değerler açık yönlendirme (open
- * redirect) açığına yol açacağı için reddedilir ve `/account` kullanılır.
- */
-function guvenliDonusAdresi(deger: string | null): string {
-  if (!deger || !deger.startsWith("/")) {
-    return "/account";
-  }
-
-  if (deger.startsWith("//") || deger.startsWith("/\\")) {
-    return "/account";
-  }
-
-  return deger;
-}
+import { guvenliDonusAdresi } from "@/lib/guvenli-yonlendirme";
 
 export default function LoginPage() {
   const s = useSozluk();
@@ -56,9 +38,16 @@ export default function LoginPage() {
       return;
     }
 
-    const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+    /*
+      Giriş sonrası dönülecek adres. `next` yeni ad; `returnTo` eski
+      bağlantılar için korunuyor. Değer `guvenliDonusAdresi` ile
+      doğrulanır — açık yönlendirme açığına kapalıdır.
+    */
+    const parametreler = new URLSearchParams(window.location.search);
 
-    window.location.href = guvenliDonusAdresi(returnTo);
+    const hedef = parametreler.get("next") ?? parametreler.get("returnTo");
+
+    window.location.href = guvenliDonusAdresi(hedef);
   }
 
   return (

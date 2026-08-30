@@ -7,6 +7,7 @@ import {
   testVeritabaniAdresi,
   testVeritabaniIstemcisi,
   veritabaniniTemizle,
+  yoneticiOturumuKur,
 } from "../helpers/test-ortami.mts";
 import { cerezAyarla, cerezleriTemizle } from "../helpers/next-taklit.mjs";
 
@@ -24,16 +25,12 @@ const testVeritabani = testVeritabaniAdresi();
 process.env.DATABASE_URL = testVeritabani;
 process.env.DIRECT_URL = testVeritabani;
 process.env.USER_SESSION_SECRET = "test-kullanici-anahtari-" + "u".repeat(32);
-process.env.ADMIN_SESSION_SECRET = "test-admin-anahtari-" + "a".repeat(32);
 process.env.EPOSTA_GONDERIMI_KAPALI = "1";
 
 const { prisma } = await import("../../src/lib/prisma.ts");
-const {
-  createUserSessionToken,
-  createAdminSessionToken,
-  USER_SESSION_COOKIE,
-  ADMIN_SESSION_COOKIE,
-} = await import("../../src/lib/auth.ts");
+const { createUserSessionToken, USER_SESSION_COOKIE } = await import(
+  "../../src/lib/auth.ts"
+);
 
 const { createRecord, editRecord } = await import("../../src/lib/actions.ts");
 
@@ -72,10 +69,7 @@ async function oturumAc(kullanici: {
 }
 
 async function yoneticiOturumuAc() {
-  cerezAyarla(
-    ADMIN_SESSION_COOKIE,
-    await createAdminSessionToken({ email: "admin@test.invalid" })
-  );
+  await yoneticiOturumuKur({ prisma, cerezAyarla });
 }
 
 async function urunOlustur(kullaniciId: string | null) {

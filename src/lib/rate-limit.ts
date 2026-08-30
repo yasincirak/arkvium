@@ -33,9 +33,7 @@ type HizSinirAyari = {
 
 function ozetle(kapsam: string, tanimlayici: string): string {
   const anahtar =
-    process.env.USER_SESSION_SECRET ??
-    process.env.ADMIN_SESSION_SECRET ??
-    "arkvium-rate-limit";
+    process.env.USER_SESSION_SECRET ?? "arkvium-rate-limit";
 
   const ozet = createHmac("sha256", anahtar)
     .update(`${kapsam}:${tanimlayici.toLowerCase()}`)

@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Sidebar from "@/components/admin/Sidebar";
 import { GIZLI_SAYFA_ROBOTS } from "@/lib/seo";
 import Topbar from "@/components/admin/Topbar";
-import { yoneticiErisimi } from "@/lib/session";
-import { YOL_BASLIGI } from "@/lib/yol-basligi";
+import { getUserSession } from "@/lib/session";
+import { girisAdresi } from "@/lib/guvenli-yonlendirme";
 
 export const metadata: Metadata = {
   title: "ARKVIUM | Yönetim Paneli",
@@ -19,34 +18,34 @@ export const metadata: Metadata = {
  *
  * Middleware yalnızca "geçerli imzalı oturum var mı" kontrolü yapabilir;
  * edge runtime veritabanına erişemez. Asıl karar burada verilir ve rol her
- * istekte veritabanından okunur (bkz. yoneticiErisimi).
+ * istekte veritabanından okunur.
  *
- * Yetkisiz istek, alt sayfalar render edilmeden yönlendirme yanıtı alır;
- * yönetim verisi istemciye hiç gönderilmez.
+ * Yetkisiz kullanıcıya alt sayfalar RENDER EDİLMEZ: `children` yalnızca
+ * rolü ADMIN olan kullanıcı için ağaca girer, bu yüzden yönetim verisi
+ * istemciye hiç gönderilmez.
  */
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const istekBasliklari = await headers();
-  const yol = istekBasliklari.get(YOL_BASLIGI);
+  const oturum = await getUserSession();
 
-  // Giriş sayfası kapının dışındadır; aksi hâlde yönlendirme döngüsü olur.
-  if (yol === "/admin/login") {
-    return <>{children}</>;
+  if (!oturum) {
+    // Middleware normalde buraya gelmeden yönlendirir; bu ikinci kapı.
+    redirect(girisAdresi("/admin"));
   }
 
-  const erisim = await yoneticiErisimi();
-
-  if (!erisim) {
+  if (oturum.role !== "ADMIN") {
     /*
-      Buraya ancak middleware geçerli bir oturum doğruladıktan sonra
-      gelinir; yani kullanıcı giriş yapmış ama rolü ADMIN değil. Onu kendi
-      hesabına gönderiyoruz. Başlık yoksa middleware çalışmamış demektir —
-      o durumda güvenli taraf yönetici girişidir.
+      DİKKAT: burada JSX DÖNDÜRÜLMEZ.
+
+      Next.js layout ile page'i paralel render eder; layout'tan farklı bir
+      ekran döndürmek alt sayfanın render edilmesini engellemez ve sayfanın
+      çıktısı RSC yüküyle istemciye gider (ölçüldü: stok tablosu sızıyordu).
+      `redirect()` render'ı iptal eder, istemciye yalnızca yönlendirme gider.
     */
-    redirect(yol ? "/account" : "/admin/login");
+    redirect("/yetkisiz");
   }
 
   return (

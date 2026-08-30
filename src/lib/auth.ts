@@ -1,7 +1,15 @@
 import { SignJWT, jwtVerify } from "jose";
 
 export const USER_SESSION_COOKIE = "arkvium_user_session";
-export const ADMIN_SESSION_COOKIE = "arkvium_admin_session";
+
+/**
+ * KALDIRILMIŞ ayrı yönetici çerezi.
+ *
+ * Yetkilendirmenin tek kaynağı artık kullanıcı hesabı ve `User.role`.
+ * Bu ad yalnızca eski tarayıcılarda kalmış çerezi TEMİZLEMEK için duruyor;
+ * hiçbir yerde doğrulanmaz ve hiçbir yetki vermez.
+ */
+export const ESKI_ADMIN_COOKIE = "arkvium_admin_session";
 
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
@@ -12,7 +20,7 @@ const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
  * göründüğü için üretimde herkesin geçerli oturum tokenı üretmesine izin verir.
  * Anahtar eksikse uygulama sessizce güvensiz çalışmak yerine hata vermelidir.
  */
-function getSecret(name: "ADMIN_SESSION_SECRET" | "USER_SESSION_SECRET") {
+function getSecret(name: "USER_SESSION_SECRET") {
   const value = process.env[name];
 
   if (!value || value.length < 32) {
@@ -23,10 +31,6 @@ function getSecret(name: "ADMIN_SESSION_SECRET" | "USER_SESSION_SECRET") {
 
   return new TextEncoder().encode(value);
 }
-
-export type AdminSessionPayload = {
-  email: string;
-};
 
 export type UserSessionPayload = {
   userId: string;
@@ -45,38 +49,6 @@ export const sessionCookieOptions = {
   path: "/",
   maxAge: SESSION_MAX_AGE_SECONDS,
 } as const;
-
-export async function createAdminSessionToken(
-  payload: AdminSessionPayload
-): Promise<string> {
-  return new SignJWT({ ...payload, type: "admin" })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("7d")
-    .sign(getSecret("ADMIN_SESSION_SECRET"));
-}
-
-export async function verifyAdminSessionToken(
-  token: string
-): Promise<AdminSessionPayload | null> {
-  try {
-    const { payload } = await jwtVerify(
-      token,
-      getSecret("ADMIN_SESSION_SECRET")
-    );
-
-    // type claim'i kullanıcı tokenının admin olarak kabul edilmesini engeller.
-    if (payload.type !== "admin" || typeof payload.email !== "string") {
-      return null;
-    }
-
-    return {
-      email: payload.email,
-    };
-  } catch {
-    return null;
-  }
-}
 
 export async function createUserSessionToken(
   payload: UserSessionPayload

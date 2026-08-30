@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import BaskiKontrolListesi from "@/components/admin/BaskiKontrolListesi";
 import TagGenerator from "@/components/admin/TagGenerator";
 import TagStokOzeti from "@/components/admin/TagStokOzeti";
 import { SIPARIS_URUNLERI } from "@/lib/siparis";
@@ -29,6 +30,8 @@ export default function AdminTagsPage() {
       >
         <TagStokOzeti />
       </Suspense>
+
+      <BaskiKontrolListesi />
 
       <TagGenerator
         urunler={SIPARIS_URUNLERI.map((urun) => ({

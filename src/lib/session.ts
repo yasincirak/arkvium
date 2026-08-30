@@ -2,11 +2,8 @@ import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 import type { UserRole } from "@/generated/prisma/enums";
 import {
-  ADMIN_SESSION_COOKIE,
   USER_SESSION_COOKIE,
-  verifyAdminSessionToken,
   verifyUserSessionToken,
-  type AdminSessionPayload,
   type UserSessionPayload,
 } from "./auth";
 
@@ -66,17 +63,6 @@ export async function getUserSession(): Promise<AktifOturum | null> {
   }
 }
 
-export async function getAdminSession(): Promise<AdminSessionPayload | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
-
-  if (!token) {
-    return null;
-  }
-
-  return verifyAdminSessionToken(token);
-}
-
 /**
  * Oturum zorunlu olan yerlerde kullanılır. Oturum yoksa işlemi durdurur.
  * Hata mesajı kasıtlı olarak sistem detayı içermez.
@@ -91,56 +77,38 @@ export async function requireUserSession(): Promise<AktifOturum> {
   return session;
 }
 
-export async function requireAdminSession(): Promise<AdminSessionPayload> {
-  const session = await getAdminSession();
-
-  if (!session) {
-    throw new Error("Bu işlem için yönetici girişi gerekiyor.");
-  }
-
-  return session;
-}
 
 /**
- * Yönetici erişimi.
+ * Yönetici erişimi — TEK KAYNAK.
  *
- * İKİ KAYNAK kabul edilir:
- *  - "rol": müşteri oturumuyla giriş yapmış ve VERİTABANINDAKİ rolü ADMIN
- *    olan kullanıcı. Rol her istekte yeniden okunur.
- *  - "eski-admin-cerezi": ayrı /admin/login akışıyla alınan yönetici çerezi.
- *    Geçiş dönemi için yedek yöntem olarak korunuyor.
+ * Yetki yalnızca kullanıcı oturumundan ve VERİTABANINDAKİ `User.role`
+ * alanından gelir. Ayrı yönetici çerezi, ayrı yönetici şifresi ve
+ * e-posta karşılaştırması YOKTUR.
  *
- * E-posta adresi karşılaştırarak yetki VERİLMEZ; rol kaynağında karar
- * tamamen User.role alanına aittir.
+ * Rol her çağrıda veritabanından okunur (bkz. getUserSession): oturum
+ * tokenına yazılsaydı, yetki geri alındığında token süresi dolana kadar
+ * eski yetki sürerdi.
  */
 export type YoneticiErisimi = {
-  kaynak: "rol" | "eski-admin-cerezi";
+  userId: string;
   email: string;
-  /** Rol tabanlı erişimde kullanıcı kimliği; eski çerezde null. */
-  userId: string | null;
 };
 
 export async function yoneticiErisimi(): Promise<YoneticiErisimi | null> {
   const oturum = await getUserSession();
 
-  if (oturum && oturum.role === "ADMIN") {
-    return { kaynak: "rol", email: oturum.email, userId: oturum.userId };
+  if (!oturum || oturum.role !== "ADMIN") {
+    return null;
   }
 
-  const eski = await getAdminSession();
-
-  if (eski) {
-    return { kaynak: "eski-admin-cerezi", email: eski.email, userId: null };
-  }
-
-  return null;
+  return { userId: oturum.userId, email: oturum.email };
 }
 
 export async function requireYoneticiErisimi(): Promise<YoneticiErisimi> {
   const erisim = await yoneticiErisimi();
 
   if (!erisim) {
-    throw new Error("Bu işlem için yönetici girişi gerekiyor.");
+    throw new Error("Bu işlem için yönetici yetkisi gerekiyor.");
   }
 
   return erisim;

@@ -28,7 +28,6 @@ let sonSelect: any = null;
 
 before(() => {
   process.env.USER_SESSION_SECRET = KULLANICI_GIZLI;
-  process.env.ADMIN_SESSION_SECRET = "b".repeat(48);
 
   mock.module(pathToFileURL(resolve("src/lib/prisma.ts")).href, {
     exports: {
@@ -124,8 +123,8 @@ describe("yoneticiErisimi", () => {
 
     const erisim = await yoneticiErisimi();
 
-    assert.equal(erisim?.kaynak, "rol");
     assert.equal(erisim?.userId, "k3");
+    assert.equal(erisim?.email, "c@ornek.test");
   });
 
   test("oturum sürümü eskiyse rol ADMIN olsa bile yetki verilmez", async () => {
@@ -139,6 +138,16 @@ describe("yoneticiErisimi", () => {
         sessionVersion: 0,
       }),
     };
+
+    assert.equal(await yoneticiErisimi(), null);
+  });
+
+  test("eski yönetici çerezi artık yetki vermez", async () => {
+    const { yoneticiErisimi } = await oturumModulu();
+
+    veritabaniKullanicisi = null;
+    // Eski akışta bu çerez tek başına yönetici yetkisi veriyordu.
+    cerezler = { arkvium_admin_session: "eski-gecerli-gorunumlu-token" };
 
     assert.equal(await yoneticiErisimi(), null);
   });

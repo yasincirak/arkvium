@@ -126,15 +126,9 @@ export async function testSunucusuBaslat(): Promise<TestSunucusu> {
         DATABASE_URL: veritabani,
         DIRECT_URL: veritabani,
         USER_SESSION_SECRET: "test-kullanici-anahtari-" + "u".repeat(32),
-        ADMIN_SESSION_SECRET: "test-admin-anahtari-" + "a".repeat(32),
-        ADMIN_EMAIL: "admin@test.invalid",
         // "TestAdminSifresi123" değerinin bcrypt hash'i, base64 kodlu
         // (yalnızca test amaçlı). Ham hash kullanılamaz: "$" içerdiği için
         // Next.js env yükleyicisi değeri bozar.
-        ADMIN_PASSWORD_HASH_B64: Buffer.from(
-          "$2b$10$M.B268i.ITJ5.oLJoy3LvOupTTPBdtm7jOCKszCD6mCHzMP7ezCB2",
-          "utf8"
-        ).toString("base64"),
         NEXT_PUBLIC_APP_URL: `http://localhost:${port}`,
         // Gerçek e-posta gönderimini kesin olarak kapatır.
         // Boş string yeterli değildir: Next.js .env dosyalarını yükleyip
@@ -203,4 +197,53 @@ export function oturumCerezi(yanit: Response, ad: string): string | null {
 /** Her isteğin farklı IP'den geldiğini varsaymak için; hız sınırı testleri hariç. */
 export function rastgeleIp(): string {
   return `198.51.100.${1 + Math.floor(Math.random() * 250)}`;
+}
+
+/**
+ * Testler için gerçek bir YÖNETİCİ oturumu kurar.
+ *
+ * Ayrı yönetici çerezi kaldırıldı: yetkinin tek kaynağı kullanıcı hesabı ve
+ * veritabanındaki `User.role`. Bu yüzden test de gerçek bir kullanıcı satırı
+ * oluşturur, rolünü ADMIN yapar ve gerçek imzalı KULLANICI oturum tokenını
+ * çereze koyar. Oturum taklit edilmez; imza ve rol denetimi olduğu gibi çalışır.
+ *
+ * `prisma` ve `cerezAyarla` çağıran testten geçirilir; bu yardımcı dosya
+ * uygulama modüllerini kendisi yüklemez (test sırası bozulmasın).
+ */
+export async function yoneticiOturumuKur(bagimliliklar: {
+  prisma: any;
+  cerezAyarla: (ad: string, deger: string) => void;
+  eposta?: string;
+  rol?: "ADMIN" | "CUSTOMER";
+}): Promise<{ userId: string; email: string }> {
+  const { prisma, cerezAyarla } = bagimliliklar;
+  const eposta = bagimliliklar.eposta ?? "yonetici@test.invalid";
+  const rol = bagimliliklar.rol ?? "ADMIN";
+
+  const { createUserSessionToken, USER_SESSION_COOKIE } = await import(
+    "../../src/lib/auth.ts"
+  );
+
+  const kullanici = await prisma.user.upsert({
+    where: { email: eposta },
+    update: { role: rol },
+    create: {
+      email: eposta,
+      // Gerçek bcrypt hash'i; bu testlerde şifreyle giriş yapılmıyor.
+      passwordHash: "$2b$12$1ipEdfIDZWdT1Fzchqv3SuXgZuYH/cssB0QqSrz2w.ihqJwBNcgnG",
+      role: rol,
+    },
+    select: { id: true, email: true, sessionVersion: true },
+  });
+
+  cerezAyarla(
+    USER_SESSION_COOKIE,
+    await createUserSessionToken({
+      userId: kullanici.id,
+      email: kullanici.email,
+      sessionVersion: kullanici.sessionVersion,
+    })
+  );
+
+  return { userId: kullanici.id, email: kullanici.email };
 }

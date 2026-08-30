@@ -2,17 +2,41 @@
 
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import {
+  A4_KULLANILABILIR_BOY_MM,
+  A4_KULLANILABILIR_EN_MM,
+  ETIKET_ARALIK_MM,
+  ETIKET_IC_BOSLUK_MM,
+  ETIKET_MM,
+  ETIKET_SUTUN,
+  KART_ARALIK_MM,
+  KART_BOY_MM,
+  KART_EN_MM,
+  KART_SUTUN,
+  SAYFADA_ETIKET,
+  SESSIZ_ALAN_MODUL,
+  modulBoyutuMm,
+  sessizAlanMm,
+  yerlesimAl,
+} from "./EtiketBaskiOlculeri";
 
 /**
- * Üretilen etiketlerin baskı sayfası.
+ * 30x30 mm etiket ve eşleştirilmiş aktivasyon kartı baskısı.
  *
- * Ekranda yalnızca "Yazdır" butonu görünür; etiket ızgarası sadece yazdırma
- * sırasında görünür hâle gelir (kurallar `globals.css` içindeki `@media print`
- * bloğunda). Yazdır penceresinden "PDF olarak kaydet" de seçilebilir.
+ * EŞLEŞME GARANTİSİ
+ * Etiket ızgarası ve kart ızgarası AYNI `etiketler` dizisini, aynı sırayla
+ * dolaşır ve her ikisi de `publicToken` ile anahtarlanır. Ayrı bir eşleme
+ * tablosu, ayrı bir sorgu veya ayrı bir sıralama YOKTUR; bu yüzden bir
+ * QR'ın yanlış aktivasyon kartıyla eşleşmesi yapısal olarak imkânsızdır.
  *
- * QR adresi `NEXT_PUBLIC_APP_URL` üzerinden kurulur. Baskıya giden QR yanlış
- * adrese giderse geri dönüşü olmadığı için ortam değişkeni önceliklidir;
- * tanımlı değilse tarayıcının açık olduğu adres kullanılır.
+ * ÖLÇÜ
+ * Tüm ölçüler `mm` cinsindendir ve tek kaynaktan (EtiketBaskiOlculeri)
+ * gelir. Kesim çizgisi `outline` ile çizilir; `border` kutuya eklenip
+ * 30 mm'yi bozardı.
+ *
+ * AKTİVASYON KODU
+ * Etiketin ÖN YÜZÜNDE aktivasyon kodu asla bulunmaz. Kod yalnızca ayrı
+ * aktivasyon kartında, kazınacak alanın altında yer alır.
  */
 
 type UretilenEtiket = {
@@ -20,6 +44,12 @@ type UretilenEtiket = {
   activationCode: string;
   publicToken: string;
 };
+
+type BaskiTuru = "etiket" | "kart";
+
+function mm(deger: number): string {
+  return `${deger}mm`;
+}
 
 export default function TagPrintSheet({
   etiketler,
@@ -30,7 +60,9 @@ export default function TagPrintSheet({
   urunAdi?: string;
 }) {
   const [tabanAdres, setTabanAdres] = useState("");
-  const [aktivasyonGoster, setAktivasyonGoster] = useState(false);
+  const [kodGoster, setKodGoster] = useState(true);
+  const [baskiTuru, setBaskiTuru] = useState<BaskiTuru>("etiket");
+  const [yazdirilacak, setYazdirilacak] = useState(false);
 
   useEffect(() => {
     const adres = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
@@ -38,79 +70,275 @@ export default function TagPrintSheet({
     setTabanAdres(adres.replace(/\/+$/, ""));
   }, []);
 
+  /*
+    Yazdırma, doğru bölüm DOM'a girdikten SONRA açılmalı. Aynı tıklamada
+    window.print() çağrılırsa tarayıcı bir önceki bölümü basar.
+  */
+  useEffect(() => {
+    if (!yazdirilacak) {
+      return;
+    }
+
+    const zamanlayici = window.setTimeout(() => {
+      window.print();
+      setYazdirilacak(false);
+    }, 50);
+
+    return () => window.clearTimeout(zamanlayici);
+  }, [yazdirilacak]);
+
   if (etiketler.length === 0) {
     return null;
   }
 
+  const yerlesim = yerlesimAl(kodGoster);
+  const modul = modulBoyutuMm(kodGoster);
+  const sessiz = sessizAlanMm(kodGoster);
+
+  function yazdir(tur: BaskiTuru) {
+    setBaskiTuru(tur);
+    setYazdirilacak(true);
+  }
+
+  const sayfaSayisi = Math.ceil(etiketler.length / SAYFADA_ETIKET);
+
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={() => window.print()}
-          disabled={!tabanAdres}
-          className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          QR baskı sayfasını yazdır
-        </button>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => yazdir("etiket")}
+            disabled={!tabanAdres}
+            className="rounded-lg bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            30×30 mm QR etiketlerini yazdır
+          </button>
 
-        <label className="flex items-center gap-2 text-sm text-white/60">
-          <input
-            type="checkbox"
-            checked={aktivasyonGoster}
-            onChange={(e) => setAktivasyonGoster(e.target.checked)}
-            className="h-4 w-4 rounded border-white/20 bg-white/5"
-          />
-          Aktivasyon kodlarını da bas (kazınacak alan)
-        </label>
+          <button
+            type="button"
+            onClick={() => yazdir("kart")}
+            className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+          >
+            Aktivasyon kartlarını yazdır
+          </button>
+
+          <label className="flex items-center gap-2 text-sm text-white/60">
+            <input
+              type="checkbox"
+              checked={kodGoster}
+              onChange={(e) => setKodGoster(e.target.checked)}
+              className="h-4 w-4 rounded border-white/20 bg-white/5"
+            />
+            Etiket kodunu ön yüze bas
+          </label>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm leading-relaxed text-white/60">
+          <p className="font-semibold text-white">
+            Yazdırma ayarları — ölçünün tutması için zorunlu
+          </p>
+
+          <p className="mt-1">
+            Kâğıt <strong className="text-white/80">A4</strong> · Ölçek{" "}
+            <strong className="text-white/80">%100</strong> · &quot;Sayfaya
+            sığdır&quot; / &quot;Kenarlığa sığdır&quot;{" "}
+            <strong className="text-white/80">KAPALI</strong>
+          </p>
+
+          <p className="mt-2 text-white/45">
+            Sayfa başına {SAYFADA_ETIKET} etiket ({ETIKET_SUTUN} sütun) —{" "}
+            {etiketler.length} etiket için {sayfaSayisi} sayfa. QR modül
+            boyutu {modul.toFixed(3)} mm, sessiz alan {sessiz.toFixed(2)} mm (
+            {SESSIZ_ALAN_MODUL} modül).
+            {kodGoster
+              ? " Etiket kodu ön yüzde olduğu için QR 1.8 mm küçüktür."
+              : " Etiket kodu ön yüzde yok; QR en büyük hâlinde."}
+          </p>
+
+          <p className="mt-2 text-white/45">
+            İlk baskıdan sonra cetvelle ölçün: bir etiket tam 30 mm olmalı.
+            Tutmuyorsa ölçek %100 değildir.
+          </p>
+        </div>
       </div>
 
       {/* Ekranda gizli, yalnızca yazdırmada görünür. */}
-      <div id="etiket-baski-alani" className="hidden print:block">
-        {/*
-          Baskı çıktısı matbaaya gider ve hangi ürüne ait olduğu kâğıttan
-          anlaşılamazsa partiler karışır.
-        */}
-        {urunAdi && (
-          <p className="mb-3 text-[12px] font-semibold text-black">
-            {urunAdi} — {etiketler.length} etiket
-          </p>
-        )}
-
-        <div className="grid grid-cols-3 gap-4">
-          {etiketler.map((etiket) => (
-            <div
-              key={etiket.publicToken}
-              className="flex break-inside-avoid flex-col items-center gap-2 rounded-lg border border-dashed border-black/40 bg-white p-3 text-black"
-            >
-              {tabanAdres && (
+      <div id="baski-alani" className="hidden print:block">
+        {baskiTuru === "etiket" ? (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: `repeat(${ETIKET_SUTUN}, ${mm(ETIKET_MM)})`,
+              gap: mm(ETIKET_ARALIK_MM),
+              width: mm(A4_KULLANILABILIR_EN_MM),
+              justifyContent: "start",
+            }}
+          >
+            {etiketler.map((etiket) => (
+              <div
+                key={etiket.publicToken}
+                className="baski-parca"
+                style={{
+                  width: mm(ETIKET_MM),
+                  height: mm(ETIKET_MM),
+                  boxSizing: "border-box",
+                  padding: mm(ETIKET_IC_BOSLUK_MM),
+                  background: "#ffffff",
+                  color: "#000000",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "flex-start",
+                  gap: mm(yerlesim.satirArasiMm),
+                  // outline kutu ölçüsüne eklenmez; etiket tam 30 mm kalır.
+                  outline: "0.1mm solid #c9c9c9",
+                  outlineOffset: 0,
+                }}
+              >
                 <QRCodeSVG
                   value={`${tabanAdres}/t/${etiket.publicToken}`}
-                  size={110}
+                  // Ölçü mm cinsinden verilir; piksel yuvarlaması olmaz.
+                  style={{
+                    width: mm(yerlesim.qrKutuMm),
+                    height: mm(yerlesim.qrKutuMm),
+                    display: "block",
+                  }}
                   level="M"
+                  marginSize={SESSIZ_ALAN_MODUL}
                   bgColor="#ffffff"
                   fgColor="#000000"
                 />
-              )}
 
-              <div className="text-center">
-                <p className="text-[11px] font-semibold tracking-wide">
+                <span
+                  style={{
+                    fontSize: mm(yerlesim.arkviumSatirMm * 0.78),
+                    lineHeight: mm(yerlesim.arkviumSatirMm),
+                    fontWeight: 700,
+                    letterSpacing: "0.12mm",
+                  }}
+                >
                   ARKVIUM
-                </p>
+                </span>
 
-                <p className="font-mono text-[13px] font-bold tracking-wider">
-                  {etiket.code}
-                </p>
-
-                {aktivasyonGoster && (
-                  <p className="mt-1 font-mono text-[11px]">
-                    {etiket.activationCode}
-                  </p>
+                {yerlesim.kodSatirMm !== null && (
+                  <span
+                    style={{
+                      fontSize: mm(yerlesim.kodSatirMm * 0.78),
+                      lineHeight: mm(yerlesim.kodSatirMm),
+                      fontFamily: "ui-monospace, monospace",
+                      letterSpacing: "0.04mm",
+                    }}
+                  >
+                    {etiket.code}
+                  </span>
                 )}
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: `repeat(${KART_SUTUN}, ${mm(KART_EN_MM)})`,
+              gap: mm(KART_ARALIK_MM),
+              width: mm(A4_KULLANILABILIR_EN_MM),
+              maxHeight: mm(A4_KULLANILABILIR_BOY_MM * 100),
+              justifyContent: "start",
+            }}
+          >
+            {etiketler.map((etiket) => (
+              <div
+                key={etiket.publicToken}
+                className="baski-parca"
+                style={{
+                  width: mm(KART_EN_MM),
+                  height: mm(KART_BOY_MM),
+                  boxSizing: "border-box",
+                  padding: "3mm",
+                  background: "#ffffff",
+                  color: "#000000",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  outline: "0.1mm solid #c9c9c9",
+                  outlineOffset: 0,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "2.6mm",
+                      fontWeight: 700,
+                      letterSpacing: "0.2mm",
+                    }}
+                  >
+                    ARKVIUM
+                  </span>
+
+                  {urunAdi && (
+                    <span style={{ fontSize: "2mm", color: "#555555" }}>
+                      {urunAdi}
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  <span style={{ fontSize: "2mm", color: "#555555" }}>
+                    Etiket kodu
+                  </span>
+
+                  <div
+                    style={{
+                      fontSize: "3.4mm",
+                      fontFamily: "ui-monospace, monospace",
+                      fontWeight: 700,
+                      letterSpacing: "0.2mm",
+                    }}
+                  >
+                    {etiket.code}
+                  </div>
+                </div>
+
+                {/*
+                  Kazınacak alan. Aktivasyon kodu bu çerçevenin ALTINDA kalır;
+                  üzerine kazıma etiketi yapıştırılır. Kod yalnızca burada
+                  bulunur — QR etiketinin ön yüzünde asla yer almaz.
+                */}
+                <div
+                  style={{
+                    border: "0.2mm dashed #777777",
+                    borderRadius: "1mm",
+                    padding: "1.4mm 2mm",
+                    textAlign: "center",
+                  }}
+                >
+                  <div style={{ fontSize: "1.8mm", color: "#777777" }}>
+                    Kazınacak alan — aktivasyon kodu
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: "0.6mm",
+                      fontSize: "3.6mm",
+                      fontFamily: "ui-monospace, monospace",
+                      fontWeight: 700,
+                      letterSpacing: "0.3mm",
+                    }}
+                  >
+                    {etiket.activationCode}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );

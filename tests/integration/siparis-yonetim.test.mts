@@ -7,6 +7,7 @@ import {
   testVeritabaniAdresi,
   testVeritabaniIstemcisi,
   veritabaniniTemizle,
+  yoneticiOturumuKur,
 } from "../helpers/test-ortami.mts";
 import { cerezAyarla, cerezleriTemizle } from "../helpers/next-taklit.mjs";
 
@@ -27,12 +28,8 @@ const testVeritabani = testVeritabaniAdresi();
 
 process.env.DATABASE_URL = testVeritabani;
 process.env.DIRECT_URL = testVeritabani;
-process.env.ADMIN_SESSION_SECRET = "test-admin-anahtari-" + "a".repeat(32);
 
 const { prisma } = await import("../../src/lib/prisma.ts");
-const { createAdminSessionToken, ADMIN_SESSION_COOKIE } = await import(
-  "../../src/lib/auth.ts"
-);
 const { siparisOlustur } = await import("../../src/lib/siparis-servisi.ts");
 const { SIPARIS_URUNLERI } = await import("../../src/lib/siparis.ts");
 const { etiketUret } = await import("../../src/lib/tags.ts");
@@ -83,10 +80,7 @@ beforeEach(async () => {
 
 /** Gerçek imzalı yönetici oturumunu çereze koyar. */
 async function yoneticiOturumuAc(eposta = YONETICI) {
-  cerezAyarla(
-    ADMIN_SESSION_COOKIE,
-    await createAdminSessionToken({ email: eposta })
-  );
+  await yoneticiOturumuKur({ prisma, cerezAyarla, eposta });
 }
 
 /** Sipariş oluşturur ve istenen duruma getirir (test kurulumu). */

@@ -23,7 +23,6 @@ const testVeritabani = testVeritabaniAdresi();
 process.env.DATABASE_URL = testVeritabani;
 process.env.DIRECT_URL = testVeritabani;
 process.env.USER_SESSION_SECRET = "test-kullanici-anahtari-" + "u".repeat(32);
-process.env.ADMIN_SESSION_SECRET = "test-admin-anahtari-" + "a".repeat(32);
 
 const { prisma } = await import("../../src/lib/prisma.ts");
 const { createUserSessionToken, USER_SESSION_COOKIE } = await import(

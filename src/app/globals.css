@@ -146,25 +146,46 @@ body {
  * Yazdırırken sayfadaki her şey gizlenir, yalnızca QR ızgarası kâğıda çıkar.
  * Ekran görünümünü etkilemez.
  */
+/*
+ * BASKI KURALLARI — GERÇEK ÖLÇÜ
+ *
+ * Etiketler fiziksel olarak 30x30 mm kesilecek. Bu yüzden tüm ölçüler
+ * `mm` cinsindendir; hiçbir yerde piksel, rem veya yüzde kullanılmaz.
+ * Yazıcı iletişim kutusunda ÖLÇEK %100 ve "sayfaya sığdır" KAPALI olmalı;
+ * aksi hâlde tarayıcı sayfayı yeniden ölçekler ve 30 mm tutmaz.
+ *
+ * `print-color-adjust: exact` olmadan tarayıcılar açık gri kesim
+ * çizgilerini ve kazınacak alan çerçevesini baskıda atlayabiliyor.
+ */
 @media print {
   body * {
     visibility: hidden;
   }
 
-  #etiket-baski-alani,
-  #etiket-baski-alani * {
+  #baski-alani,
+  #baski-alani * {
     visibility: visible;
   }
 
-  #etiket-baski-alani {
+  #baski-alani {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
 
+  /* Sayfa boyutu sabittir: A4 dışında bir kâğıt ölçüyü bozar. */
   @page {
-    margin: 12mm;
+    size: A4;
+    margin: 10mm;
+  }
+
+  /* Bir etiket veya kart asla iki sayfaya bölünmez. */
+  .baski-parca {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 }
 

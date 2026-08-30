@@ -6,6 +6,7 @@ import {
   testVeritabaniAdresi,
   testVeritabaniIstemcisi,
   veritabaniniTemizle,
+  yoneticiOturumuKur,
 } from "../helpers/test-ortami.mts";
 import { cerezAyarla, cerezleriTemizle } from "../helpers/next-taklit.mjs";
 
@@ -22,12 +23,8 @@ const testVeritabani = testVeritabaniAdresi();
 
 process.env.DATABASE_URL = testVeritabani;
 process.env.DIRECT_URL = testVeritabani;
-process.env.ADMIN_SESSION_SECRET = "test-admin-anahtari-" + "a".repeat(32);
 
 const { prisma } = await import("../../src/lib/prisma.ts");
-const { createAdminSessionToken, ADMIN_SESSION_COOKIE } = await import(
-  "../../src/lib/auth.ts"
-);
 const { SIPARIS_URUNLERI, KARGO_UCRETI_KURUS } = await import(
   "../../src/lib/siparis.ts"
 );
@@ -73,10 +70,7 @@ beforeEach(async () => {
 });
 
 async function yoneticiOturumuAc() {
-  cerezAyarla(
-    ADMIN_SESSION_COOKIE,
-    await createAdminSessionToken({ email: "admin@test.invalid" })
-  );
+  await yoneticiOturumuKur({ prisma, cerezAyarla });
 }
 
 async function istek(govde: unknown) {
