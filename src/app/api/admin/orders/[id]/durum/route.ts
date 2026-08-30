@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/session";
+import { yoneticiErisimi } from "@/lib/session";
 import {
   siparisDurumunuGuncelle,
   SiparisYonetimHatasi,
@@ -10,7 +10,7 @@ import {
  *
  * Güvenlik kuralları:
  * - Sayfa katmanı `src/middleware.ts` ile korunsa da bu uç yetkisini KENDİ
- *   içinde `getAdminSession()` ile ayrıca doğrular; oturumsuz istek 401 alır
+ *   içinde `yoneticiErisimi()` ile ayrıca doğrular; oturumsuz istek 401 alır
  *   ve hiçbir kayıt değişmez.
  * - Yalnızca `paid → preparing` ve `preparing → shipped` geçişleri kabul
  *   edilir; geçiş koşullu güncellemeyle yapılır.
@@ -22,7 +22,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const admin = await getAdminSession();
+    const admin = await yoneticiErisimi();
 
     if (!admin) {
       return NextResponse.json(

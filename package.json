@@ -14,6 +14,7 @@
     "test:all": "npm run test && npm run test:integration",
     "test:db:migrate": "node scripts/test-db-migrate.mjs",
     "hash-password": "node scripts/hash-password.mjs",
+    "rol-ata": "node scripts/rol-ata.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {

@@ -23,8 +23,11 @@ type UretilenEtiket = {
 
 export default function TagPrintSheet({
   etiketler,
+  urunAdi,
 }: {
   etiketler: UretilenEtiket[];
+  /** Baskı sayfasının üstünde hangi ürüne ait olduğu yazar. */
+  urunAdi?: string;
 }) {
   const [tabanAdres, setTabanAdres] = useState("");
   const [aktivasyonGoster, setAktivasyonGoster] = useState(false);
@@ -64,6 +67,16 @@ export default function TagPrintSheet({
 
       {/* Ekranda gizli, yalnızca yazdırmada görünür. */}
       <div id="etiket-baski-alani" className="hidden print:block">
+        {/*
+          Baskı çıktısı matbaaya gider ve hangi ürüne ait olduğu kâğıttan
+          anlaşılamazsa partiler karışır.
+        */}
+        {urunAdi && (
+          <p className="mb-3 text-[12px] font-semibold text-black">
+            {urunAdi} — {etiketler.length} etiket
+          </p>
+        )}
+
         <div className="grid grid-cols-3 gap-4">
           {etiketler.map((etiket) => (
             <div

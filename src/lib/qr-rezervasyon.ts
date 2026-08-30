@@ -72,18 +72,30 @@ export async function suresiDolanRezervasyonlariTemizle(
   return sonuc.count;
 }
 
+/**
+ * Rezerve edilebilir (stoktaki) etiketleri seçen filtre.
+ *
+ * `productKod` verildiğinde YALNIZCA o ürüne basılmış etiketler sayılır.
+ * Türü olmayan (null) eski etiketler hiçbir ürünün stoğuna sayılmaz:
+ * hangi fiziksel ürüne basıldıkları bilinmediği için yanlış siparişe
+ * ayrılmaları sessiz bir hata olurdu. Önce sınıflandırılmaları gerekir.
+ */
+function stokFiltresi(productKod?: string) {
+  return {
+    status: "unused",
+    userId: null,
+    itemRecordId: null,
+    orderTag: { is: null },
+    ...(productKod ? { productKod } : {}),
+  } as const;
+}
+
 /** Rezerve edilebilir (stoktaki) etiket sayısı. */
 export async function stoktakiEtiketSayisi(
-  islem: IslemIstemcisi
+  islem: IslemIstemcisi,
+  productKod?: string
 ): Promise<number> {
-  return islem.tag.count({
-    where: {
-      status: "unused",
-      userId: null,
-      itemRecordId: null,
-      orderTag: { is: null },
-    },
-  });
+  return islem.tag.count({ where: stokFiltresi(productKod) });
 }
 
 /**
@@ -98,6 +110,8 @@ export async function kalemIcinEtiketAyir(
   ayar: {
     orderId: string;
     orderItemId: string;
+    /** Sipariş kaleminin ürün kodu. Yalnızca bu ürünün etiketleri ayrılır. */
+    productKod: string;
     adet: number;
     sonGecerlilik: Date;
   }
@@ -107,12 +121,7 @@ export async function kalemIcinEtiketAyir(
   }
 
   const etiketler = await islem.tag.findMany({
-    where: {
-      status: "unused",
-      userId: null,
-      itemRecordId: null,
-      orderTag: { is: null },
-    },
+    where: stokFiltresi(ayar.productKod),
     select: { id: true },
     orderBy: { createdAt: "asc" },
     take: ayar.adet,

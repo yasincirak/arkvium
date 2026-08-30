@@ -5,6 +5,7 @@ import {
   verifyAdminSessionToken,
   verifyUserSessionToken,
 } from "@/lib/auth";
+import { YOL_BASLIGI } from "@/lib/yol-basligi";
 
 /**
  * Bu dosya src/ altında olmak zorundadır.
@@ -30,21 +31,45 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith("/admin")) {
+    /*
+      Edge runtime veritabanına erişemez, bu yüzden burada YALNIZCA "geçerli
+      imzalı bir oturum var mı" sorusu yanıtlanır. Asıl yetki kararı —
+      kullanıcının rolünün gerçekten ADMIN olup olduğu — her istekte
+      veritabanına bakan src/app/admin/layout.tsx içinde verilir.
+
+      Yol bilgisi isteğe başlık olarak eklenir; layout, giriş sayfasında
+      kendi kendine yönlendirme döngüsü kurmamak için bunu okur. Başlık her
+      istekte burada yeniden yazıldığı için istemci taklit edemez.
+    */
+    const istekBasliklari = new Headers(request.headers);
+    istekBasliklari.set(YOL_BASLIGI, pathname);
+
+    const devam = () =>
+      NextResponse.next({ request: { headers: istekBasliklari } });
+
     if (pathname === "/admin/login") {
-      return NextResponse.next();
+      return devam();
     }
 
-    const token = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+    const adminToken = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
 
-    if (!token || !(await verifyAdminSessionToken(token))) {
-      return girisSayfasinaYonlendir(
-        request,
-        "/admin/login",
-        ADMIN_SESSION_COOKIE
-      );
+    if (adminToken && (await verifyAdminSessionToken(adminToken))) {
+      return devam();
     }
 
-    return NextResponse.next();
+    // Rol tabanlı erişim: müşteri oturumu geçerliyse layout'a bırakılır.
+    // Rolü ADMIN değilse layout güvenli biçimde /account'a yönlendirir.
+    const userToken = request.cookies.get(USER_SESSION_COOKIE)?.value;
+
+    if (userToken && (await verifyUserSessionToken(userToken))) {
+      return devam();
+    }
+
+    return girisSayfasinaYonlendir(
+      request,
+      "/admin/login",
+      ADMIN_SESSION_COOKIE
+    );
   }
 
   if (pathname.startsWith("/account")) {

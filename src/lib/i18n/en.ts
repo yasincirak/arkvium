@@ -488,6 +488,9 @@ export const EN: DerinKismi<Sozluk> = {
 
   hesap: {
     baslik: "My Account",
+    yonetimPaneli: "Admin Panel",
+    yonetimPaneliAciklama:
+      "You have administrator access, so you can open the admin panel from here.",
     bilgiler: "Account Details",
     adSoyad: "Full Name",
     eposta: "Email",

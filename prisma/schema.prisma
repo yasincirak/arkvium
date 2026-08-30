@@ -30,6 +30,10 @@ model User {
   /// bırakır. Sayaç karşılaştırması zamanlamadan tamamen bağımsızdır.
   sessionVersion Int @default(0)
 
+  /// Yetki rolü. Yeni kayıtlar ve mevcut tüm kullanıcılar CUSTOMER'dır;
+  /// ADMIN yalnızca kontrollü bir komutla verilir (scripts/rol-ata.mjs).
+  role UserRole @default(CUSTOMER)
+
   records                 ItemRecord[]
   passwordResetTokens     PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
@@ -127,6 +131,17 @@ model Tag {
   /// unused | active | inactive | revoked
   status String @default("unused")
 
+  /// Etiketin basıldığı fiziksel ürün türü (src/lib/siparis.ts içindeki
+  /// SIPARIS_URUNLERI kodları: sticker-seti, arac-stickeri, ...).
+  ///
+  /// Neden enum değil: ürün listesi uygulama kodunda tanımlı ve zamanla
+  /// değişiyor. Enum olsaydı her yeni ürün için migration gerekirdi.
+  /// Geçerlilik denetimi üretim ucunda yapılır.
+  ///
+  /// Null = tür eklenmeden önce üretilmiş eski stok. Bu etiketler sipariş
+  /// karşılamada KULLANILMAZ; önce sınıflandırılmaları gerekir.
+  productKod String?
+
   /// Aktivasyon kodunun SHA-256 özeti. Kod düz metin saklanmaz;
   /// yalnızca fiziksel etiketin üzerinde bulunur.
   activationCodeHash String
@@ -152,6 +167,8 @@ model Tag {
 
   @@index([status])
   @@index([userId])
+  /// Stok sorguları her zaman "hangi üründen kaç boş etiket var" biçiminde.
+  @@index([productKod, status])
 }
 
 /// Etiket geçmişi. Aktivasyon, ürün değişimi, devir ve iptal işlemleri
@@ -163,6 +180,7 @@ model TagEvent {
   tag   Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   /// activated | moved | deactivated | reactivated | revoked | transferred
+  /// | classified
   type String
 
   /// İşlemi yapan kullanıcı. Yönetici işlemlerinde null olabilir.
@@ -173,10 +191,26 @@ model TagEvent {
   fromUserId       String?
   toUserId         String?
 
+  /// Ürün türü sınıflandırmasının denetim izi ("classified" olayı).
+  /// Eski (türsüz) etiketlerde `fromProductKod` null olur.
+  fromProductKod String?
+  toProductKod   String?
+
   createdAt DateTime @default(now())
 
   @@index([tagId])
   @@index([createdAt])
+}
+
+/// Kullanıcı yetki rolü.
+///
+/// Yetkilendirme KARARI her zaman bu alanın veritabanındaki güncel
+/// değerine göre verilir. Rol oturum tokenına yazılmaz: token imzalı olsa
+/// bile üretildiği andaki değeri taşır ve rol geri alındığında token
+/// süresi dolana kadar eski yetkiyi taşımaya devam ederdi.
+enum UserRole {
+  CUSTOMER
+  ADMIN
 }
 
 enum OwnershipTransferStatus {

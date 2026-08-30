@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAdminSession } from "@/lib/session";
+import { yoneticiErisimi } from "@/lib/session";
 import { etiketKoduBicimle, etiketUret } from "@/lib/tags";
+import { SIPARIS_URUNLERI } from "@/lib/siparis";
 
 /**
  * Toplu etiket üretimi (yalnızca yönetici).
@@ -10,13 +11,17 @@ import { etiketKoduBicimle, etiketUret } from "@/lib/tags";
  * bir kez döner. Yanıt kaybedilirse kodlar geri getirilemez, etiketlerin
  * yeniden üretilmesi gerekir. Bu bilinçli bir tercihtir: veritabanı sızsa
  * bile kimse başkasının etiketini aktive edemez.
+ *
+ * ÜRÜN TÜRÜ ZORUNLUDUR. Etiketler fiziksel olarak farklı ürünlere basılır
+ * (sticker, metal anahtarlık, künye...). Tür yazılmazsa sipariş karşılamada
+ * yanlış ürünün etiketi ayrılır ve bu hata sessizce geçer.
  */
 
 const EN_FAZLA = 500;
 
 export async function POST(request: Request) {
   try {
-    const admin = await getAdminSession();
+    const admin = await yoneticiErisimi();
 
     if (!admin) {
       return NextResponse.json(
@@ -35,6 +40,16 @@ export async function POST(request: Request) {
       );
     }
 
+    const productKod = String(body.productKod || "").trim();
+    const urun = SIPARIS_URUNLERI.find((u) => u.kod === productKod);
+
+    if (!urun) {
+      return NextResponse.json(
+        { error: "Geçerli bir ürün türü seçin." },
+        { status: 400 }
+      );
+    }
+
     const uretilenler = Array.from({ length: adet }, () => etiketUret());
 
     await prisma.tag.createMany({
@@ -43,12 +58,14 @@ export async function POST(request: Request) {
         publicToken: etiket.publicToken,
         activationCodeHash: etiket.activationCodeHash,
         status: "unused",
+        productKod: urun.kod,
       })),
     });
 
     return NextResponse.json({
       success: true,
       adet,
+      urun: { kod: urun.kod, ad: urun.ad },
       uyari:
         "Aktivasyon kodları yalnızca bir kez gösterilir. Bu listeyi kaydetmeden sayfadan ayrılmayın.",
       etiketler: uretilenler.map((etiket) => ({

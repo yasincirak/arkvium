@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import TagPrintSheet from "./TagPrintSheet";
 
 /**
@@ -17,11 +17,41 @@ type UretilenEtiket = {
   publicToken: string;
 };
 
-export default function TagGenerator() {
+export type UrunSecenegi = { kod: string; ad: string };
+
+/**
+ * Baskıya giden QR adresinin tabanı.
+ *
+ * `NEXT_PUBLIC_APP_URL` önceliklidir: baskı yanlış adrese giderse binlerce
+ * etiket çöp olur ve geri dönüşü yoktur. Değişken tanımlı değilse tarayıcının
+ * adresine düşülür — bu geliştirme makinesinde localhost demektir, o yüzden
+ * aşağıda üretim engellenir.
+ */
+function tabanAdresiCoz(): string {
+  return (process.env.NEXT_PUBLIC_APP_URL || window.location.origin).replace(
+    /\/+$/,
+    ""
+  );
+}
+
+function yerelAdresMi(adres: string): boolean {
+  return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(adres);
+}
+
+export default function TagGenerator({ urunler }: { urunler: UrunSecenegi[] }) {
   const [adet, setAdet] = useState("10");
+  const [urunKod, setUrunKod] = useState(urunler[0]?.kod ?? "");
   const [calisiyor, setCalisiyor] = useState(false);
   const [hata, setHata] = useState("");
   const [etiketler, setEtiketler] = useState<UretilenEtiket[]>([]);
+  const [uretilenUrunAdi, setUretilenUrunAdi] = useState("");
+  const [tabanAdres, setTabanAdres] = useState("");
+
+  useEffect(() => {
+    setTabanAdres(tabanAdresiCoz());
+  }, []);
+
+  const adresYerel = tabanAdres !== "" && yerelAdresMi(tabanAdres);
 
   async function uret(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -43,7 +73,7 @@ export default function TagGenerator() {
       const yanit = await fetch("/api/admin/tags/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adet: Number(adet) }),
+        body: JSON.stringify({ adet: Number(adet), productKod: urunKod }),
       });
 
       const veri = await yanit.json();
@@ -56,6 +86,7 @@ export default function TagGenerator() {
       }
 
       setEtiketler(veri.etiketler ?? []);
+      setUretilenUrunAdi(veri.urun?.ad ?? "");
     } catch {
       setHata("Etiketler üretilemedi. Bağlantınızı kontrol edin.");
     } finally {
@@ -64,16 +95,13 @@ export default function TagGenerator() {
   }
 
   function csvIndir() {
-    // Baskıya giden adres, tarayıcının açık olduğu adrese göre değil
-    // uygulamanın gerçek adresine göre kurulur.
-    const taban = (
-      process.env.NEXT_PUBLIC_APP_URL || window.location.origin
-    ).replace(/\/+$/, "");
+    const taban = tabanAdresiCoz();
 
     const satirlar = [
-      "Etiket Kodu;Aktivasyon Kodu;QR Adresi",
+      "Urun;Etiket Kodu;Aktivasyon Kodu;QR Adresi",
       ...etiketler.map(
-        (e) => `${e.code};${e.activationCode};${taban}/t/${e.publicToken}`
+        (e) =>
+          `${uretilenUrunAdi};${e.code};${e.activationCode};${taban}/t/${e.publicToken}`
       ),
     ];
 
@@ -97,29 +125,76 @@ export default function TagGenerator() {
         onSubmit={uret}
         className="rounded-2xl border border-white/10 bg-white/5 p-6"
       >
-        <label
-          htmlFor="adet"
-          className="mb-2 block text-sm font-medium text-white/80"
-        >
-          Kaç adet etiket üretilsin? (1–500)
-        </label>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label
+              htmlFor="urun"
+              className="mb-2 block text-sm font-medium text-white/80"
+            >
+              Hangi ürüne basılacak?
+            </label>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <input
-            id="adet"
-            name="adet"
-            type="number"
-            min={1}
-            max={500}
-            required
-            value={adet}
-            onChange={(e) => setAdet(e.target.value)}
-            className="w-32 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-indigo-500"
-          />
+            <select
+              id="urun"
+              name="urun"
+              required
+              value={urunKod}
+              onChange={(e) => setUrunKod(e.target.value)}
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-indigo-500"
+            >
+              {urunler.map((urun) => (
+                <option
+                  key={urun.kod}
+                  value={urun.kod}
+                  className="bg-[#0a0a0f]"
+                >
+                  {urun.ad}
+                </option>
+              ))}
+            </select>
+          </div>
 
+          <div>
+            <label
+              htmlFor="adet"
+              className="mb-2 block text-sm font-medium text-white/80"
+            >
+              Kaç adet? (1–500)
+            </label>
+
+            <input
+              id="adet"
+              name="adet"
+              type="number"
+              min={1}
+              max={500}
+              required
+              value={adet}
+              onChange={(e) => setAdet(e.target.value)}
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-indigo-500"
+            />
+          </div>
+        </div>
+
+        <p className="mt-3 text-sm text-white/40">
+          Etiketler seçtiğin ürünün stoğuna eklenir ve yalnızca o ürünün
+          siparişlerinde kullanılır.
+        </p>
+
+        {adresYerel && (
+          <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            <strong>Üretim durduruldu.</strong> QR adresi şu an{" "}
+            <span className="font-mono">{tabanAdres}</span> olarak kurulacaktı.
+            Bu adrese basılan etiketler hiçbir telefonda açılmaz.{" "}
+            <span className="font-mono">NEXT_PUBLIC_APP_URL</span> değerini
+            canlı alan adına ayarlayıp sayfayı yenileyin.
+          </div>
+        )}
+
+        <div className="mt-4">
           <button
             type="submit"
-            disabled={calisiyor}
+            disabled={calisiyor || adresYerel || tabanAdres === ""}
             className="rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {calisiyor ? "Üretiliyor..." : "Etiket Üret"}
@@ -142,7 +217,10 @@ export default function TagGenerator() {
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-white/60">
-              {etiketler.length} etiket üretildi.
+              <span className="font-semibold text-white">
+                {uretilenUrunAdi}
+              </span>{" "}
+              için {etiketler.length} etiket üretildi.
             </p>
 
             <button
@@ -155,13 +233,14 @@ export default function TagGenerator() {
           </div>
 
           <div className="mt-4">
-            <TagPrintSheet etiketler={etiketler} />
+            <TagPrintSheet etiketler={etiketler} urunAdi={uretilenUrunAdi} />
           </div>
 
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[560px] text-left text-sm">
               <thead className="text-white/40">
                 <tr>
+                  <th className="border-b border-white/10 py-2 pr-4">Ürün</th>
                   <th className="border-b border-white/10 py-2 pr-4">
                     Etiket Kodu
                   </th>
@@ -175,6 +254,9 @@ export default function TagGenerator() {
               <tbody className="text-white/80">
                 {etiketler.map((etiket) => (
                   <tr key={etiket.publicToken}>
+                    <td className="border-b border-white/5 py-2 pr-4 text-white/60">
+                      {uretilenUrunAdi}
+                    </td>
                     <td className="border-b border-white/5 py-2 pr-4 font-mono">
                       {etiket.code}
                     </td>

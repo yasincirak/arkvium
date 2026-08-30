@@ -65,6 +65,33 @@ export default async function AccountPage() {
           <LogoutButton />
         </div>
 
+        {/*
+          Yönetim paneli geçişi.
+
+          Görünürlük kararı VERİTABANINDAKİ role alanına dayanır (session,
+          rolü her istekte veritabanından okur). Bu yalnızca bir kısayoldur;
+          asıl yetki kontrolü /admin layout'unda ve admin API uçlarında
+          sunucu tarafında yeniden yapılır.
+        */}
+        {session.role === "ADMIN" && (
+          <div className="mb-8 rounded-2xl border border-indigo-500/25 bg-indigo-500/10 p-6">
+            <h2 className="text-xl font-semibold">
+              {ceviri.hesap.yonetimPaneli}
+            </h2>
+
+            <p className="mt-2 text-sm leading-relaxed text-white/60">
+              {ceviri.hesap.yonetimPaneliAciklama}
+            </p>
+
+            <Link
+              href="/admin"
+              className="mt-5 inline-flex min-h-[44px] items-center rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
+            >
+              {ceviri.hesap.yonetimPaneli}
+            </Link>
+          </div>
+        )}
+
         {!user.emailVerifiedAt && <EmailVerificationNotice />}
 
         <div className="mb-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">

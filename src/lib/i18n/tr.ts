@@ -497,6 +497,9 @@ export const TR = {
 
   hesap: {
     baslik: "Hesabım",
+    yonetimPaneli: "Yönetim Paneli",
+    yonetimPaneliAciklama:
+      "Yönetici yetkin olduğu için yönetim paneline buradan geçebilirsin.",
     bilgiler: "Hesap Bilgileri",
     adSoyad: "Ad Soyad",
     eposta: "E-posta",

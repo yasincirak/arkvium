@@ -1,6 +1,9 @@
+import { Suspense } from "react";
 import TagGenerator from "@/components/admin/TagGenerator";
+import TagStokOzeti from "@/components/admin/TagStokOzeti";
+import { SIPARIS_URUNLERI } from "@/lib/siparis";
 
-// Etiket üretimi her istekte taze çalışmalıdır.
+// Etiket üretimi ve stok sayıları her istekte taze çalışmalıdır.
 export const dynamic = "force-dynamic";
 
 export default function AdminTagsPage() {
@@ -16,7 +19,23 @@ export default function AdminTagsPage() {
         </p>
       </div>
 
-      <TagGenerator />
+      {/* Stok sorgusu üretim formunu bekletmesin. */}
+      <Suspense
+        fallback={
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/40">
+            Stok okunuyor…
+          </div>
+        }
+      >
+        <TagStokOzeti />
+      </Suspense>
+
+      <TagGenerator
+        urunler={SIPARIS_URUNLERI.map((urun) => ({
+          kod: urun.kod,
+          ad: urun.ad,
+        }))}
+      />
     </div>
   );
 }

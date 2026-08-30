@@ -179,11 +179,20 @@ export async function siparisOlustur(
           // 1) Süresi dolmuş rezervasyonlar stoğa döner.
           await suresiDolanRezervasyonlariTemizle(islem);
 
-          // 2) Stok kontrolü: yetmiyorsa hiçbir kayıt yazılmadan durulur.
-          const stok = await stoktakiEtiketSayisi(islem);
+          /*
+            2) Stok kontrolü ÜRÜN BAZINDA yapılır.
 
-          if (stok < toplamQrAdedi) {
-            throw new StokHatasi(STOK_YETERSIZ_MESAJI);
+            Toplam sayıya bakmak yetmez: stokta 5 valiz etiketi varken
+            araç stickerı siparişi "stok yeterli" görünür ve yanlış ürünün
+            etiketi ayrılırdı. Yetmiyorsa hiçbir kayıt yazılmadan durulur.
+          */
+          for (const kalem of toplam.kalemler) {
+            const gerekli = kalem.adet * kalem.qrAdedi;
+            const stok = await stoktakiEtiketSayisi(islem, kalem.kod);
+
+            if (stok < gerekli) {
+              throw new StokHatasi(STOK_YETERSIZ_MESAJI);
+            }
           }
 
           // 3) Sipariş başlığı.
@@ -225,6 +234,7 @@ export async function siparisOlustur(
             await kalemIcinEtiketAyir(islem, {
               orderId: olusan.id,
               orderItemId: satir.id,
+              productKod: kalem.kod,
               adet: kalem.adet * kalem.qrAdedi,
               sonGecerlilik,
             });

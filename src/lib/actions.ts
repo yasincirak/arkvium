@@ -3,7 +3,7 @@
 import { randomUUID } from "crypto";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { getAdminSession, getUserSession } from "./session";
+import { getUserSession, yoneticiErisimi } from "./session";
 import { hizSiniriKontrol, istemciIpAdresi } from "./rate-limit";
 import { epostaGonder } from "./email";
 import { whatsappBaglantisi } from "./telefon";
@@ -65,7 +65,7 @@ type CreateFinderMessageInput = {
  * yapılmak zorundadır.
  */
 async function requireRecordAccess(recordId: string): Promise<void> {
-  const adminSession = await getAdminSession();
+  const adminSession = await yoneticiErisimi();
 
   if (adminSession) {
     return;
@@ -87,7 +87,7 @@ async function requireRecordAccess(recordId: string): Promise<void> {
 export async function createRecord(
   data: CreateRecordInput
 ): Promise<ItemRecord> {
-  const adminSession = await getAdminSession();
+  const adminSession = await yoneticiErisimi();
   const userSession = await getUserSession();
 
   if (!adminSession && !userSession) {
@@ -257,7 +257,7 @@ export async function changeFinderMessageStatus(
   messageId: string,
   status: FinderMessageStatus
 ): Promise<FinderMessage | null> {
-  const adminSession = await getAdminSession();
+  const adminSession = await yoneticiErisimi();
 
   if (!adminSession) {
     throw new Error("Bu işlem için yönetici girişi gerekiyor.");

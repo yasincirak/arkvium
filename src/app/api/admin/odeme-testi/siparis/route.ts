@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/session";
+import { yoneticiErisimi } from "@/lib/session";
 import { rezervasyonSonGecerliligi, StokHatasi } from "@/lib/qr-rezervasyon";
 import { siparisOlustur } from "@/lib/siparis-servisi";
 
@@ -12,7 +12,7 @@ import { siparisOlustur } from "@/lib/siparis-servisi";
  *
  * Güvenlik kuralları:
  * - `src/middleware.ts` yalnızca `/admin/*` SAYFALARINI korur; `/api/admin/*`
- *   kapsam dışıdır. Bu yüzden yetki burada `getAdminSession()` ile AYRICA
+ *   kapsam dışıdır. Bu yüzden yetki burada `yoneticiErisimi()` ile AYRICA
  *   doğrulanır; oturumsuz istek 401 alır ve hiçbir kayıt oluşmaz.
  * - İstemciden yalnızca ürün KODU ve teslimat bilgisi alınır. Fiyat, ara
  *   toplam, kargo ve toplam istemciden KABUL EDİLMEZ; hepsi `siparisOlustur`
@@ -24,7 +24,7 @@ import { siparisOlustur } from "@/lib/siparis-servisi";
 
 export async function POST(request: Request) {
   try {
-    const admin = await getAdminSession();
+    const admin = await yoneticiErisimi();
 
     if (!admin) {
       return NextResponse.json(
