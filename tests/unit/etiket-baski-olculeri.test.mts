@@ -36,6 +36,10 @@ const {
   A4_KULLANILABILIR_BOY_MM,
   izgaraEnMm,
   izgaraBoyMm,
+  etiketSayfaSayisi,
+  kartSayfaSayisi,
+  SAYFADA_ETIKET,
+  SAYFADA_KART,
 } = olculer;
 
 /**
@@ -147,5 +151,59 @@ describe("A4 yerleşimi", () => {
 
   test("etiketler arasında kesim payı var", () => {
     assert.ok(ETIKET_ARALIK_MM > 0, "aralık olmadan kesim yapılamaz");
+  });
+});
+
+describe("sayfa sayısı — gereksiz boş sayfa olmamalı", () => {
+  /**
+   * Boş ikinci sayfa gerçek bir hataydı: baskı alanı dışındaki panel
+   * `visibility: hidden` ile gizlendiği için düzende yer kaplamaya devam
+   * ediyor, 495 mm'lik yükseklik A4'te ikinci bir sayfa açıyordu.
+   * Kural artık `display: none`; bu testler sayfa hesabını sabitler.
+   */
+  const BEKLENEN: ReadonlyArray<readonly [number, number]> = [
+    [1, 1],
+    [3, 1],
+    [34, 1],
+    [35, 1],
+    [36, 2],
+    [70, 2],
+    [71, 3],
+  ];
+
+  for (const [adet, sayfa] of BEKLENEN) {
+    test(`${adet} etiket -> ${sayfa} sayfa`, () => {
+      assert.equal(etiketSayfaSayisi(adet), sayfa);
+    });
+  }
+
+  test("sayfa başına tam 35 etiket sığar", () => {
+    assert.equal(SAYFADA_ETIKET, 35);
+  });
+
+  test("etiket yokken hiç sayfa üretilmez", () => {
+    assert.equal(etiketSayfaSayisi(0), 0);
+    assert.equal(etiketSayfaSayisi(-1), 0);
+  });
+
+  test("1–35 arası her adet TEK sayfaya sığar", () => {
+    for (let adet = 1; adet <= SAYFADA_ETIKET; adet += 1) {
+      assert.equal(
+        etiketSayfaSayisi(adet),
+        1,
+        `${adet} etiket tek sayfaya sığmalıydı`
+      );
+    }
+  });
+
+  test("sayfa sınırının bir fazlası ikinci sayfayı açar", () => {
+    assert.equal(etiketSayfaSayisi(SAYFADA_ETIKET + 1), 2);
+  });
+
+  test("aktivasyon kartları aynı kuralı izler", () => {
+    assert.equal(kartSayfaSayisi(1), 1);
+    assert.equal(kartSayfaSayisi(SAYFADA_KART), 1);
+    assert.equal(kartSayfaSayisi(SAYFADA_KART + 1), 2);
+    assert.equal(kartSayfaSayisi(0), 0);
   });
 });

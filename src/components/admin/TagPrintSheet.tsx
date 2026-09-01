@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { QRCodeSVG } from "qrcode.react";
 import {
-  A4_KULLANILABILIR_BOY_MM,
-  A4_KULLANILABILIR_EN_MM,
   ETIKET_ARALIK_MM,
   ETIKET_IC_BOSLUK_MM,
   ETIKET_MM,
@@ -15,6 +14,7 @@ import {
   KART_SUTUN,
   SAYFADA_ETIKET,
   SESSIZ_ALAN_MODUL,
+  etiketSayfaSayisi,
   modulBoyutuMm,
   sessizAlanMm,
   yerlesimAl,
@@ -37,6 +37,15 @@ import {
  * AKTİVASYON KODU
  * Etiketin ÖN YÜZÜNDE aktivasyon kodu asla bulunmaz. Kod yalnızca ayrı
  * aktivasyon kartında, kazınacak alanın altında yer alır.
+ *
+ * BASKI ALANI NEDEN PORTAL İLE <body> ALTINA TAŞINIYOR?
+ * Baskıda yönetim panelinin tamamı gizlenmelidir. `visibility: hidden`
+ * yetmiyordu: gizlenen kutular düzende yer kaplamaya devam ediyor ve
+ * 495 mm'lik panel yüksekliği A4'te ikinci bir BOŞ sayfa açıyordu.
+ * Çözüm `display: none`, ama baskı alanı panelin içinde kalsaydı atasıyla
+ * birlikte o da kaybolurdu. Portal sayesinde baskı alanı body'nin doğrudan
+ * çocuğu olur ve globals.css içindeki
+ * `body > *:not(#baski-alani) { display: none }` kuralı yazılabilir.
  */
 
 type UretilenEtiket = {
@@ -64,10 +73,14 @@ export default function TagPrintSheet({
   const [baskiTuru, setBaskiTuru] = useState<BaskiTuru>("etiket");
   const [yazdirilacak, setYazdirilacak] = useState(false);
 
+  /** Portal yalnızca istemcide kurulabilir; sunucuda `document` yoktur. */
+  const [baglandi, setBaglandi] = useState(false);
+
   useEffect(() => {
     const adres = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
 
     setTabanAdres(adres.replace(/\/+$/, ""));
+    setBaglandi(true);
   }, []);
 
   /*
@@ -94,13 +107,204 @@ export default function TagPrintSheet({
   const yerlesim = yerlesimAl(kodGoster);
   const modul = modulBoyutuMm(kodGoster);
   const sessiz = sessizAlanMm(kodGoster);
+  const sayfaSayisi = etiketSayfaSayisi(etiketler.length);
 
   function yazdir(tur: BaskiTuru) {
     setBaskiTuru(tur);
     setYazdirilacak(true);
   }
 
-  const sayfaSayisi = Math.ceil(etiketler.length / SAYFADA_ETIKET);
+  /*
+    Ekranda `display: none`. Yazdırmada globals.css içindeki kural onu
+    `display: block` yapar. Kapsayıcıya HİÇBİR kenar boşluğu, dolgu veya
+    yükseklik verilmez: tek bir artık boşluk ikinci sayfayı geri getirir.
+  */
+  const baskiAlani = (
+    <div id="baski-alani" style={{ display: "none" }}>
+      {baskiTuru === "etiket" ? (
+        <div
+          className="baski-izgara"
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${ETIKET_SUTUN}, ${mm(ETIKET_MM)})`,
+            gap: mm(ETIKET_ARALIK_MM),
+            /*
+              Genişlik SÜTUNLARDAN çıkar (5x30 + 4x6 = 174 mm). Basılabilir
+              alanla (190 mm) birebir eşit sabit bir genişlik vermek,
+              yuvarlamada yatay taşmaya ve fazladan sayfaya yol açabilir.
+            */
+            width: "max-content",
+            justifyContent: "start",
+            alignContent: "start",
+          }}
+        >
+          {etiketler.map((etiket) => (
+            <div
+              key={etiket.publicToken}
+              className="baski-parca"
+              style={{
+                width: mm(ETIKET_MM),
+                height: mm(ETIKET_MM),
+                boxSizing: "border-box",
+                padding: mm(ETIKET_IC_BOSLUK_MM),
+                background: "#ffffff",
+                color: "#000000",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                gap: mm(yerlesim.satirArasiMm),
+                // outline kutu ölçüsüne eklenmez; etiket tam 30 mm kalır.
+                outline: "0.1mm solid #c9c9c9",
+                outlineOffset: 0,
+              }}
+            >
+              <QRCodeSVG
+                value={`${tabanAdres}/t/${etiket.publicToken}`}
+                // Ölçü mm cinsinden verilir; piksel yuvarlaması olmaz.
+                style={{
+                  width: mm(yerlesim.qrKutuMm),
+                  height: mm(yerlesim.qrKutuMm),
+                  display: "block",
+                }}
+                level="M"
+                marginSize={SESSIZ_ALAN_MODUL}
+                bgColor="#ffffff"
+                fgColor="#000000"
+              />
+
+              <span
+                style={{
+                  fontSize: mm(yerlesim.arkviumSatirMm * 0.78),
+                  lineHeight: mm(yerlesim.arkviumSatirMm),
+                  fontWeight: 700,
+                  letterSpacing: "0.12mm",
+                }}
+              >
+                ARKVIUM
+              </span>
+
+              {yerlesim.kodSatirMm !== null && (
+                <span
+                  style={{
+                    fontSize: mm(yerlesim.kodSatirMm * 0.78),
+                    lineHeight: mm(yerlesim.kodSatirMm),
+                    fontFamily: "ui-monospace, monospace",
+                    letterSpacing: "0.04mm",
+                  }}
+                >
+                  {etiket.code}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div
+          className="baski-izgara"
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${KART_SUTUN}, ${mm(KART_EN_MM)})`,
+            gap: mm(KART_ARALIK_MM),
+            width: "max-content",
+            justifyContent: "start",
+            alignContent: "start",
+          }}
+        >
+          {etiketler.map((etiket) => (
+            <div
+              key={etiket.publicToken}
+              className="baski-parca"
+              style={{
+                width: mm(KART_EN_MM),
+                height: mm(KART_BOY_MM),
+                boxSizing: "border-box",
+                padding: "3mm",
+                background: "#ffffff",
+                color: "#000000",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                outline: "0.1mm solid #c9c9c9",
+                outlineOffset: 0,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "2.6mm",
+                    fontWeight: 700,
+                    letterSpacing: "0.2mm",
+                  }}
+                >
+                  ARKVIUM
+                </span>
+
+                {urunAdi && (
+                  <span style={{ fontSize: "2mm", color: "#555555" }}>
+                    {urunAdi}
+                  </span>
+                )}
+              </div>
+
+              <div>
+                <span style={{ fontSize: "2mm", color: "#555555" }}>
+                  Etiket kodu
+                </span>
+
+                <div
+                  style={{
+                    fontSize: "3.4mm",
+                    fontFamily: "ui-monospace, monospace",
+                    fontWeight: 700,
+                    letterSpacing: "0.2mm",
+                  }}
+                >
+                  {etiket.code}
+                </div>
+              </div>
+
+              {/*
+                Kazınacak alan. Aktivasyon kodu bu çerçevenin ALTINDA kalır;
+                üzerine kazıma etiketi yapıştırılır. Kod yalnızca burada
+                bulunur — QR etiketinin ön yüzünde asla yer almaz.
+              */}
+              <div
+                style={{
+                  border: "0.2mm dashed #777777",
+                  borderRadius: "1mm",
+                  padding: "1.4mm 2mm",
+                  textAlign: "center",
+                }}
+              >
+                <div style={{ fontSize: "1.8mm", color: "#777777" }}>
+                  Kazınacak alan — aktivasyon kodu
+                </div>
+
+                <div
+                  style={{
+                    marginTop: "0.6mm",
+                    fontSize: "3.6mm",
+                    fontFamily: "ui-monospace, monospace",
+                    fontWeight: 700,
+                    letterSpacing: "0.3mm",
+                  }}
+                >
+                  {etiket.activationCode}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -163,183 +367,7 @@ export default function TagPrintSheet({
         </div>
       </div>
 
-      {/* Ekranda gizli, yalnızca yazdırmada görünür. */}
-      <div id="baski-alani" className="hidden print:block">
-        {baskiTuru === "etiket" ? (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: `repeat(${ETIKET_SUTUN}, ${mm(ETIKET_MM)})`,
-              gap: mm(ETIKET_ARALIK_MM),
-              width: mm(A4_KULLANILABILIR_EN_MM),
-              justifyContent: "start",
-            }}
-          >
-            {etiketler.map((etiket) => (
-              <div
-                key={etiket.publicToken}
-                className="baski-parca"
-                style={{
-                  width: mm(ETIKET_MM),
-                  height: mm(ETIKET_MM),
-                  boxSizing: "border-box",
-                  padding: mm(ETIKET_IC_BOSLUK_MM),
-                  background: "#ffffff",
-                  color: "#000000",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "flex-start",
-                  gap: mm(yerlesim.satirArasiMm),
-                  // outline kutu ölçüsüne eklenmez; etiket tam 30 mm kalır.
-                  outline: "0.1mm solid #c9c9c9",
-                  outlineOffset: 0,
-                }}
-              >
-                <QRCodeSVG
-                  value={`${tabanAdres}/t/${etiket.publicToken}`}
-                  // Ölçü mm cinsinden verilir; piksel yuvarlaması olmaz.
-                  style={{
-                    width: mm(yerlesim.qrKutuMm),
-                    height: mm(yerlesim.qrKutuMm),
-                    display: "block",
-                  }}
-                  level="M"
-                  marginSize={SESSIZ_ALAN_MODUL}
-                  bgColor="#ffffff"
-                  fgColor="#000000"
-                />
-
-                <span
-                  style={{
-                    fontSize: mm(yerlesim.arkviumSatirMm * 0.78),
-                    lineHeight: mm(yerlesim.arkviumSatirMm),
-                    fontWeight: 700,
-                    letterSpacing: "0.12mm",
-                  }}
-                >
-                  ARKVIUM
-                </span>
-
-                {yerlesim.kodSatirMm !== null && (
-                  <span
-                    style={{
-                      fontSize: mm(yerlesim.kodSatirMm * 0.78),
-                      lineHeight: mm(yerlesim.kodSatirMm),
-                      fontFamily: "ui-monospace, monospace",
-                      letterSpacing: "0.04mm",
-                    }}
-                  >
-                    {etiket.code}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: `repeat(${KART_SUTUN}, ${mm(KART_EN_MM)})`,
-              gap: mm(KART_ARALIK_MM),
-              width: mm(A4_KULLANILABILIR_EN_MM),
-              maxHeight: mm(A4_KULLANILABILIR_BOY_MM * 100),
-              justifyContent: "start",
-            }}
-          >
-            {etiketler.map((etiket) => (
-              <div
-                key={etiket.publicToken}
-                className="baski-parca"
-                style={{
-                  width: mm(KART_EN_MM),
-                  height: mm(KART_BOY_MM),
-                  boxSizing: "border-box",
-                  padding: "3mm",
-                  background: "#ffffff",
-                  color: "#000000",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  outline: "0.1mm solid #c9c9c9",
-                  outlineOffset: 0,
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "baseline",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: "2.6mm",
-                      fontWeight: 700,
-                      letterSpacing: "0.2mm",
-                    }}
-                  >
-                    ARKVIUM
-                  </span>
-
-                  {urunAdi && (
-                    <span style={{ fontSize: "2mm", color: "#555555" }}>
-                      {urunAdi}
-                    </span>
-                  )}
-                </div>
-
-                <div>
-                  <span style={{ fontSize: "2mm", color: "#555555" }}>
-                    Etiket kodu
-                  </span>
-
-                  <div
-                    style={{
-                      fontSize: "3.4mm",
-                      fontFamily: "ui-monospace, monospace",
-                      fontWeight: 700,
-                      letterSpacing: "0.2mm",
-                    }}
-                  >
-                    {etiket.code}
-                  </div>
-                </div>
-
-                {/*
-                  Kazınacak alan. Aktivasyon kodu bu çerçevenin ALTINDA kalır;
-                  üzerine kazıma etiketi yapıştırılır. Kod yalnızca burada
-                  bulunur — QR etiketinin ön yüzünde asla yer almaz.
-                */}
-                <div
-                  style={{
-                    border: "0.2mm dashed #777777",
-                    borderRadius: "1mm",
-                    padding: "1.4mm 2mm",
-                    textAlign: "center",
-                  }}
-                >
-                  <div style={{ fontSize: "1.8mm", color: "#777777" }}>
-                    Kazınacak alan — aktivasyon kodu
-                  </div>
-
-                  <div
-                    style={{
-                      marginTop: "0.6mm",
-                      fontSize: "3.6mm",
-                      fontFamily: "ui-monospace, monospace",
-                      fontWeight: 700,
-                      letterSpacing: "0.3mm",
-                    }}
-                  >
-                    {etiket.activationCode}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {baglandi && createPortal(baskiAlani, document.body)}
     </>
   );
 }

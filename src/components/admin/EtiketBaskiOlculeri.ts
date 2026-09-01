@@ -139,3 +139,26 @@ export function izgaraBoyMm(
 ): number {
   return satir * parcaBoyMm + (satir - 1) * aralikMm;
 }
+
+/**
+ * Verilen etiket adedinin kaç A4 sayfası tutacağı.
+ *
+ * Boş sayfa üretmemesi kritik: 35 etiket TAM olarak bir sayfadır,
+ * 36 etiket ikinci sayfaya taşar. 0 etiket sayfa üretmez.
+ */
+export function etiketSayfaSayisi(adet: number): number {
+  if (!Number.isFinite(adet) || adet <= 0) {
+    return 0;
+  }
+
+  return Math.ceil(adet / SAYFADA_ETIKET);
+}
+
+/** Aynı hesap aktivasyon kartları için. */
+export function kartSayfaSayisi(adet: number): number {
+  if (!Number.isFinite(adet) || adet <= 0) {
+    return 0;
+  }
+
+  return Math.ceil(adet / SAYFADA_KART);
+}

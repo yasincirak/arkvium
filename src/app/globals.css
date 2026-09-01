@@ -158,22 +158,45 @@ body {
  * çizgilerini ve kazınacak alan çerçevesini baskıda atlayabiliyor.
  */
 @media print {
-  body * {
-    visibility: hidden;
-  }
+  /*
+    NEDEN `display: none`, `visibility: hidden` DEĞİL?
 
-  #baski-alani,
-  #baski-alani * {
-    visibility: visible;
+    `visibility: hidden` öğeyi görünmez yapar ama DÜZENDE YER KAPLAMAYA
+    DEVAM EDER. Yönetim panelinin sarmalayıcısı (min-h-screen + stok tablosu
+    + kontrol listesi + form) 495 mm yüksekliğindeydi; A4'ün basılabilir
+    alanı 277 mm olduğu için yazdırma motoru 2 sayfa üretiyor ve ikinci
+    sayfa tamamen görünmez içerikle dolduğu için BOŞ görünüyordu.
+
+    `display: none` kutuyu tamamen kaldırır, sayfa yüksekliğine katkı vermez.
+
+    Baskı alanı `createPortal` ile doğrudan <body> altına taşınır; böylece
+    "body'nin baskı alanı DIŞINDAKİ tüm çocuklarını kaldır" kuralı yazılabilir.
+    Baskı alanı panelin içinde kalsaydı, atasını gizlemek onu da gizlerdi.
+  */
+  body > *:not(#baski-alani) {
+    display: none !important;
   }
 
   #baski-alani {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
+    display: block !important;
+    position: static;
+    margin: 0;
+    padding: 0;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+  }
+
+  /*
+    Kök öğelerdeki her türlü yükseklik/kenar boşluğu sıfırlanır: tek bir
+    artık boşluk bile ikinci sayfayı geri getirir.
+  */
+  html,
+  body {
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
   }
 
   /* Sayfa boyutu sabittir: A4 dışında bir kâğıt ölçüyü bozar. */
@@ -187,7 +210,17 @@ body {
     break-inside: avoid;
     page-break-inside: avoid;
   }
+
+  /*
+    Izgaranın son satırından sonra sayfa sonu zorlanmaz. Bazı motorlar
+    grid kapsayıcısının sonuna kırılma noktası koyup boş sayfa açıyor.
+  */
+  .baski-izgara {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
 }
+
 
 /*
  * Bölüm giriş animasyonları.
