@@ -24,7 +24,61 @@ const nextConfig = {
      * Paket dışarıda bırakılınca require çalışma anında node_modules'tan
      * çözülür.
      */
-    serverComponentsExternalPackages: ["iyzipay"],
+    /**
+     * `qrcode.react` sunucu bundle'ına GÖMÜLMEZ.
+     *
+     * Baskıcı paketi ucu QR'ı sunucuda üretir. Paket webpack tarafından
+     * route bundle'ına gömüldüğünde içindeki `react` çağrısı Next'in
+     * SUNUCU BİLEŞENİ çalışma zamanına (app-page.runtime) bağlanıyor;
+     * orada hook'lar null olduğu için `QRCodeSVG` render edilirken
+     * "Cannot read properties of null (reading 'useMemo')" hatası
+     * fırlıyordu. Hata yalnızca production derlemesinde görülüyordu:
+     * `next dev` aynı biçimde paketlemiyor.
+     *
+     * Paket dışarıda bırakılınca çalışma anında node_modules'tan yüklenir
+     * ve gerçek React ile render edilir. İstemcideki 30x30 mm baskı akışı
+     * etkilenmez; o taraf ayrı bir bundle'dır.
+     */
+    serverComponentsExternalPackages: ["iyzipay", "qrcode.react"],
+
+    /**
+     * QR üretimi çalışma anında `node_modules`'tan yüklendiği için webpack
+     * bu dosyaları izleyemez. Sunucusuz pakete girmelerini burada garanti
+     * ediyoruz; aksi hâlde production'da "Cannot find module" alınır.
+     */
+    outputFileTracingIncludes: {
+      "/api/admin/tags/baskici-paketi": [
+        "./node_modules/qrcode.react/**",
+        "./node_modules/react/**",
+        "./node_modules/react-dom/**",
+      ],
+    },
+  },
+
+  /**
+   * Sunucu derlemesinde `react-dom/server` GÖMÜLMEZ.
+   *
+   * Baskıcı paketi ucu QR'ı sunucuda render eder. Next, route bundle'ına
+   * kendi `react-dom/server` kopyasını gömüyor; o kopya kendi React'inin
+   * hook dispatcher'ını kuruyor. `qrcode.react` ise node_modules'taki
+   * gerçek React ile çalıştığı için iki ayrı React kopyası oluşuyor ve
+   * `useMemo` null geliyordu (production'da 500).
+   *
+   * Burada yalnızca bu belirteç dışarı alınır: çalışma anında
+   * `require("react-dom/server")` gerçek node_modules kopyasını verir ve
+   * bileşenle aynı React örneği kullanılır. Next'in kendi iç kullanımı
+   * `next/dist/compiled/react-dom/server` belirtecinden geçtiği için
+   * bu kuraldan etkilenmez.
+   */
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals = [
+        ...(Array.isArray(config.externals) ? config.externals : []),
+        { "react-dom/server": "commonjs react-dom/server" },
+      ];
+    }
+
+    return config;
   },
 
   /**

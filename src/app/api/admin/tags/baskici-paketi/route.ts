@@ -65,17 +65,25 @@ export const runtime = "nodejs";
 /**
  * QR SVG'sini Node tarafında üretir.
  *
- * NEDEN `createRequire`?
- * Bu bir Route Handler ve yalnızca sunucuda çalışıyor. Ancak Next.js,
- * app router altındaki dosyaları React Server Components katmanında
- * derliyor; o katmanda `qrcode.react` hook kullanamıyor ve
- * `useMemo` null geliyor (denendi: çalışma zamanında TypeError).
+ * NEDEN BU KADAR DOLAMBAÇLI?
+ * `qrcode.react` bir React bileşenidir ve içinde `useMemo` kullanır. Route
+ * Handler'lar Next'in sunucu katmanında derlendiği için burada iki ayrı
+ * tuzak vardır ve İKİSİ DE production'da 500 üretmiştir:
  *
- * `createRequire` modülleri webpack grafiğinin DIŞINDAN, düz Node
- * çözümlemesiyle yükler. Böylece `qrcode.react` normal istemci sürümüyle,
- * gerçek React ile çalışır. 30x30 mm baskı akışıyla AYNI kütüphane
- * kullanılır; ayrı bir kodlayıcı seçilseydi iki akışın ürettiği QR
- * zamanla birbirinden ayrışabilirdi.
+ *  1) Paket route bundle'ına gömülürse `react` Next'in sunucu bileşeni
+ *     çalışma zamanına bağlanır; orada hook'lar yoktur ve render sırasında
+ *     "Cannot read properties of null (reading 'useMemo')" fırlar.
+ *
+ *  2) Yalnızca bileşen dışarı alınırsa bu kez İKİ AYRI React KOPYASI oluşur:
+ *     bileşen node_modules/react ile çalışır, onu render eden bundle içindeki
+ *     react-dom/server ise kendi React kopyasının dispatcher'ını kurar.
+ *     Dispatcher eşleşmediği için hook yine null gelir.
+ *
+ * Çözüm: bileşen de renderer da AYNI gerçek node_modules kopyasından
+ * yüklenir. `qrcode.react` next.config.mjs içinde dışarıda bırakılır;
+ * Bunun için `qrcode.react` ve `react-dom` next.config.mjs içinde sunucu
+ * bundle'ının DIŞINDA bırakılır; dosyaların sunucusuz pakete girmesi
+ * `outputFileTracingIncludes` ile garanti altına alınır.
  */
 const nodeRequire = createRequire(import.meta.url);
 
@@ -94,6 +102,9 @@ function qrSvgUret(adres: string): string {
     })
   );
 }
+
+/** QR dosyası üretilemediğinde fırlatılır; mesajı yalnızca teknik sebeptir. */
+class QrUretilemedi extends Error {}
 
 function hata(mesaj: string, durum: number) {
   // Mesajlar sabittir; sistem detayı, token veya kayıt bilgisi taşımaz.
@@ -145,6 +156,22 @@ function secimiCoz(govde: unknown): {
   }
 
   return { alan: tokenlar ? "publicToken" : "code", degerler };
+}
+
+/**
+ * Tek etiketin baskıya hazır SVG'sini üretir.
+ *
+ * Hata durumunda sebep TEKNİK metinle sarmalanır; QR adresi, token veya
+ * etiket kodu hata metnine KONMAZ (log ve yanıt bu metinden beslenir).
+ */
+function qrDosyasiUret(qrAdresi: string): string {
+  try {
+    return svgOlcuUygula(qrSvgUret(qrAdresi), ARAC_SVG_MM);
+  } catch (sebep) {
+    throw new QrUretilemedi(
+      sebep instanceof Error ? sebep.message : "bilinmeyen hata"
+    );
+  }
 }
 
 export async function POST(request: Request) {
@@ -220,7 +247,7 @@ export async function POST(request: Request) {
         etiketKodu: etiketKoduBicimle(etiket.code),
         qrAdresi,
         // Fiziksel ölçü SVG'nin içine yazılır; matbaa elle ölçeklemez.
-        qrSvg: svgOlcuUygula(qrSvgUret(qrAdresi), ARAC_SVG_MM),
+        qrSvg: qrDosyasiUret(qrAdresi),
       };
     });
 
@@ -249,8 +276,25 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Baskıcı paketi hatası:", error);
+    /*
+      Kayda YALNIZCA hata metni yazılır. Yığın izi, QR adresi, publicToken,
+      çerez ve aktivasyon kodu loglanmaz — bu uç yönetici içindir ama log
+      kayıtları daha geniş bir çevrede saklanır.
+    */
+    const sebep = error instanceof Error ? error.message : "bilinmeyen hata";
 
-    return hata("Baskı paketi oluşturulamadı.", 500);
+    console.error("Baskıcı paketi hatası:", sebep);
+
+    if (error instanceof QrUretilemedi) {
+      return hata(
+        `QR dosyası üretilemedi, paket oluşturulmadı (${sebep}). Etiketler değişmedi.`,
+        500
+      );
+    }
+
+    return hata(
+      "Baskı paketi oluşturulamadı. Etiketler ve stok değişmedi; tekrar deneyebilirsiniz.",
+      500
+    );
   }
 }
