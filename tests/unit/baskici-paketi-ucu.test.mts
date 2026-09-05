@@ -502,7 +502,7 @@ describe("baskıcı paketi ucu — araç paketi içeriği", () => {
 
     assert.match(
       ad ?? "",
-      /^arkvium-baskici-arac-stickeri-\d{4}-\d{2}-\d{2}\.zip$/
+      /^arkvium-baskici-arac-stickeri-\d{4}-\d{2}-\d{2}-2etiket\.zip$/
     );
   });
 
@@ -517,5 +517,141 @@ describe("baskıcı paketi ucu — araç paketi içeriği", () => {
       "URETIM-NOTU.txt",
       "baskici-listesi.csv",
     ]);
+  });
+});
+
+describe("baskıcı paketi ucu — TAM etiket eşleşmesi", () => {
+  /**
+   * Bu blok gerçek bir production şikâyetinden doğdu: indirilen ZIP'te
+   * yeni üretilen etiket yerine ESKİ bir etiket çıktı. Aşağıdaki testler
+   * "istenen etiket ne ise pakete tam olarak o girer" kuralını, veritabanında
+   * BAŞKA etiketler de varken doğrular.
+   */
+  const YENI = { code: "ARKN1XXQWDP", publicToken: "token_yeni" };
+  const ESKI = { code: "ARKKX2AZZVE", publicToken: "token_eski" };
+  const UCUNCU = { code: "ARKTTTT2345", publicToken: "token_ucuncu" };
+
+  async function paket(govde: Record<string, unknown>) {
+    const POST = await ucuAl();
+
+    yonetici = { userId: "y1", email: "yonetici@ornek.test" };
+    // Veritabanında birden fazla araç etiketi var.
+    veritabaniEtiketleri = [ESKI, YENI, UCUNCU];
+
+    return POST(istek({ productKod: ARAC_KODU, ...govde }));
+  }
+
+  async function svgAdlari(yanit: Response) {
+    return zipOku(Buffer.from(await yanit.arrayBuffer()))
+      .filter((d) => d.ad.endsWith(".svg"))
+      .map((d) => d.ad)
+      .sort();
+  }
+
+  test("yeni üretilen tek etiketin tokenı gönderilince yalnızca o etiket paketlenir", async () => {
+    const yanit = await paket({ publicTokens: [YENI.publicToken] });
+
+    assert.equal(yanit.status, 200);
+    assert.deepEqual(await svgAdlari(yanit), ["ARK-N1XX-QWDP.svg"]);
+  });
+
+  test("ARK-N1XX-QWDP istendiğinde ARK-KX2A-ZZVE pakete GİRMEZ", async () => {
+    const yanit = await paket({ tagKodlari: ["ARK-N1XX-QWDP"] });
+
+    assert.equal(yanit.status, 200);
+
+    const adlar = await svgAdlari(yanit);
+
+    assert.deepEqual(adlar, ["ARK-N1XX-QWDP.svg"]);
+    assert.ok(
+      !adlar.includes("ARK-KX2A-ZZVE.svg"),
+      "eski etiket pakete sızmış"
+    );
+  });
+
+  test("iki belirli etiket seçilince yalnızca o ikisi paketlenir", async () => {
+    const yanit = await paket({
+      tagKodlari: ["ARK-N1XX-QWDP", "ARK-TTTT-2345"],
+    });
+
+    assert.equal(yanit.status, 200);
+    assert.deepEqual(await svgAdlari(yanit), [
+      "ARK-N1XX-QWDP.svg",
+      "ARK-TTTT-2345.svg",
+    ]);
+  });
+
+  test("CSV'deki kodlar SVG dosya adlarıyla birebir eşleşir", async () => {
+    const yanit = await paket({
+      tagKodlari: ["ARK-N1XX-QWDP", "ARK-TTTT-2345"],
+    });
+
+    const dosyalar = zipOku(Buffer.from(await yanit.arrayBuffer()));
+
+    const csv = dosyalar
+      .find((d) => d.ad === "baskici-listesi.csv")!
+      .icerik.toString("utf8")
+      .replace(/^﻿/, "");
+
+    const satirlar = csv.trim().split("\r\n").slice(1);
+
+    assert.equal(satirlar.length, 2);
+
+    for (const satir of satirlar) {
+      const alanlar = satir.split(";").map((a) => a.replace(/^"|"$/g, ""));
+      const [, etiketKodu, , qrDosyasi] = alanlar;
+
+      assert.equal(qrDosyasi, `${etiketKodu}.svg`);
+      assert.ok(
+        dosyalar.some((d) => d.ad === qrDosyasi),
+        `${qrDosyasi} arşivde yok`
+      );
+    }
+  });
+
+  test("bilinmeyen kod istenirse paket üretilmez ve eşleşmeyen kod bildirilir", async () => {
+    const yanit = await paket({ tagKodlari: ["ARK-0000-0000"] });
+
+    assert.equal(yanit.status, 409);
+
+    const govde = await yanit.json();
+
+    assert.match(govde.error, /ARK-0000-0000/);
+  });
+
+  test("var olan ve olmayan kod birlikte gönderilirse hiç paket üretilmez", async () => {
+    const yanit = await paket({
+      tagKodlari: ["ARK-N1XX-QWDP", "ARK-0000-0000"],
+    });
+
+    assert.equal(yanit.status, 409);
+  });
+
+  test("boş seçim reddedilir", async () => {
+    assert.equal((await paket({ tagKodlari: [] })).status, 400);
+    assert.equal((await paket({ publicTokens: [] })).status, 400);
+  });
+
+  test("yinelenen seçim tek etiket üretir", async () => {
+    const yanit = await paket({
+      tagKodlari: ["ARK-N1XX-QWDP", "ark n1xx qwdp", "ARKN1XXQWDP"],
+    });
+
+    assert.equal(yanit.status, 200);
+    assert.deepEqual(await svgAdlari(yanit), ["ARK-N1XX-QWDP.svg"]);
+  });
+
+  test("dosya adında seçilen etiket sayısı bulunur", async () => {
+    const tek = await paket({ tagKodlari: ["ARK-N1XX-QWDP"] });
+    const cift = await paket({
+      tagKodlari: ["ARK-N1XX-QWDP", "ARK-TTTT-2345"],
+    });
+
+    const ad = (yanit: Response) =>
+      yanit.headers.get("Content-Disposition")?.match(/filename="([^"]+)"/)?.[1];
+
+    assert.match(ad(tek) ?? "", /-1etiket\.zip$/);
+    assert.match(ad(cift) ?? "", /-2etiket\.zip$/);
+    assert.notEqual(ad(tek), ad(cift), "iki paket aynı adı taşıyor");
   });
 });

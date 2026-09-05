@@ -222,9 +222,12 @@ describe("baskıcı paketi — sızıntı denetimi", () => {
   });
 
   test("indirilen dosya adı kimlik veya kişisel veri taşımaz", () => {
-    const ad = paketDosyaAdi("evcil-hayvan-kunyesi", 3);
+    const ad = paketDosyaAdi("evcil-hayvan-kunyesi", "2026-09-05", 3);
 
-    assert.equal(ad, "arkvium-baskici-evcil-hayvan-kunyesi-3.zip");
+    assert.equal(
+      ad,
+      "arkvium-baskici-evcil-hayvan-kunyesi-2026-09-05-3etiket.zip"
+    );
 
     for (const deger of [...SENTETIK_AKTIVASYON, ...SENTETIK_KISISEL]) {
       assert.ok(!ad.includes(deger));

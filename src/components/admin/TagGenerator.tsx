@@ -302,9 +302,28 @@ export default function TagGenerator({ urunler }: { urunler: UrunSecenegi[] }) {
               </span>
             </div>
 
+            {/*
+              PAKETE NE GİRECEĞİ İNDİRMEDEN ÖNCE GÖRÜNÜR.
+
+              Aynı gün birden fazla paket indirildiğinde hangi dosyanın
+              hangi etiketleri taşıdığı karışabiliyordu. Kodlar burada
+              yazılı olduğu için indirmeden önce aktivasyon kartıyla
+              karşılaştırılabilir.
+            */}
+            <div className="mt-3 rounded-lg border border-emerald-500/20 bg-black/20 p-3">
+              <p className="text-xs font-semibold text-emerald-200">
+                Bu paket şu {etiketler.length} etiketi içerecek:
+              </p>
+
+              <p className="mt-1 break-words font-mono text-xs text-emerald-100/80">
+                {etiketler.map((e) => e.code).join(", ")}
+              </p>
+            </div>
+
             <p className="mt-2 text-xs text-emerald-200/70">
               ZIP içinde her etiket için 40×40 mm SVG QR dosyası,
-              baskici-listesi.csv ve URETIM-NOTU.txt bulunur.
+              baskici-listesi.csv ve URETIM-NOTU.txt bulunur. Dosya adında
+              tarih ve etiket adedi yazar.
             </p>
 
             {paketHatasi && (

@@ -139,6 +139,23 @@ export default function AracBaskiciPaketi({
         </span>
       </div>
 
+      {/*
+        Seçim indirmeden ÖNCE açıkça yazılır. Liste sayfa açıldığında
+        okunduğu için, başka bir sekmede yeni etiket üretilmişse burada
+        görünmez; kodları görmek yanlış paketi indirmeyi engeller.
+      */}
+      {secili.length > 0 && (
+        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+          <p className="text-xs font-semibold text-emerald-200">
+            Pakete girecek {secili.length} etiket:
+          </p>
+
+          <p className="mt-1 break-words font-mono text-xs text-emerald-100/80">
+            {secili.join(", ")}
+          </p>
+        </div>
+      )}
+
       {hata && (
         <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">
           {hata}

@@ -262,19 +262,28 @@ export function baskiciPaketiOlustur(
 }
 
 /**
- * İndirilecek dosyanın adı: arkvium-baskici-<urun>-<parti>.zip
+ * İndirilecek dosyanın adı: arkvium-baskici-<urun>-<parti>-<adet>etiket.zip
  *
- * `parti` tarih (2026-09-05) veya parti numarası olabilir. Kişisel veri,
- * kimlik veya aktivasyon kodu taşımaz; yalnızca harf, rakam ve tire kalır.
+ * ADET NEDEN DOSYA ADINDA?
+ * Ad yalnızca tarih taşıdığında aynı gün indirilen her paket BİREBİR AYNI
+ * ada sahip oluyordu. İndirilenler klasöründe eski paket dururken yenisi
+ * "(1)" ekiyle kaydediliyor ve yanlış dosyanın açılması çok kolay hâle
+ * geliyordu — matbaaya yanlış QR gitmesi demek. Adet, iki paketi çıplak
+ * gözle ayırt edilebilir kılar.
+ *
+ * Kişisel veri, kimlik veya aktivasyon kodu taşımaz; yalnızca harf, rakam
+ * ve tire kalır.
  */
 export function paketDosyaAdi(
   urunKodu: string,
-  parti: string | number
+  parti: string | number,
+  adet: number
 ): string {
   const urun = String(urunKodu).toLowerCase().replace(/[^a-z0-9-]/g, "");
   const etiket = String(parti).toLowerCase().replace(/[^a-z0-9-]/g, "");
+  const sayi = Number.isFinite(adet) && adet > 0 ? Math.floor(adet) : 0;
 
-  return `arkvium-baskici-${urun || "etiket"}-${etiket || "parti"}.zip`;
+  return `arkvium-baskici-${urun || "etiket"}-${etiket || "parti"}-${sayi}etiket.zip`;
 }
 
 /** Bugünün tarihinden parti etiketi üretir: 2026-09-05 */

@@ -228,9 +228,32 @@ export async function POST(request: Request) {
       orderBy: { createdAt: "asc" },
     });
 
+    /*
+      TAM EŞLEŞME ŞARTI.
+
+      İstenen her kayıt bulunmalı ve hepsi bu ürüne ait olmalıdır. Tek bir
+      kayıt bile eksikse paket ÜRETİLMEZ: eksik listeyle devam etmek,
+      matbaaya "yanlış ama geçerli görünen" bir paket göndermek demektir.
+      Bulunamayan kod yanıtta gösterilir; etiket kodu gizli değildir
+      (etiketin üzerinde basılıdır) ve yöneticinin hatayı görmesi gerekir.
+    */
     if (etiketler.length !== secim.degerler.length) {
+      const bulunanlar = new Set(
+        etiketler.map((etiket) =>
+          secim.alan === "publicToken" ? etiket.publicToken : etiket.code
+        )
+      );
+
+      const eksikler = secim.degerler.filter((deger) => !bulunanlar.has(deger));
+
+      // publicToken gizlidir; yanıtta yalnızca SAYISI bildirilir.
+      const ayrinti =
+        secim.alan === "code"
+          ? ` Eşleşmeyen kod: ${eksikler.slice(0, 5).map(etiketKoduBicimle).join(", ")}`
+          : ` ${eksikler.length} etiket bulunamadı.`;
+
       return hata(
-        "Seçilen etiketler bu partiye ait değil. Paket oluşturulmadı.",
+        `Seçilen etiketlerin hepsi bu ürüne ait değil; paket oluşturulmadı.${ayrinti}`,
         409
       );
     }
@@ -268,7 +291,8 @@ export async function POST(request: Request) {
         "Content-Type": "application/zip",
         "Content-Disposition": `attachment; filename="${paketDosyaAdi(
           urun.kod,
-          bugununPartiEtiketi()
+          bugununPartiEtiketi(),
+          paketEtiketleri.length
         )}"`,
         "Content-Length": String(zip.length),
         // Paket önbelleğe alınmaz; ara sunucularda kopyası kalmasın.
