@@ -19,6 +19,7 @@ import {
   sessizAlanMm,
   yerlesimAl,
 } from "./EtiketBaskiOlculeri";
+import { baskiYapilandirmasi } from "@/lib/baski-yapilandirmasi";
 
 /**
  * 30x30 mm etiket ve eşleştirilmiş aktivasyon kartı baskısı.
@@ -63,10 +64,16 @@ function mm(deger: number): string {
 export default function TagPrintSheet({
   etiketler,
   urunAdi,
+  urunKod,
 }: {
   etiketler: UretilenEtiket[];
   /** Baskı sayfasının üstünde hangi ürüne ait olduğu yazar. */
   urunAdi?: string;
+  /**
+   * Ürün kodu. 30x30 mm sayfasının gösterilip gösterilmeyeceğine bu değer
+   * karar verir; tanımlı değilse hiçbir etiket baskısı sunulmaz.
+   */
+  urunKod?: string;
 }) {
   const [tabanAdres, setTabanAdres] = useState("");
   const [kodGoster, setKodGoster] = useState(true);
@@ -103,6 +110,9 @@ export default function TagPrintSheet({
   if (etiketler.length === 0) {
     return null;
   }
+
+  const yapilandirma = baskiYapilandirmasi(urunKod);
+  const etiketYazdirmaVar = yapilandirma.etiketYazdirma;
 
   const yerlesim = yerlesimAl(kodGoster);
   const modul = modulBoyutuMm(kodGoster);
@@ -310,14 +320,21 @@ export default function TagPrintSheet({
     <>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => yazdir("etiket")}
-            disabled={!tabanAdres}
-            className="rounded-lg bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            30×30 mm QR etiketlerini yazdır
-          </button>
+          {/*
+            30x30 mm sayfası YALNIZCA ölçüsü bu şekilde tanımlanmış üründe
+            görünür. Karar `baski-yapilandirmasi` dosyasından gelir; ürün
+            bilinmiyorsa düğme hiç basılmaz (güvenli varsayılan).
+          */}
+          {etiketYazdirmaVar && (
+            <button
+              type="button"
+              onClick={() => yazdir("etiket")}
+              disabled={!tabanAdres}
+              className="rounded-lg bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              30×30 mm QR etiketlerini yazdır
+            </button>
+          )}
 
           <button
             type="button"
@@ -327,17 +344,30 @@ export default function TagPrintSheet({
             Aktivasyon kartlarını yazdır
           </button>
 
-          <label className="flex items-center gap-2 text-sm text-white/60">
-            <input
-              type="checkbox"
-              checked={kodGoster}
-              onChange={(e) => setKodGoster(e.target.checked)}
-              className="h-4 w-4 rounded border-white/20 bg-white/5"
-            />
-            Etiket kodunu ön yüze bas
-          </label>
+          {etiketYazdirmaVar && (
+            <label className="flex items-center gap-2 text-sm text-white/60">
+              <input
+                type="checkbox"
+                checked={kodGoster}
+                onChange={(e) => setKodGoster(e.target.checked)}
+                className="h-4 w-4 rounded border-white/20 bg-white/5"
+              />
+              Etiket kodunu ön yüze bas
+            </label>
+          )}
         </div>
 
+        {!etiketYazdirmaVar && (
+          <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed text-amber-100/80">
+            <p className="font-semibold text-amber-200">
+              Baskı ölçüsü henüz tanımlanmadı
+            </p>
+
+            <p className="mt-1">{yapilandirma.aciklama}</p>
+          </div>
+        )}
+
+        {etiketYazdirmaVar && (
         <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm leading-relaxed text-white/60">
           <p className="font-semibold text-white">
             Yazdırma ayarları — ölçünün tutması için zorunlu
@@ -365,6 +395,7 @@ export default function TagPrintSheet({
             Tutmuyorsa ölçek %100 değildir.
           </p>
         </div>
+        )}
       </div>
 
       {baglandi && createPortal(baskiAlani, document.body)}

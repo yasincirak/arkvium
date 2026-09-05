@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import BaskiKontrolListesi from "@/components/admin/BaskiKontrolListesi";
 import TagGenerator from "@/components/admin/TagGenerator";
@@ -18,6 +19,13 @@ export default function AdminTagsPage() {
           üzerinde bir etiket kodu, kazınarak açılan bölümde ise gizli
           aktivasyon kodu bulunur.
         </p>
+
+        <Link
+          href="/admin/tags/baskici"
+          className="mt-3 inline-flex text-sm font-medium text-indigo-400 hover:text-indigo-300"
+        >
+          Daha önce üretilmiş araç QR&apos;ları için baskıcı paketi →
+        </Link>
       </div>
 
       {/* Stok sorgusu üretim formunu bekletmesin. */}

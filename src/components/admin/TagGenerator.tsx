@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import TagPrintSheet from "./TagPrintSheet";
+import { baskiYapilandirmasi } from "@/lib/baski-yapilandirmasi";
 
 /**
  * Etiket üretim formu.
@@ -45,6 +46,9 @@ export default function TagGenerator({ urunler }: { urunler: UrunSecenegi[] }) {
   const [hata, setHata] = useState("");
   const [etiketler, setEtiketler] = useState<UretilenEtiket[]>([]);
   const [uretilenUrunAdi, setUretilenUrunAdi] = useState("");
+  const [uretilenUrunKodu, setUretilenUrunKodu] = useState("");
+  const [paketCalisiyor, setPaketCalisiyor] = useState(false);
+  const [paketHatasi, setPaketHatasi] = useState("");
   const [tabanAdres, setTabanAdres] = useState("");
 
   useEffect(() => {
@@ -52,6 +56,9 @@ export default function TagGenerator({ urunler }: { urunler: UrunSecenegi[] }) {
   }, []);
 
   const adresYerel = tabanAdres !== "" && yerelAdresMi(tabanAdres);
+
+  /** Üretilen partinin baskı davranışı — tek merkezden okunur. */
+  const uretilenYapilandirma = baskiYapilandirmasi(uretilenUrunKodu);
 
   async function uret(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -87,10 +94,59 @@ export default function TagGenerator({ urunler }: { urunler: UrunSecenegi[] }) {
 
       setEtiketler(veri.etiketler ?? []);
       setUretilenUrunAdi(veri.urun?.ad ?? "");
+      setUretilenUrunKodu(veri.urun?.kod ?? "");
+      setPaketHatasi("");
     } catch {
       setHata("Etiketler üretilemedi. Bağlantınızı kontrol edin.");
     } finally {
       setCalisiyor(false);
+    }
+  }
+
+  /**
+   * Baskıcı paketi.
+   *
+   * İstekte YALNIZCA publicToken listesi ve ürün kodu gider; aktivasyon
+   * kodu gönderilmez. Paketin içeriğini ve QR adreslerini sunucu belirler.
+   */
+  async function baskiciPaketiIndir() {
+    setPaketHatasi("");
+    setPaketCalisiyor(true);
+
+    try {
+      const yanit = await fetch("/api/admin/tags/baskici-paketi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productKod: uretilenUrunKodu,
+          publicTokens: etiketler.map((e) => e.publicToken),
+        }),
+      });
+
+      if (!yanit.ok) {
+        const veri = await yanit.json().catch(() => ({}));
+
+        setPaketHatasi(veri.error || "Baskı paketi oluşturulamadı.");
+
+        return;
+      }
+
+      const blob = await yanit.blob();
+      const adres = URL.createObjectURL(blob);
+
+      const bag = document.createElement("a");
+      bag.href = adres;
+      bag.download =
+        yanit.headers
+          .get("Content-Disposition")
+          ?.match(/filename="([^"]+)"/)?.[1] ?? "arkvium-baskici.zip";
+      bag.click();
+
+      URL.revokeObjectURL(adres);
+    } catch {
+      setPaketHatasi("Baskı paketi indirilemedi. Bağlantını kontrol et.");
+    } finally {
+      setPaketCalisiyor(false);
     }
   }
 
@@ -215,25 +271,72 @@ export default function TagGenerator({ urunler }: { urunler: UrunSecenegi[] }) {
             listeyi kaydetmeden sayfadan ayrılmayın; kodlar geri getirilemez.
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-white/60">
-              <span className="font-semibold text-white">
-                {uretilenUrunAdi}
-              </span>{" "}
-              için {etiketler.length} etiket üretildi.
+          <p className="mt-4 text-sm text-white/60">
+            <span className="font-semibold text-white">{uretilenUrunAdi}</span>{" "}
+            için {etiketler.length} etiket üretildi.
+          </p>
+
+          {/*
+            İKİ İNDİRME BİRBİRİNDEN AYRI DURUR.
+
+            Üstteki paket baskı firmasına gider ve aktivasyon kodu içermez.
+            Alttaki dosya gizli aktivasyon kodlarını taşır ve dışarı çıkmaz.
+            Yan yana konsalardı yanlış dosyayı göndermek çok kolay olurdu.
+          */}
+          {uretilenYapilandirma.baskiciPaketi && (
+          <div className="mt-4 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={baskiciPaketiIndir}
+                disabled={paketCalisiyor || !uretilenUrunKodu}
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {paketCalisiyor
+                  ? "Paket hazırlanıyor..."
+                  : "Araç baskıcı paketini indir"}
+              </button>
+
+              <span className="text-sm text-emerald-200">
+                Aktivasyon kodu ve kişisel veri içermez.
+              </span>
+            </div>
+
+            <p className="mt-2 text-xs text-emerald-200/70">
+              ZIP içinde her etiket için 40×40 mm SVG QR dosyası,
+              baskici-listesi.csv ve URETIM-NOTU.txt bulunur.
             </p>
 
-            <button
-              type="button"
-              onClick={csvIndir}
-              className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
-            >
-              CSV olarak indir
-            </button>
+            {paketHatasi && (
+              <div className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                {paketHatasi}
+              </div>
+            )}
+          </div>
+          )}
+
+          <div className="mt-3 rounded-xl border border-red-500/25 bg-red-500/10 p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={csvIndir}
+                className="rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/20"
+              >
+                Gizli Aktivasyon CSV&apos;sini İndir
+              </button>
+
+              <span className="text-sm text-red-200">
+                Yalnızca ARKVIUM yönetimi içindir; baskıcıyla paylaşmayın.
+              </span>
+            </div>
           </div>
 
           <div className="mt-4">
-            <TagPrintSheet etiketler={etiketler} urunAdi={uretilenUrunAdi} />
+            <TagPrintSheet
+              etiketler={etiketler}
+              urunAdi={uretilenUrunAdi}
+              urunKod={uretilenUrunKodu}
+            />
           </div>
 
           <div className="mt-4 overflow-x-auto">
