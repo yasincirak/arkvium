@@ -82,7 +82,11 @@ export function sessizAlanMmHesapla(
  * Sessiz alan fiziksel olarak yetersizse dosya ÜRETİLMEZ; sessizce küçük
  * bir QR basmaktansa paketin hiç oluşmaması tercih edilir.
  */
-export function svgOlcuUygula(svg: string, kenarMm: number): string {
+export function svgOlcuUygula(
+  svg: string,
+  kenarMm: number,
+  enAzSessizAlanMm: number = EN_AZ_SESSIZ_ALAN_MM
+): string {
   const acilis = String(svg).match(/^<svg\b[^>]*>/);
 
   if (!acilis) {
@@ -105,9 +109,9 @@ export function svgOlcuUygula(svg: string, kenarMm: number): string {
 
   const sessiz = sessizAlanMmHesapla(kenarMm, en);
 
-  if (sessiz < EN_AZ_SESSIZ_ALAN_MM) {
+  if (sessiz < enAzSessizAlanMm) {
     throw new Error(
-      `Sessiz alan ${sessiz.toFixed(2)} mm; en az ${EN_AZ_SESSIZ_ALAN_MM} mm olmalı.`
+      `Sessiz alan ${sessiz.toFixed(2)} mm; en az ${enAzSessizAlanMm} mm olmalı.`
     );
   }
 
@@ -131,28 +135,33 @@ export function svgOlcuUygula(svg: string, kenarMm: number): string {
 }
 
 /**
- * Matbaaya giden üretim notu.
+ * Üreticiye giden üretim notu.
  *
- * Sabit metindir: müşteri, sipariş veya etiket bilgisi içermez.
+ * Sabit alanlardan üretilir: müşteri, sipariş veya etiket bilgisi içermez.
+ * Ölçüler ürün yapılandırmasından gelir, burada elle yazılmaz — böylece
+ * notta yazan ölçü ile dosyanın gerçek ölçüsü ayrışamaz.
  */
-export function uretimNotuMetni(): string {
+export function uretimNotuMetni(ayar: {
+  urunAdi: string;
+  govde: string;
+  qrMm: number;
+  yontem: string;
+}): string {
   return (
     [
-      "ARKVIUM — ARAÇ İLETİŞİM QR STICKER'I / ÜRETİM NOTU",
+      `ARKVIUM — ${ayar.urunAdi.toLocaleUpperCase("tr-TR")} / ÜRETİM NOTU`,
       "",
-      "1) Bitmiş araç etiketi: 60 x 80 mm, dikey.",
-      "2) QR dosyası: 40 x 40 mm.",
+      `1) Bitmiş ürün gövdesi: ${ayar.govde}.`,
+      `2) QR dosyası: ${ayar.qrMm} x ${ayar.qrMm} mm.`,
       "3) QR çevresindeki beyaz sessiz alan korunacak; üzerine hiçbir öğe gelmeyecek.",
-      "4) Etiket, araç camının İÇ YÜZEYİNE uygulanacak.",
-      "5) Dışarıdan normal okunacak şekilde cam içi TERS BASKI yapılacak.",
-      "6) SVG dosyası esnetilmeyecek; en-boy oranı korunacak.",
-      "7) İlk numunede farklı telefonlarla okuma testi yapılacak.",
+      `4) ${ayar.yontem}`,
+      "5) SVG dosyası esnetilmeyecek; en-boy oranı korunacak.",
+      "6) İlk numunede farklı telefonlarla okuma testi yapılacak.",
       "",
       "Dosya eşleşmesi baskici-listesi.csv içindedir.",
     ].join("\r\n") + "\r\n"
   );
 }
-
 
 /** CSV sütunları — sıra ve isimler sabittir, test bunu doğrular. */
 export const CSV_SUTUNLARI = [

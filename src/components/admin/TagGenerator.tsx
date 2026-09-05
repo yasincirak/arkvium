@@ -294,7 +294,7 @@ export default function TagGenerator({ urunler }: { urunler: UrunSecenegi[] }) {
               >
                 {paketCalisiyor
                   ? "Paket hazırlanıyor..."
-                  : "Araç baskıcı paketini indir"}
+                  : `${uretilenUrunAdi} baskıcı paketini indir`}
               </button>
 
               <span className="text-sm text-emerald-200">
@@ -321,9 +321,12 @@ export default function TagGenerator({ urunler }: { urunler: UrunSecenegi[] }) {
             </div>
 
             <p className="mt-2 text-xs text-emerald-200/70">
-              ZIP içinde her etiket için 40×40 mm SVG QR dosyası,
-              baskici-listesi.csv ve URETIM-NOTU.txt bulunur. Dosya adında
-              tarih ve etiket adedi yazar.
+              ZIP içinde her etiket için{" "}
+              {uretilenYapilandirma.baskiciAyari
+                ? `${uretilenYapilandirma.baskiciAyari.qrMm}×${uretilenYapilandirma.baskiciAyari.qrMm} mm`
+                : "ölçüsü tanımlı"}{" "}
+              SVG QR dosyası, baskici-listesi.csv ve URETIM-NOTU.txt bulunur.
+              Dosya adında tarih ve etiket adedi yazar.
             </p>
 
             {paketHatasi && (

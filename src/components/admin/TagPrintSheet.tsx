@@ -358,9 +358,23 @@ export default function TagPrintSheet({
         </div>
 
         {!etiketYazdirmaVar && (
-          <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed text-amber-100/80">
-            <p className="font-semibold text-amber-200">
-              Baskı ölçüsü henüz tanımlanmadı
+          <div
+            className={`rounded-xl border px-4 py-3 text-sm leading-relaxed ${
+              yapilandirma.tur === "tanimsiz"
+                ? "border-amber-500/25 bg-amber-500/10 text-amber-100/80"
+                : "border-white/10 bg-white/5 text-white/60"
+            }`}
+          >
+            <p
+              className={`font-semibold ${
+                yapilandirma.tur === "tanimsiz"
+                  ? "text-amber-200"
+                  : "text-white"
+              }`}
+            >
+              {yapilandirma.tur === "tanimsiz"
+                ? "Baskı ölçüsü henüz tanımlanmadı"
+                : "Bu ürün baskıcı paketiyle üretilir"}
             </p>
 
             <p className="mt-1">{yapilandirma.aciklama}</p>

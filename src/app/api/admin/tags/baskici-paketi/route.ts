@@ -8,9 +8,8 @@ import {
   etiketKoduBicimle,
   etiketKoduNormalize,
 } from "@/lib/tags";
-import { baskiciPaketiUretilebilirMi } from "@/lib/baski-yapilandirmasi";
+import { baskiciAyariAl } from "@/lib/baski-yapilandirmasi";
 import {
-  ARAC_SVG_MM,
   URETIM_TABAN_ADRESI,
   baskiciPaketiOlustur,
   bugununPartiEtiketi,
@@ -119,12 +118,26 @@ function hata(mesaj: string, durum: number) {
  *   - `tagKodlari`   : stoktan seçim; ekranda token gösterilmez, basılan
  *                      etiket kodu (ARK-XXXX-XXXX) kullanılır.
  *
- * Her iki durumda da değerler tekilleştirilir ve boş değerler atılır.
+ * ETİKET KODUNDA İKİ ADAY ARANIR.
+ * Kodlar normalde `etiketKoduNormalize` biçiminde saklanır. Ancak elle
+ * eklenmiş veya eski kayıtlarda ham değer bu biçime UYMAYABİLİR (örneğin
+ * I/L harfleri normalleştirmede 1'e döner). Tek biçimle arandığında böyle
+ * bir kayıt ekranda görünüp seçildiğinde "bulunamadı" hatası veriyordu.
+ * Bu yüzden her seçim için hem normalleştirilmiş hem ham (yalnızca boşluk
+ * ve tire temizlenmiş) biçim aday olarak aranır.
+ *
+ * Tekilleştirme adaylara göre yapılır; aynı etiketin farklı yazımları tek
+ * seçim sayılır.
  */
-function secimiCoz(govde: unknown): {
+type Secim = {
   alan: "publicToken" | "code";
-  degerler: string[];
-} | null {
+  /** Her seçim için kabul edilebilir değerler. */
+  secimler: { girdi: string; adaylar: string[] }[];
+  /** Veritabanı sorgusuna girecek tüm adaylar. */
+  tumAdaylar: string[];
+};
+
+function secimiCoz(govde: unknown): Secim | null {
   const kayit = (govde ?? {}) as Record<string, unknown>;
 
   const tokenlar = Array.isArray(kayit.publicTokens) ? kayit.publicTokens : null;
@@ -136,26 +149,43 @@ function secimiCoz(govde: unknown): {
 
   const ham: unknown[] = tokenlar ?? kodlar ?? [];
 
-  /*
-    Tekilleştirme NORMALLEŞTİRMEDEN SONRA yapılır. Önce yapılsaydı
-    "ARK-AAAA-BBBB" ile "ark aaaa bbbb" ayrı iki değer sayılır, sorgudan tek
-    satır dönerdi ve istek "etiket bu partiye ait değil" diye reddedilirdi.
-  */
-  const degerler = Array.from(
-    new Set(
-      ham
-        .map((deger) => String(deger ?? "").trim())
-        .filter((deger) => deger.length > 0)
-        // Etiket kodu veritabanında normalleştirilmiş (tiresiz) durur.
-        .map((deger) => (tokenlar ? deger : etiketKoduNormalize(deger)))
-    )
-  );
+  const girdiler = ham
+    .map((deger) => String(deger ?? "").trim())
+    .filter((deger) => deger.length > 0);
 
-  if (degerler.length === 0) {
+  const secimler: Secim["secimler"] = [];
+  const gorulen = new Set<string>();
+
+  for (const girdi of girdiler) {
+    const adaylar = tokenlar
+      ? [girdi]
+      : Array.from(
+          new Set([
+            etiketKoduNormalize(girdi),
+            girdi.toUpperCase().replace(/[\s-]/g, ""),
+          ])
+        );
+
+    // Aynı etiketin farklı yazımı tek seçim sayılır.
+    const anahtar = adaylar.join("|");
+
+    if (gorulen.has(anahtar)) {
+      continue;
+    }
+
+    gorulen.add(anahtar);
+    secimler.push({ girdi, adaylar });
+  }
+
+  if (secimler.length === 0) {
     return null;
   }
 
-  return { alan: tokenlar ? "publicToken" : "code", degerler };
+  return {
+    alan: tokenlar ? "publicToken" : "code",
+    secimler,
+    tumAdaylar: Array.from(new Set(secimler.flatMap((s) => s.adaylar))),
+  };
 }
 
 /**
@@ -164,9 +194,12 @@ function secimiCoz(govde: unknown): {
  * Hata durumunda sebep TEKNİK metinle sarmalanır; QR adresi, token veya
  * etiket kodu hata metnine KONMAZ (log ve yanıt bu metinden beslenir).
  */
-function qrDosyasiUret(qrAdresi: string): string {
+function qrDosyasiUret(
+  qrAdresi: string,
+  ayar: { qrMm: number; enAzSessizAlanMm: number }
+): string {
   try {
-    return svgOlcuUygula(qrSvgUret(qrAdresi), ARAC_SVG_MM);
+    return svgOlcuUygula(qrSvgUret(qrAdresi), ayar.qrMm, ayar.enAzSessizAlanMm);
   } catch (sebep) {
     throw new QrUretilemedi(
       sebep instanceof Error ? sebep.message : "bilinmeyen hata"
@@ -196,7 +229,9 @@ export async function POST(request: Request) {
       Ölçüsü tanımlanmamış ürünler için paket üretilmez; aksi hâlde yanlış
       ölçüde basılmış etiketler ortaya çıkardı.
     */
-    if (!baskiciPaketiUretilebilirMi(urun.kod)) {
+    const ayar = baskiciAyariAl(urun.kod);
+
+    if (!ayar) {
       return hata(
         "Bu ürün için baskı ölçüsü henüz tanımlanmadı; paket üretilemez.",
         400
@@ -209,7 +244,7 @@ export async function POST(request: Request) {
       return hata("Paket için etiket listesi boş olamaz.", 400);
     }
 
-    if (secim.degerler.length > EN_FAZLA) {
+    if (secim.secimler.length > EN_FAZLA) {
       return hata(`Tek pakette en fazla ${EN_FAZLA} etiket olabilir.`, 400);
     }
 
@@ -219,11 +254,11 @@ export async function POST(request: Request) {
       sorgudan hiç dönmez, bu yüzden yanlışlıkla pakete sızamazlar.
       Sorgu SALT OKUNURDUR; hiçbir kayıt değiştirilmez.
     */
-    const etiketler = await prisma.tag.findMany({
+    const bulunanlar = await prisma.tag.findMany({
       where:
         secim.alan === "publicToken"
-          ? { publicToken: { in: secim.degerler }, productKod: urun.kod }
-          : { code: { in: secim.degerler }, productKod: urun.kod },
+          ? { publicToken: { in: secim.tumAdaylar }, productKod: urun.kod }
+          : { code: { in: secim.tumAdaylar }, productKod: urun.kod },
       select: { code: true, publicToken: true },
       orderBy: { createdAt: "asc" },
     });
@@ -231,25 +266,36 @@ export async function POST(request: Request) {
     /*
       TAM EŞLEŞME ŞARTI.
 
-      İstenen her kayıt bulunmalı ve hepsi bu ürüne ait olmalıdır. Tek bir
-      kayıt bile eksikse paket ÜRETİLMEZ: eksik listeyle devam etmek,
-      matbaaya "yanlış ama geçerli görünen" bir paket göndermek demektir.
-      Bulunamayan kod yanıtta gösterilir; etiket kodu gizli değildir
-      (etiketin üzerinde basılıdır) ve yöneticinin hatayı görmesi gerekir.
+      Her seçim TEK bir kayda karşılık gelmeli; bir kayıt da yalnızca bir
+      seçime bağlanmalıdır. Tek bir seçim bile karşılıksızsa paket
+      ÜRETİLMEZ: eksik listeyle devam etmek, üreticiye "yanlış ama geçerli
+      görünen" bir paket göndermek demektir.
     */
-    if (etiketler.length !== secim.degerler.length) {
-      const bulunanlar = new Set(
-        etiketler.map((etiket) =>
-          secim.alan === "publicToken" ? etiket.publicToken : etiket.code
-        )
-      );
+    const eslesenler = new Map<string, (typeof bulunanlar)[number]>();
+    const eksikler: string[] = [];
 
-      const eksikler = secim.degerler.filter((deger) => !bulunanlar.has(deger));
+    for (const secilen of secim.secimler) {
+      const kayit = bulunanlar.find((aday) => {
+        const deger = secim.alan === "publicToken" ? aday.publicToken : aday.code;
 
-      // publicToken gizlidir; yanıtta yalnızca SAYISI bildirilir.
+        return secilen.adaylar.includes(deger);
+      });
+
+      if (!kayit || eslesenler.has(kayit.publicToken)) {
+        eksikler.push(secilen.girdi);
+
+        continue;
+      }
+
+      eslesenler.set(kayit.publicToken, kayit);
+    }
+
+    if (eksikler.length > 0) {
+      // publicToken gizlidir; yalnızca SAYISI bildirilir. Etiket kodu ise
+      // etiketin üzerinde basılıdır, yöneticinin görmesi gerekir.
       const ayrinti =
         secim.alan === "code"
-          ? ` Eşleşmeyen kod: ${eksikler.slice(0, 5).map(etiketKoduBicimle).join(", ")}`
+          ? ` Eşleşmeyen kod: ${eksikler.slice(0, 5).join(", ")}`
           : ` ${eksikler.length} etiket bulunamadı.`;
 
       return hata(
@@ -257,6 +303,8 @@ export async function POST(request: Request) {
         409
       );
     }
+
+    const etiketler = Array.from(eslesenler.values());
 
     const paketEtiketleri: BaskiciEtiketi[] = etiketler.map((etiket) => {
       /*
@@ -270,12 +318,17 @@ export async function POST(request: Request) {
         etiketKodu: etiketKoduBicimle(etiket.code),
         qrAdresi,
         // Fiziksel ölçü SVG'nin içine yazılır; matbaa elle ölçeklemez.
-        qrSvg: qrDosyasiUret(qrAdresi),
+        qrSvg: qrDosyasiUret(qrAdresi, ayar),
       };
     });
 
     const zip = baskiciPaketiOlustur(paketEtiketleri, urun.ad, {
-      uretimNotu: uretimNotuMetni(),
+      uretimNotu: uretimNotuMetni({
+        urunAdi: urun.ad,
+        govde: ayar.govde,
+        qrMm: ayar.qrMm,
+        yontem: ayar.yontem,
+      }),
     });
 
     if (zip.length > EN_FAZLA_ZIP_BAYT) {

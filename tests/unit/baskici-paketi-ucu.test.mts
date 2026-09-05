@@ -327,30 +327,7 @@ describe("baskıcı paketi ucu — üretilen içerik", () => {
 });
 
 describe("baskıcı paketi ucu — ürün türü kapısı", () => {
-  test("ölçüsü tanımlanmamış üründe paket üretilmez", async () => {
-    const POST = await ucuAl();
-
-    yonetici = { userId: "y1", email: "yonetici@ornek.test" };
-    veritabaniEtiketleri = PARTI;
-
-    for (const kod of [
-      "metal-anahtarlik",
-      "evcil-hayvan-kunyesi",
-      "valiz-etiketi",
-    ]) {
-      const yanit = await POST(
-        istek({ productKod: kod, publicTokens: ["token_bir"] })
-      );
-
-      assert.equal(yanit.status, 400, `${kod} için paket üretilmemeliydi`);
-
-      const govde = await yanit.json();
-
-      assert.match(govde.error, /tanımlanmadı/i);
-    }
-  });
-
-  test("30×30 mm ürününde de baskıcı paketi üretilmez", async () => {
+  test("30×30 mm ürününde baskıcı paketi üretilmez", async () => {
     const POST = await ucuAl();
 
     yonetici = { userId: "y1", email: "yonetici@ornek.test" };
@@ -360,6 +337,183 @@ describe("baskıcı paketi ucu — ürün türü kapısı", () => {
     );
 
     assert.equal(yanit.status, 400);
+    assert.match((await yanit.json()).error, /tanımlanmadı/i);
+  });
+
+  test("bilinmeyen ürün kodu reddedilir", async () => {
+    const POST = await ucuAl();
+
+    yonetici = { userId: "y1", email: "yonetici@ornek.test" };
+
+    const yanit = await POST(
+      istek({ productKod: "olmayan-urun", publicTokens: ["token_bir"] })
+    );
+
+    assert.equal(yanit.status, 400);
+  });
+});
+
+describe("baskıcı paketi ucu — metal ürünler", () => {
+  const METAL = [
+    { kod: "metal-anahtarlik", mm: 20, govde: "30 x 30 mm" },
+    { kod: "evcil-hayvan-kunyesi", mm: 18, govde: "Ø30 mm (yuvarlak)" },
+    { kod: "valiz-etiketi", mm: 25, govde: "60 x 40 mm" },
+  ];
+
+  async function paket(urunKod: string, govde: Record<string, unknown>) {
+    const POST = await ucuAl();
+
+    yonetici = { userId: "y1", email: "yonetici@ornek.test" };
+    veritabaniEtiketleri = PARTI;
+
+    return POST(istek({ productKod: urunKod, ...govde }));
+  }
+
+  for (const urun of METAL) {
+    test(`${urun.kod}: paket üretilir ve SVG ${urun.mm} mm olur`, async () => {
+      const yanit = await paket(urun.kod, {
+        publicTokens: PARTI.map((e) => e.publicToken),
+      });
+
+      assert.equal(yanit.status, 200);
+
+      const dosyalar = zipOku(Buffer.from(await yanit.arrayBuffer()));
+
+      const svgler = dosyalar.filter((d) => d.ad.endsWith(".svg"));
+
+      assert.equal(svgler.length, 2);
+
+      for (const dosya of svgler) {
+        const svg = dosya.icerik.toString("utf8");
+
+        assert.match(svg, new RegExp(`width="${urun.mm}mm"`));
+        assert.match(svg, new RegExp(`height="${urun.mm}mm"`));
+        assert.ok(svg.includes('fill="#000000"'), "siyah QR yok");
+        assert.match(svg, /fill="#ffffff" d="M0,0 h\d+v\d+H0z"/);
+      }
+    });
+
+    test(`${urun.kod}: ZIP tam olarak beklenen dosyaları içerir`, async () => {
+      const yanit = await paket(urun.kod, {
+        publicTokens: PARTI.map((e) => e.publicToken),
+      });
+
+      const adlar = zipOku(Buffer.from(await yanit.arrayBuffer()))
+        .map((d) => d.ad)
+        .sort();
+
+      assert.deepEqual(adlar, [
+        "ARK-AAAA-BBBB.svg",
+        "ARK-CCCC-DDDD.svg",
+        "URETIM-NOTU.txt",
+        "baskici-listesi.csv",
+      ]);
+    });
+
+    test(`${urun.kod}: üretim notu gövde ölçüsünü ve lazer kazımayı yazar`, async () => {
+      const yanit = await paket(urun.kod, {
+        publicTokens: PARTI.map((e) => e.publicToken),
+      });
+
+      const not = zipOku(Buffer.from(await yanit.arrayBuffer()))
+        .find((d) => d.ad === "URETIM-NOTU.txt")!
+        .icerik.toString("utf8");
+
+      assert.ok(not.includes(urun.govde), "gövde ölçüsü yok");
+      assert.ok(not.includes(`${urun.mm} x ${urun.mm} mm`), "QR ölçüsü yok");
+      assert.match(not, /LAZER KAZIMA/);
+      assert.match(not, /esnetilmeyecek/);
+      assert.match(not, /okuma testi/);
+    });
+
+    test(`${urun.kod}: aktivasyon kodu ve kişisel veri pakete girmez`, async () => {
+      const yanit = await paket(urun.kod, {
+        activationCodes: [AKTIVASYON_KODU],
+        publicTokens: PARTI.map((e) => e.publicToken),
+      });
+
+      const zip = Buffer.from(await yanit.arrayBuffer());
+
+      // Ham arşiv baytlarında aktivasyon kodu hiçbir katmanda bulunmamalı.
+      assert.ok(!zip.toString("latin1").includes(AKTIVASYON_KODU));
+
+      /*
+        Kişisel veri araması SIKIŞTIRILMIŞ baytlarda yapılamaz: deflate
+        çıktısında "@" gibi tek bir karakter rastgele oluşabilir. Bu yüzden
+        arama, arşivden çıkarılmış METİN dosyaları üzerinde yapılır.
+      */
+      for (const dosya of zipOku(zip)) {
+        if (!dosya.ad.endsWith(".csv") && !dosya.ad.endsWith(".txt")) {
+          continue;
+        }
+
+        const metin = dosya.icerik.toString("utf8");
+
+        assert.ok(!metin.includes("@"), `${dosya.ad}: e-posta deseni sızmış`);
+        assert.ok(!metin.includes(AKTIVASYON_KODU), `${dosya.ad}: kod sızmış`);
+        assert.doesNotMatch(
+          metin,
+          /\b[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}\b/,
+          `${dosya.ad}: aktivasyon kodu deseni`
+        );
+      }
+    });
+
+    test(`${urun.kod}: yalnızca seçilen etiket paketlenir`, async () => {
+      const yanit = await paket(urun.kod, { tagKodlari: ["ARK-AAAA-BBBB"] });
+
+      const svgler = zipOku(Buffer.from(await yanit.arrayBuffer()))
+        .filter((d) => d.ad.endsWith(".svg"))
+        .map((d) => d.ad);
+
+      assert.deepEqual(svgler, ["ARK-AAAA-BBBB.svg"]);
+    });
+
+    test(`${urun.kod}: bilinmeyen kod paketi engeller`, async () => {
+      const yanit = await paket(urun.kod, { tagKodlari: ["ARK-0000-0000"] });
+
+      assert.equal(yanit.status, 409);
+    });
+
+    test(`${urun.kod}: boş seçim reddedilir`, async () => {
+      assert.equal((await paket(urun.kod, { tagKodlari: [] })).status, 400);
+    });
+
+    test(`${urun.kod}: oturumsuz istek reddedilir`, async () => {
+      const POST = await ucuAl();
+
+      yonetici = null;
+
+      const yanit = await POST(
+        istek({ productKod: urun.kod, tagKodlari: ["ARK-AAAA-BBBB"] })
+      );
+
+      assert.equal(yanit.status, 401);
+    });
+
+    test(`${urun.kod}: yinelenen seçim tekilleştirilir`, async () => {
+      const yanit = await paket(urun.kod, {
+        tagKodlari: ["ARK-AAAA-BBBB", "ark-aaaa-bbbb", "ARKAAAABBBB"],
+      });
+
+      const svgler = zipOku(Buffer.from(await yanit.arrayBuffer())).filter(
+        (d) => d.ad.endsWith(".svg")
+      );
+
+      assert.equal(svgler.length, 1);
+    });
+  }
+
+  test("araç paketi 40 mm olarak korunur", async () => {
+    const yanit = await paket(ARAC_KODU, {
+      publicTokens: [PARTI[0].publicToken],
+    });
+
+    const svg = zipOku(Buffer.from(await yanit.arrayBuffer()))
+      .find((d) => d.ad.endsWith(".svg"))!
+      .icerik.toString("utf8");
+
+    assert.match(svg, /width="40mm"/);
   });
 });
 
@@ -653,5 +807,62 @@ describe("baskıcı paketi ucu — TAM etiket eşleşmesi", () => {
     assert.match(ad(tek) ?? "", /-1etiket\.zip$/);
     assert.match(ad(cift) ?? "", /-2etiket\.zip$/);
     assert.notEqual(ad(tek), ad(cift), "iki paket aynı adı taşıyor");
+  });
+});
+
+describe("baskıcı paketi ucu — kanonik olmayan etiket kodu", () => {
+  /**
+   * Elle eklenmiş veya eski kayıtların kodu sistemin normalleştirme
+   * biçimine uymayabilir (I/L harfleri 1'e döner). Böyle bir kayıt stok
+   * ekranında görünüp seçildiğinde "bulunamadı" hatası veriyordu.
+   */
+  const HAM_KOD = "ACILTESTA1C9C1";
+
+  async function paket(kodlar: string[]) {
+    const POST = await ucuAl();
+
+    yonetici = { userId: "y1", email: "yonetici@ornek.test" };
+    veritabaniEtiketleri = [{ code: HAM_KOD, publicToken: "token_ham" }];
+
+    return POST(istek({ productKod: "metal-anahtarlik", tagKodlari: kodlar }));
+  }
+
+  test("ham kod ile paketlenebilir", async () => {
+    const yanit = await paket([HAM_KOD]);
+
+    assert.equal(yanit.status, 200);
+
+    const svgler = zipOku(Buffer.from(await yanit.arrayBuffer()))
+      .filter((d) => d.ad.endsWith(".svg"))
+      .map((d) => d.ad);
+
+    assert.equal(svgler.length, 1);
+  });
+
+  test("sorguda hem normalleştirilmiş hem ham biçim aranır", async () => {
+    await paket([HAM_KOD]);
+
+    const arananlar: string[] = sonSorgu.where.code.in;
+
+    assert.ok(arananlar.includes(HAM_KOD), "ham biçim aranmamış");
+    assert.ok(arananlar.length >= 2, "yalnızca tek biçim aranmış");
+  });
+
+  test("gerçekten olmayan kod yine reddedilir", async () => {
+    const yanit = await paket(["ARK-0000-0000"]);
+
+    assert.equal(yanit.status, 409);
+  });
+
+  test("aynı kaydın iki farklı yazımı tek etiket sayılır", async () => {
+    const yanit = await paket([HAM_KOD, HAM_KOD.toLowerCase()]);
+
+    assert.equal(yanit.status, 200);
+
+    const svgler = zipOku(Buffer.from(await yanit.arrayBuffer())).filter((d) =>
+      d.ad.endsWith(".svg")
+    );
+
+    assert.equal(svgler.length, 1, "aynı etiket iki kez pakete girmiş");
   });
 });

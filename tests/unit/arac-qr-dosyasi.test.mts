@@ -20,6 +20,10 @@ const {
   uretimNotuMetni,
 } = await import("../../src/lib/baskici-paketi.ts");
 
+const { baskiciAyariAl } = await import(
+  "../../src/lib/baski-yapilandirmasi.ts"
+);
+
 const nodeRequire = createRequire(import.meta.url);
 
 /** Uçtaki üretimin aynısı: aynı kütüphane, aynı ayarlar. */
@@ -235,7 +239,13 @@ describe("araç QR dosyası — okunabilirlik yapısı", () => {
 });
 
 describe("üretim notu", () => {
-  const NOT = uretimNotuMetni();
+  const NOT = uretimNotuMetni({
+    urunAdi: "Araç İletişim QR Sticker'ı",
+    govde: "60 x 80 mm, dikey",
+    qrMm: 40,
+    yontem:
+      "Araç camının İÇ YÜZEYİNE uygulanacak; dışarıdan normal okunacak şekilde cam içi TERS BASKI yapılacak.",
+  });
 
   const BEKLENEN = [
     "60 x 80 mm",
@@ -258,4 +268,70 @@ describe("üretim notu", () => {
     assert.doesNotMatch(NOT, /@/);
     assert.doesNotMatch(NOT, /\b[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}\b/);
   });
+});
+
+describe("metal ürünlerin QR dosyaları", () => {
+  const URUNLER = [
+    { kod: "metal-anahtarlik", ad: "Metal QR Anahtarlık", beklenenMm: 20 },
+    { kod: "evcil-hayvan-kunyesi", ad: "Evcil Hayvan QR Künyesi", beklenenMm: 18 },
+    { kod: "valiz-etiketi", ad: "QR Valiz Etiketi", beklenenMm: 25 },
+  ];
+
+  for (const urun of URUNLER) {
+    const ayar = baskiciAyariAl(urun.kod)!;
+    const svg = svgOlcuUygula(
+      qrUret(ORNEK_ADRES),
+      ayar.qrMm,
+      ayar.enAzSessizAlanMm
+    );
+
+    test(`${urun.ad}: SVG tam ${urun.beklenenMm} mm`, () => {
+      assert.equal(ayar.qrMm, urun.beklenenMm);
+      assert.match(svg, new RegExp(`<svg[^>]*\\swidth="${urun.beklenenMm}mm"`));
+      assert.match(svg, new RegExp(`<svg[^>]*\\sheight="${urun.beklenenMm}mm"`));
+    });
+
+    test(`${urun.ad}: piksel ölçüsü kalmaz, xmlns taşır`, () => {
+      const acilis = svg.match(/^<svg[^>]*>/)![0];
+
+      assert.doesNotMatch(acilis, /width="\d+"/);
+      assert.doesNotMatch(acilis, /height="\d+"/);
+      assert.match(acilis, /xmlns="http:\/\/www\.w3\.org\/2000\/svg"/);
+    });
+
+    test(`${urun.ad}: siyah QR ve opak beyaz zemin`, () => {
+      assert.ok(svg.includes('fill="#000000"'));
+      assert.match(svg, /fill="#ffffff" d="M0,0 h\d+v\d+H0z"/);
+    });
+
+    test(`${urun.ad}: dört tarafta en az 4 modül sessiz alan`, () => {
+      const bosluk = kenarBosluklari(svg);
+
+      for (const kenar of [bosluk.sol, bosluk.ust, bosluk.sag, bosluk.alt]) {
+        assert.ok(
+          kenar >= SESSIZ_ALAN_MODUL,
+          `${urun.ad}: sessiz alan ${kenar} modül`
+        );
+      }
+    });
+
+    test(`${urun.ad}: üretim notu gövde, QR ölçüsü ve lazer kazıma içerir`, () => {
+      const not = uretimNotuMetni({
+        urunAdi: urun.ad,
+        govde: ayar.govde,
+        qrMm: ayar.qrMm,
+        yontem: ayar.yontem,
+      });
+
+      assert.ok(not.includes(ayar.govde), "gövde ölçüsü yok");
+      assert.ok(
+        not.includes(`${ayar.qrMm} x ${ayar.qrMm} mm`),
+        "QR ölçüsü yok"
+      );
+      assert.match(not, /LAZER KAZIMA/);
+      assert.match(not, /esnetilmeyecek/);
+      assert.match(not, /okuma testi/);
+      assert.doesNotMatch(not, /@/, "kişisel veri deseni");
+    });
+  }
 });
