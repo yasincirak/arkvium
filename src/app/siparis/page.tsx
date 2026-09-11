@@ -6,6 +6,7 @@ import { GIZLI_SAYFA_ROBOTS } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import SiparisFormu from "@/components/SiparisFormu";
 import { KARGO_UCRETI_KURUS, SIPARIS_URUNLERI } from "@/lib/siparis";
+import UrunIzleyici from "@/components/analitik/UrunIzleyici";
 
 /**
  * Sipariş sayfası (herkese açık).
@@ -61,6 +62,12 @@ export default function SiparisPage({
 
   return (
     <main className="pt-20 min-h-screen bg-[#f6f4ff] text-[#101a3d]">
+      {/*
+        Ürün görüntüleme olayı. Ürün kodu yukarıda sunucudaki katalogla
+        zaten doğrulandı; olay ucunda ikinci kez doğrulanır.
+      */}
+      <UrunIzleyici urunKodu={urun.kod} />
+
       <SayfaUstBari ton="acik" />
 
       <div className="mx-auto max-w-3xl px-6 py-12 sm:py-16">

@@ -2,6 +2,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
 import { createServer } from "node:net";
 import { Client } from "pg";
+import { testAdresiniDenetle } from "../../scripts/veritabani-kilidi.mjs";
 
 /**
  * Entegrasyon testleri için izole ortam.
@@ -52,15 +53,15 @@ function envDegeriOku(dosya: string, anahtar: string): string | null {
   return eslesme?.[1] || null;
 }
 
-function baglantiKimligi(url: string) {
-  const adres = new URL(url);
-
-  return `${adres.hostname}:${adres.port || "5432"}/${adres.pathname}@${adres.username}`;
-}
-
 /**
  * Test veritabanı adresini döndürür.
  * Production adresiyle çakışıyorsa hata fırlatır.
+ *
+ * Kilit kuralı `scripts/veritabani-kilidi.mjs` içinde TEK YERDE tanımlıdır
+ * ve birim testleriyle korunur (tests/unit/test-veritabani-kilidi.test.mts).
+ * Bağlantı kimliğinin yanı sıra Supabase PROJE REFERANSINI de
+ * karşılaştırır: aynı projeye farklı porttan veya farklı hosttan
+ * bağlanmak "farklı veritabanı" sayılmaz.
  */
 export function testVeritabaniAdresi(): string {
   const testUrl = envDegeriOku(".env.test", "TEST_DATABASE_URL");
@@ -71,16 +72,15 @@ export function testVeritabaniAdresi(): string {
     );
   }
 
-  const testKimlik = baglantiKimligi(testUrl);
+  const karar = testAdresiniDenetle(testUrl, {
+    DATABASE_URL: envDegeriOku(".env", "DATABASE_URL"),
+    DIRECT_URL: envDegeriOku(".env", "DIRECT_URL"),
+  });
 
-  for (const anahtar of ["DATABASE_URL", "DIRECT_URL"]) {
-    const prodUrl = envDegeriOku(".env", anahtar);
-
-    if (prodUrl && baglantiKimligi(prodUrl) === testKimlik) {
-      throw new Error(
-        `GÜVENLİK DURDURMASI: TEST_DATABASE_URL, .env içindeki ${anahtar} ile aynı veritabanını gösteriyor. Testler çalıştırılmadı.`
-      );
-    }
+  if (!karar.guvenli) {
+    throw new Error(
+      `GÜVENLİK DURDURMASI: ${karar.sebep} Testler çalıştırılmadı.`
+    );
   }
 
   return testUrl;
@@ -96,8 +96,13 @@ export async function testVeritabaniIstemcisi(): Promise<Client> {
 
 /** Testler arasında tüm verileri siler. Yalnızca test veritabanında çalışır. */
 export async function veritabaniniTemizle(istemci: Client): Promise<void> {
+  /*
+    "AnalyticsEvent" ve "AdminNotification" listede AYRICA yer alır: bu iki
+    tablonun hiçbir yabancı anahtarı yoktur, bu yüzden CASCADE ile
+    temizlenmezler ve testler arasında satır taşırlardı.
+  */
   await istemci.query(
-    'TRUNCATE "FinderMessage","ItemRecord","PasswordResetToken","EmailVerificationToken","RateLimitEntry","User" RESTART IDENTITY CASCADE'
+    'TRUNCATE "FinderMessage","ItemRecord","PasswordResetToken","EmailVerificationToken","RateLimitEntry","AnalyticsEvent","AdminNotification","User" RESTART IDENTITY CASCADE'
   );
 }
 

@@ -161,4 +161,14 @@ describe("hesap bildirimleri sahiplik kontrolü", () => {
     assert.equal(mesajlar[0].finderName, "Yeni Mesaj");
     assert.equal(mesajlar[1].finderName, "Eski Mesaj");
   });
+
+  test("mesajı olmayan kendi ürününde boş liste döner", async () => {
+    const sahip = await kullaniciOlustur("sahip@test.invalid");
+    const recordId = await urunOlustur(sahip.id);
+
+    const mesajlar = await getFinderMessagesForOwner(recordId, sahip.id);
+
+    // Arayüzdeki "Henüz bildirim yok" durumu bu boş listeye dayanır.
+    assert.deepEqual(mesajlar, []);
+  });
 });

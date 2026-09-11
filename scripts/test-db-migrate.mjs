@@ -9,6 +9,7 @@
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { testAdresiniDenetle } from "./veritabani-kilidi.mjs";
 
 function envDegeriOku(dosya, anahtar) {
   if (!existsSync(dosya)) {
@@ -22,12 +23,6 @@ function envDegeriOku(dosya, anahtar) {
   return eslesme?.[1] || null;
 }
 
-function baglantiKimligi(url) {
-  const adres = new URL(url);
-
-  return `${adres.hostname}:${adres.port || "5432"}${adres.pathname}@${adres.username}`;
-}
-
 const testUrl = envDegeriOku(".env.test", "TEST_DATABASE_URL");
 
 if (!testUrl) {
@@ -37,18 +32,22 @@ if (!testUrl) {
   process.exit(1);
 }
 
-const testKimlik = baglantiKimligi(testUrl);
+/*
+  Kilit kuralı `scripts/veritabani-kilidi.mjs` içinde TEK YERDE tanımlıdır
+  ve birim testleriyle korunur. Bağlantı kimliğinin yanı sıra Supabase
+  PROJE REFERANSINI de karşılaştırır: aynı projeye farklı porttan
+  (transaction/session pooler) veya farklı hosttan (pooler/doğrudan)
+  bağlanmak artık "farklı veritabanı" sayılmaz.
+*/
+const karar = testAdresiniDenetle(testUrl, {
+  DATABASE_URL: envDegeriOku(".env", "DATABASE_URL"),
+  DIRECT_URL: envDegeriOku(".env", "DIRECT_URL"),
+});
 
-for (const anahtar of ["DATABASE_URL", "DIRECT_URL"]) {
-  const prodUrl = envDegeriOku(".env", anahtar);
-
-  if (prodUrl && baglantiKimligi(prodUrl) === testKimlik) {
-    console.error(
-      `GÜVENLİK DURDURMASI: TEST_DATABASE_URL, .env içindeki ${anahtar} ile aynı veritabanını gösteriyor.`
-    );
-    console.error("Hiçbir migration uygulanmadı.");
-    process.exit(1);
-  }
+if (!karar.guvenli) {
+  console.error(`GÜVENLİK DURDURMASI: ${karar.sebep}`);
+  console.error("Hiçbir migration uygulanmadı.");
+  process.exit(1);
 }
 
 const hedef = new URL(testUrl);

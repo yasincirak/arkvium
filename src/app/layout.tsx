@@ -5,6 +5,7 @@ import { aktifDil } from "@/lib/i18n";
 import WhatsAppDestekButonu from "@/components/WhatsAppDestekButonu";
 import { DilSaglayici } from "@/lib/i18n/istemci";
 import { CANLI_ADRES, PAYLASIM_GORSELI } from "@/lib/seo";
+import SayfaIzleyici from "@/components/analitik/SayfaIzleyici";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -69,6 +70,13 @@ export default function RootLayout({
             Yönetim paneli bileşenin kendi içinde rota ile dışlanır.
           */}
           <WhatsAppDestekButonu />
+
+          {/*
+            Sayfa görüntüleme izleyicisi. Görünür çıktı üretmez; yönetim
+            (/admin) ve hesap (/account) yolları hem burada hem sunucu
+            ucunda elenir, üçüncü taraf hiçbir hizmete istek gitmez.
+          */}
+          <SayfaIzleyici />
         </DilSaglayici>
       </body>
     </html>

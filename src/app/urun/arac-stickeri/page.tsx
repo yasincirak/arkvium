@@ -12,6 +12,8 @@ import {
 import Logo, { ArkviumTamLogo } from "@/components/Logo";
 import { CANLI_ADRES, PAYLASIM_GORSELI } from "@/lib/seo";
 import { fiyatBicimle, SIPARIS_URUNLERI } from "@/lib/siparis";
+import SepeteEkleBaglantisi from "@/components/analitik/SepeteEkleBaglantisi";
+import UrunIzleyici from "@/components/analitik/UrunIzleyici";
 
 /**
  * Araç İletişim QR Sticker'ı ürün detay sayfası.
@@ -59,14 +61,14 @@ function SatinAlDugmesi({
   metin: string;
 }) {
   return (
-    <Link
-      href={`/siparis?urun=${URUN_KODU}`}
+    <SepeteEkleBaglantisi
+      urunKodu={URUN_KODU}
       className={`inline-flex justify-center rounded-xl bg-emerald-600 px-8 py-4 font-semibold text-white transition hover:bg-emerald-500 active:scale-[0.98] motion-reduce:active:scale-100 ${
         tamGenislik ? "w-full" : ""
       }`}
     >
       {metin}
-    </Link>
+    </SepeteEkleBaglantisi>
   );
 }
 
@@ -167,6 +169,9 @@ export default function AracStickeriPage() {
 
   return (
     <main className="pt-20 relative min-h-screen bg-white text-[#101a3d]">
+      {/* Ürün görüntüleme olayı; görünür hiçbir şey üretmez. */}
+      <UrunIzleyici urunKodu={URUN_KODU} />
+
       <SayfaUstBari ton="acik" />
 
       <ArkaPlanLogosu />
