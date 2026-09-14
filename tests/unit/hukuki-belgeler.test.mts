@@ -18,6 +18,8 @@ const {
   SIPARIS_ONAY_BELGELERI,
   CEREZ_POLITIKASI_YOLU,
   DOLDURULACAK,
+  siparisOnaylariniCoz,
+  siparisOnaylariTamMi,
 } = await import("../../src/lib/hukuki-belgeler.ts");
 
 /** Adresten App Router sayfa dosyasının yolunu üretir. */
@@ -26,8 +28,8 @@ function sayfaDosyasi(yol: string): string {
 }
 
 describe("kayıt defteri tutarlılığı", () => {
-  test("dört hukuki belge tanımlıdır", () => {
-    assert.equal(HUKUKI_BELGE_LISTESI.length, 4);
+  test("beş hukuki belge tanımlıdır", () => {
+    assert.equal(HUKUKI_BELGE_LISTESI.length, 5);
   });
 
   test("her belgenin adresi kök yoldan başlar", () => {
@@ -131,13 +133,101 @@ describe("sipariş onayı belgeleri", () => {
     assert.equal(HUKUKI_BELGELER.gizlilikPolitikasi.onayBelgeKodu, null);
   });
 
-  test("sözleşme, aydınlatma ve iade koşulları onaya dâhildir", () => {
-    assert.equal(SIPARIS_ONAY_BELGELERI.length, 3);
+  test("ön bilgilendirme dâhil dört belge onaya tabidir", () => {
+    assert.equal(SIPARIS_ONAY_BELGELERI.length, 4);
+
+    const kodlar = SIPARIS_ONAY_BELGELERI.map((b) => b.onayBelgeKodu).sort();
+
+    assert.deepEqual(kodlar, [
+      "iade_kosullari",
+      "kvkk_aydinlatma",
+      "mesafeli_satis",
+      "on_bilgilendirme",
+    ]);
   });
 });
 
 describe("doldurulacak alan işareti", () => {
   test("işaret açık ve aranabilir bir metindir", () => {
     assert.equal(DOLDURULACAK, "[YAYIN ÖNCESİ DOLDURULACAK]");
+  });
+});
+
+describe("sipariş onaylarının çözümü", () => {
+  const tumKodlar = SIPARIS_ONAY_BELGELERI.map((b) => b.onayBelgeKodu);
+
+  test("tüm kodlar gelirse eksik kalmaz", () => {
+    const cozum = siparisOnaylariniCoz(tumKodlar);
+
+    assert.deepEqual(cozum.eksikBaslikar, []);
+    assert.equal(cozum.onaylar.length, SIPARIS_ONAY_BELGELERI.length);
+    assert.equal(siparisOnaylariTamMi(tumKodlar), true);
+  });
+
+  test("SÜRÜM İSTEMCİDEN ALINMAZ, kayıt defterinden okunur", () => {
+    /*
+      İstemci yalnızca hangi belgeyi onayladığını bildirir. Sürümü
+      değiştirebilseydi, yürürlükteki metinden farklı bir sürüme onay
+      verilmiş gibi görünürdü.
+    */
+    const cozum = siparisOnaylariniCoz(tumKodlar);
+
+    for (const onay of cozum.onaylar) {
+      const belge = SIPARIS_ONAY_BELGELERI.find(
+        (b) => b.onayBelgeKodu === onay.belge
+      );
+
+      assert.equal(onay.surum, belge?.surum);
+    }
+  });
+
+  test("eksik onay başlıkla bildirilir", () => {
+    const eksikli = tumKodlar.slice(1);
+
+    const cozum = siparisOnaylariniCoz(eksikli);
+
+    assert.equal(cozum.eksikBaslikar.length, 1);
+    assert.equal(cozum.eksikBaslikar[0], SIPARIS_ONAY_BELGELERI[0].baslik);
+    assert.equal(siparisOnaylariTamMi(eksikli), false);
+  });
+
+  test("hiç onay gelmezse hepsi eksiktir", () => {
+    for (const girdi of [[], null, undefined, "kabul", 1, {}]) {
+      const cozum = siparisOnaylariniCoz(girdi);
+
+      assert.equal(
+        cozum.eksikBaslikar.length,
+        SIPARIS_ONAY_BELGELERI.length,
+        `geçersiz girdi tüm belgeleri eksik saymalı: ${String(girdi)}`
+      );
+
+      assert.equal(cozum.onaylar.length, 0);
+    }
+  });
+
+  test("tanınmayan kodlar yok sayılır", () => {
+    const cozum = siparisOnaylariniCoz([...tumKodlar, "uydurma_belge"]);
+
+    assert.deepEqual(cozum.eksikBaslikar, []);
+    assert.equal(
+      cozum.onaylar.length,
+      SIPARIS_ONAY_BELGELERI.length,
+      "uydurma kod kayda girmemeli"
+    );
+  });
+
+  test("tekrarlanan kod tek kayıt üretir", () => {
+    const cozum = siparisOnaylariniCoz([...tumKodlar, ...tumKodlar]);
+
+    assert.equal(cozum.onaylar.length, SIPARIS_ONAY_BELGELERI.length);
+  });
+
+  test("gizlilik politikası onay listesine girmez", () => {
+    const cozum = siparisOnaylariniCoz([
+      ...tumKodlar,
+      HUKUKI_BELGELER.gizlilikPolitikasi.yol,
+    ]);
+
+    assert.equal(cozum.onaylar.length, SIPARIS_ONAY_BELGELERI.length);
   });
 });

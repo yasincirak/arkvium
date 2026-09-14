@@ -62,7 +62,18 @@ export default function SiparisFormu({
       const siparisYanit = await fetch("/api/siparis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ urunKodu, ...alanlar }),
+        /*
+          Onaylanan belge KODLARI gönderilir; sürüm GÖNDERİLMEZ.
+          Sürümü sunucu kendi kayıt defterinden okur, aksi hâlde
+          istemci onayladığı metnin sürümünü değiştirebilirdi.
+        */
+        body: JSON.stringify({
+          urunKodu,
+          ...alanlar,
+          onaylar: SIPARIS_ONAY_BELGELERI.map(
+            (belge) => belge.onayBelgeKodu
+          ),
+        }),
       });
 
       const siparisVeri = await siparisYanit.json();

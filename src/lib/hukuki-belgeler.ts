@@ -50,6 +50,13 @@ export const HUKUKI_BELGELER = {
     onayBelgeKodu: null,
     siparisOnayinaDahil: false,
   },
+  onBilgilendirme: {
+    yol: "/on-bilgilendirme-formu",
+    baslik: "Ön Bilgilendirme Formu",
+    surum: "1.0",
+    onayBelgeKodu: "on_bilgilendirme",
+    siparisOnayinaDahil: true,
+  },
   mesafeliSatis: {
     yol: "/mesafeli-satis-sozlesmesi",
     baslik: "Mesafeli Satış Sözleşmesi",
@@ -88,3 +95,59 @@ export const CEREZ_POLITIKASI_YOLU = "/cerez-politikasi";
  * yanıltıcı olur; bu yüzden metinlerde bu işaretle bırakılırlar.
  */
 export const DOLDURULACAK = "[YAYIN ÖNCESİ DOLDURULACAK]";
+
+/** Sipariş onayı çözümünün sonucu. */
+export type SiparisOnayCozumu = {
+  /** Kaydedilecek onaylar (belge kodu + SUNUCUDAKİ sürüm). */
+  onaylar: Array<{ belge: string; surum: string }>;
+  /** Onaylanmamış zorunlu belgelerin başlıkları. */
+  eksikBaslikar: string[];
+};
+
+/**
+ * İstemciden gelen onay kodlarını doğrular ve kaydedilecek listeyi üretir.
+ *
+ * ────────────────────────────────────────────────────────────
+ * SÜRÜM İSTEMCİDEN ALINMAZ
+ *
+ * İstemci yalnızca HANGİ belgeyi onayladığını bildirir. Onaylanan metnin
+ * SÜRÜMÜ her zaman buradaki kayıt defterinden okunur. Aksi hâlde istemci
+ * "1.0'ı onayladım" diyerek yürürlükteki metinden farklı bir sürüme
+ * onay verilmiş gibi gösterebilir ve kayıt hukuki kanıt değerini
+ * yitirirdi.
+ * ────────────────────────────────────────────────────────────
+ *
+ * Tanınmayan kodlar sessizce yok sayılır: kayıt defteri tek doğruluk
+ * kaynağıdır ve bilinmeyen bir kod hiçbir belgeye karşılık gelmez.
+ */
+export function siparisOnaylariniCoz(kodlar: unknown): SiparisOnayCozumu {
+  const gelen = new Set(
+    Array.isArray(kodlar)
+      ? kodlar
+          .map((kod) => (typeof kod === "string" ? kod.trim() : ""))
+          .filter(Boolean)
+      : []
+  );
+
+  const onaylar: Array<{ belge: string; surum: string }> = [];
+  const eksikBaslikar: string[] = [];
+
+  for (const belge of SIPARIS_ONAY_BELGELERI) {
+    if (!belge.onayBelgeKodu) {
+      continue;
+    }
+
+    if (gelen.has(belge.onayBelgeKodu)) {
+      onaylar.push({ belge: belge.onayBelgeKodu, surum: belge.surum });
+    } else {
+      eksikBaslikar.push(belge.baslik);
+    }
+  }
+
+  return { onaylar, eksikBaslikar };
+}
+
+/** Zorunlu belgelerin tamamı onaylanmışsa true. */
+export function siparisOnaylariTamMi(kodlar: unknown): boolean {
+  return siparisOnaylariniCoz(kodlar).eksikBaslikar.length === 0;
+}

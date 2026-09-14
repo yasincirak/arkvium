@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { hizSiniriKontrol, istemciIpAdresi } from "@/lib/rate-limit";
 import { rezervasyonSonGecerliligi, StokHatasi } from "@/lib/qr-rezervasyon";
 import { siparisOlustur } from "@/lib/siparis-servisi";
+import { siparisOnaylariniCoz } from "@/lib/hukuki-belgeler";
 
 /**
  * Müşteri sipariş oluşturma (herkese açık).
@@ -16,8 +17,11 @@ import { siparisOlustur } from "@/lib/siparis-servisi";
  * - Her sipariş QR etiketlerini 15 dakikalığına REZERVE ettiği için uç
  *   IP başına sınırlanır: sınır olmadan tek bir istemci tüm stoğu
  *   kilitleyebilirdi.
- * - `OrderConsent` YAZILMAZ: hukuki metinler ve sürümleri henüz mevcut
- *   olmadığı için sahte onay kaydı üretilmez.
+ * - HUKUKİ ONAY ZORUNLUDUR: zorunlu belgelerin tamamı onaylanmadan
+ *   sipariş OLUŞTURULMAZ ve hiçbir QR etiketi rezerve edilmez.
+ * - Onaylanan metnin SÜRÜMÜ istemciden alınmaz; sunucudaki belge kayıt
+ *   defterinden okunur (bkz. src/lib/hukuki-belgeler.ts).
+ * - `OrderConsent` kayıtları siparişle AYNI TRANSACTION içinde yazılır.
  */
 
 export async function POST(request: Request) {
@@ -52,8 +56,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Ürün seçilmedi." }, { status: 400 });
     }
 
+    /*
+      HUKUKİ ONAY KAPISI — sipariş oluşturulmadan ÖNCE.
+
+      Eksik onayda hiçbir kayıt yazılmaz ve hiçbir etiket rezerve
+      edilmez; hız sınırı zaten yukarıda tüketilmiştir.
+    */
+    const onayCozumu = siparisOnaylariniCoz(body?.onaylar);
+
+    if (onayCozumu.eksikBaslikar.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Siparişi tamamlamak için şu belgeleri onaylamanız gerekiyor: ${onayCozumu.eksikBaslikar.join(
+            ", "
+          )}.`,
+        },
+        { status: 400 }
+      );
+    }
+
     const siparis = await siparisOlustur({
       sepet: [{ kod: urunKodu, adet: 1 }],
+      onaylar: onayCozumu.onaylar,
       teslimat: {
         fullName: String(body?.fullName || ""),
         email: String(body?.email || ""),

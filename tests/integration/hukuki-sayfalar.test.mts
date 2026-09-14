@@ -95,6 +95,7 @@ describe("taslak uyarısı ve eksik alanlar", () => {
     */
     for (const belge of [
       HUKUKI_BELGELER.kvkkAydinlatma,
+      HUKUKI_BELGELER.onBilgilendirme,
       HUKUKI_BELGELER.mesafeliSatis,
       HUKUKI_BELGELER.teslimatIade,
     ]) {

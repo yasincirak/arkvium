@@ -52,6 +52,30 @@ export type SiparisOlusturGirdisi = {
    * doğrulanmış sunucu ayarından üretilip buraya verilir.
    */
   rezervasyonSonGecerlilik: Date;
+
+  /**
+   * Sipariş sırasında onaylanan hukuki belgeler.
+   *
+   * Sipariş kaydıyla AYNI TRANSACTION içinde yazılır: sipariş oluşup
+   * onay kaydı oluşmayan (veya tersi) bir durum mümkün değildir.
+   *
+   * SÜRÜM İSTEMCİDEN GELMEZ: çağıran uç, sürümü sunucudaki belge kayıt
+   * defterinden (src/lib/hukuki-belgeler.ts) okuyup buraya verir.
+   * Aksi hâlde istemci, onayladığı metnin sürümünü değiştirebilirdi.
+   *
+   * Boş bırakılabilir: onay ZORUNLULUĞU uç katmanında uygulanır
+   * (bkz. src/app/api/siparis/route.ts). Yönetici ödeme testi ucu
+   * müşteri sözleşmesi kurmadığı için onay göndermez.
+   */
+  onaylar?: SiparisOnayi[];
+};
+
+/** Onaylanan tek bir belge. */
+export type SiparisOnayi = {
+  /** `OrderConsent.belge` değeri (ör. "mesafeli_satis"). */
+  belge: string;
+  /** Onaylanan metnin sürümü. */
+  surum: string;
 };
 
 export type OlusturulanSiparis = {
@@ -76,6 +100,38 @@ const ALAN_SINIRI = {
   il: 100,
   postaKodu: 20,
 } as const;
+
+/**
+ * Onay listesini tekilleştirir ve geçersiz satırları eler.
+ *
+ * Aynı belge birden çok kez gelirse İLK kaydı korunur. Veritabanındaki
+ * @@unique([orderId, belge]) kısıtı ikinci bir kapıdır; burada eleme
+ * yapılması, transaction'ın kısıt ihlaliyle düşmesini önler.
+ */
+function onaylariTekillestir(
+  onaylar: SiparisOnayi[] | undefined
+): SiparisOnayi[] {
+  if (!Array.isArray(onaylar)) {
+    return [];
+  }
+
+  const gorulen = new Set<string>();
+  const sonuc: SiparisOnayi[] = [];
+
+  for (const onay of onaylar) {
+    const belge = metniTemizle(onay?.belge);
+    const surum = metniTemizle(onay?.surum);
+
+    if (!belge || !surum || gorulen.has(belge)) {
+      continue;
+    }
+
+    gorulen.add(belge);
+    sonuc.push({ belge, surum });
+  }
+
+  return sonuc;
+}
 
 /** Sipariş numarası çakışırsa bu kadar kez yeniden denenir. */
 const EN_FAZLA_DENEME = 3;
@@ -172,6 +228,8 @@ export async function siparisOlustur(
     0
   );
 
+  const onaylar = onaylariTekillestir(girdi?.onaylar);
+
   for (let deneme = 1; deneme <= EN_FAZLA_DENEME; deneme += 1) {
     try {
       const siparis = await prisma.$transaction(
@@ -247,6 +305,29 @@ export async function siparisOlustur(
               { orderId: olusan.id, type: "tags_reserved" },
             ],
           });
+
+          /*
+            6) Hukuki onaylar — SİPARİŞLE AYNI TRANSACTION içinde.
+
+            Sipariş oluşup onay kaydı oluşmayan bir durum mümkün
+            değildir; ikisi ya birlikte yazılır ya da hiçbiri.
+
+            MÜKERRER KAYIT: aynı belge listede iki kez gelse bile tek
+            satır yazılır. Bunu iki kapı sağlar — aşağıdaki tekilleştirme
+            ve `OrderConsent` üzerindeki @@unique([orderId, belge])
+            kısıtı. Tekrarlanan sipariş isteği ZATEN yeni bir sipariş
+            (yeni orderId) üretir; o siparişin kendi onayları yazılır.
+          */
+          if (onaylar.length > 0) {
+            await islem.orderConsent.createMany({
+              data: onaylar.map((onay) => ({
+                orderId: olusan.id,
+                belge: onay.belge,
+                surum: onay.surum,
+              })),
+              skipDuplicates: true,
+            });
+          }
 
           return olusan;
         },

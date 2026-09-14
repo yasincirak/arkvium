@@ -25,6 +25,9 @@ process.env.DIRECT_URL = testVeritabani;
 process.env.RATE_LIMIT_SECRET = "test-hiz-siniri-" + "r".repeat(32);
 
 const { prisma } = await import("../../src/lib/prisma.ts");
+const { SIPARIS_ONAY_BELGELERI } = await import(
+  "../../src/lib/hukuki-belgeler.ts"
+);
 const { SIPARIS_URUNLERI, KARGO_UCRETI_KURUS } = await import(
   "../../src/lib/siparis.ts"
 );
@@ -68,12 +71,26 @@ beforeEach(async () => {
   });
 });
 
-async function istek(govde: unknown, ip = rastgeleIp()) {
+/** Zorunlu belgelerin tamamının onaylandığı kod listesi. */
+const TUM_ONAYLAR = SIPARIS_ONAY_BELGELERI.map(
+  (belge) => belge.onayBelgeKodu
+);
+
+/**
+ * Sipariş ucuna istek gönderir.
+ *
+ * Onay kodları varsayılan olarak EKSİKSİZ gönderilir; onay kapısının
+ * kendisi ayrı testlerde `onaylar` alanı geçersiz kılınarak doğrulanır.
+ */
+async function istek(
+  govde: Record<string, unknown>,
+  ip = rastgeleIp()
+) {
   const yanit = await siparisUcu(
     new Request("http://localhost/api/siparis", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-forwarded-for": ip },
-      body: JSON.stringify(govde),
+      body: JSON.stringify({ onaylar: TUM_ONAYLAR, ...govde }),
     })
   );
 
@@ -177,10 +194,18 @@ describe("herkese açık sipariş ucu", () => {
     assert.equal(await prisma.order.count(), 0);
   });
 
-  test("OrderConsent kaydı yazılmaz", async () => {
-    await istek({ urunKodu: STICKER.kod, ...TESLIMAT });
+  test("OrderConsent kaydı YAZILIR", async () => {
+    /*
+      Bu test eskiden tersini doğruluyordu: hukuki metinler yokken sahte
+      onay kaydı üretilmesin diye OrderConsent bilerek yazılmıyordu.
+      Metinler ve sürümleri artık mevcut, onay da kaydediliyor.
+    */
+    const { govde } = await istek({ urunKodu: STICKER.kod, ...TESLIMAT });
 
-    assert.equal(await prisma.orderConsent.count(), 0);
+    assert.equal(
+      await prisma.orderConsent.count({ where: { orderId: govde.orderId } }),
+      SIPARIS_ONAY_BELGELERI.length
+    );
   });
 
   test("aynı IP'den aşırı istek 429 alır (stok kilitleme koruması)", async () => {
@@ -195,5 +220,158 @@ describe("herkese açık sipariş ucu", () => {
     }
 
     assert.equal(sonDurum, 429, "hız sınırı devreye girmeli");
+  });
+});
+
+describe("hukuki onay kapısı", () => {
+  test("onay gönderilmezse sipariş OLUŞMAZ", async () => {
+    const { yanit, govde } = await istek({
+      urunKodu: STICKER.kod,
+      ...TESLIMAT,
+      onaylar: [],
+    });
+
+    assert.equal(yanit.status, 400);
+    assert.match(govde.error, /onaylamanız gerekiyor/i);
+
+    assert.equal(await prisma.order.count(), 0, "sipariş yazılmamalı");
+    assert.equal(
+      await prisma.orderTag.count(),
+      0,
+      "etiket rezerve edilmemeli"
+    );
+    assert.equal(await prisma.orderConsent.count(), 0);
+  });
+
+  test("eksik onayda hata mesajı eksik belgeyi söyler", async () => {
+    const eksik = TUM_ONAYLAR.slice(1);
+
+    const { yanit, govde } = await istek({
+      urunKodu: STICKER.kod,
+      ...TESLIMAT,
+      onaylar: eksik,
+    });
+
+    assert.equal(yanit.status, 400);
+    assert.ok(
+      govde.error.includes(SIPARIS_ONAY_BELGELERI[0].baslik),
+      "eksik belgenin başlığı mesajda olmalı"
+    );
+
+    assert.equal(await prisma.order.count(), 0);
+  });
+
+  test("onay alanı hiç gönderilmezse sipariş oluşmaz", async () => {
+    const yanit = await siparisUcu(
+      new Request("http://localhost/api/siparis", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-forwarded-for": rastgeleIp(),
+        },
+        body: JSON.stringify({ urunKodu: STICKER.kod, ...TESLIMAT }),
+      })
+    );
+
+    assert.equal(yanit.status, 400);
+    assert.equal(await prisma.order.count(), 0);
+  });
+});
+
+describe("OrderConsent kaydı", () => {
+  test("onaylar siparişle birlikte kaydedilir", async () => {
+    const { yanit, govde } = await istek({
+      urunKodu: STICKER.kod,
+      ...TESLIMAT,
+    });
+
+    assert.equal(yanit.status, 200);
+
+    const onaylar = await prisma.orderConsent.findMany({
+      where: { orderId: govde.orderId },
+      select: { belge: true, surum: true, onaylandiAt: true },
+      orderBy: { belge: "asc" },
+    });
+
+    assert.equal(onaylar.length, SIPARIS_ONAY_BELGELERI.length);
+
+    for (const onay of onaylar) {
+      const belge = SIPARIS_ONAY_BELGELERI.find(
+        (b) => b.onayBelgeKodu === onay.belge
+      );
+
+      assert.ok(belge, `tanınmayan belge kodu: ${onay.belge}`);
+      assert.equal(onay.surum, belge?.surum, "sürüm kayıt defterinden gelmeli");
+      assert.ok(onay.onaylandiAt, "kabul zamanı yazılmalı");
+    }
+  });
+
+  test("SÜRÜM istemciden gelen değere göre YAZILMAZ", async () => {
+    /*
+      İstemci yalnızca belge kodu gönderir. Uydurma bir sürüm
+      göndermeye çalışsa bile kayıt defterindeki sürüm yazılır.
+    */
+    const { govde } = await istek({
+      urunKodu: STICKER.kod,
+      ...TESLIMAT,
+      onaylar: TUM_ONAYLAR,
+      surum: "99.9",
+    });
+
+    const onaylar = await prisma.orderConsent.findMany({
+      where: { orderId: govde.orderId },
+      select: { surum: true },
+    });
+
+    for (const onay of onaylar) {
+      assert.notEqual(onay.surum, "99.9");
+    }
+  });
+
+  test("tekrarlanan kodlar MÜKERRER kayıt üretmez", async () => {
+    const { yanit, govde } = await istek({
+      urunKodu: STICKER.kod,
+      ...TESLIMAT,
+      onaylar: [...TUM_ONAYLAR, ...TUM_ONAYLAR, ...TUM_ONAYLAR],
+    });
+
+    assert.equal(yanit.status, 200);
+
+    assert.equal(
+      await prisma.orderConsent.count({ where: { orderId: govde.orderId } }),
+      SIPARIS_ONAY_BELGELERI.length,
+      "her belge için tek satır olmalı"
+    );
+  });
+
+  test("iki ayrı sipariş kendi onaylarını alır", async () => {
+    const birinci = await istek({ urunKodu: STICKER.kod, ...TESLIMAT });
+    const ikinci = await istek({ urunKodu: STICKER.kod, ...TESLIMAT });
+
+    assert.notEqual(birinci.govde.orderId, ikinci.govde.orderId);
+
+    for (const siparis of [birinci, ikinci]) {
+      assert.equal(
+        await prisma.orderConsent.count({
+          where: { orderId: siparis.govde.orderId },
+        }),
+        SIPARIS_ONAY_BELGELERI.length
+      );
+    }
+  });
+
+  test("sipariş başarısız olursa onay kaydı da kalmaz", async () => {
+    // Stok yok: sipariş transaction'ı düşer, onaylar da yazılmamalı.
+    await prisma.tag.deleteMany({});
+
+    const { yanit } = await istek({ urunKodu: STICKER.kod, ...TESLIMAT });
+
+    assert.equal(yanit.status, 400);
+    assert.equal(await prisma.order.count(), 0);
+    assert.equal(
+      await prisma.orderConsent.count(),
+      0,
+      "sipariş yoksa onay da olmamalı"
+    );
   });
 });
