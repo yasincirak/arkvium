@@ -71,7 +71,9 @@ export const HUKUKI_BELGELER = {
   teslimatIade: {
     yol: "/teslimat-iade-kosullari",
     baslik: "Teslimat, İptal ve İade Koşulları",
-    surum: "1.0",
+    // 2.0: metin uygulamanın bugünkü gerçek yeteneklerine göre
+    // yeniden yazıldı. OrderConsent bu sürümü kaydeder.
+    surum: "2.0",
     onayBelgeKodu: "iade_kosullari",
     siparisOnayinaDahil: true,
   },

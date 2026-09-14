@@ -93,10 +93,7 @@ describe("taslak uyarısı ve eksik alanlar", () => {
       Satıcı unvanı, adresi ve vergi bilgisi koddan doğrulanamaz;
       uydurulmak yerine açıkça işaretlenmelidir.
     */
-    for (const belge of [
-      HUKUKI_BELGELER.onBilgilendirme,
-      HUKUKI_BELGELER.teslimatIade,
-    ]) {
+    for (const belge of [HUKUKI_BELGELER.onBilgilendirme]) {
       const { icerik } = await sayfa(belge.yol);
 
       assert.ok(
@@ -206,6 +203,56 @@ describe("taslak uyarısı ve eksik alanlar", () => {
     ]) {
       assert.ok(!icerik.includes(yasak), `metinde bulunmamalı: ${yasak}`);
     }
+  });
+
+  test("Teslimat–İade politikası kendi işaretlerini kullanır", async () => {
+    const { icerik } = await sayfa(HUKUKI_BELGELER.teslimatIade.yol);
+
+    assert.ok(icerik.includes("YASİN TARAFINDAN DOLDURULACAK"));
+    assert.ok(icerik.includes("HUKUK DANIŞMANI ONAYI GEREKİYOR"));
+  });
+
+  test("Teslimat politikası olmayan özellikleri varmış gibi anlatmaz", async () => {
+    /*
+      Uygulamada siparis iptal islevi ve otomatik geri odeme YOK.
+      Metin bunu gizlemek yerine acikca yaziyor.
+    */
+    const { icerik } = await sayfa(HUKUKI_BELGELER.teslimatIade.yol);
+
+    assert.ok(
+      icerik.includes("otomatik geri ödeme işlevi bulunmamaktadır"),
+      "otomatik geri ödeme olmadığı yazılmalı"
+    );
+
+    assert.ok(
+      icerik.includes("iptal edebileceğiniz bir ekran"),
+      "kullanıcı iptal ekranı olmadığı yazılmalı"
+    );
+
+    assert.ok(
+      icerik.includes("kargo takip numarası alanı bulunmamaktadır"),
+      "takip numarası alanı olmadığı yazılmalı"
+    );
+  });
+
+  test("Teslimat politikası yasaklı hükümleri içermez", async () => {
+    const { icerik } = await sayfa(HUKUKI_BELGELER.teslimatIade.yol);
+
+    for (const yasak of [
+      "hiçbir hak ileri süremez",
+      "sorumluluğu tamamen sona erer",
+      "Yasal ekiplerimiz",
+      "bütün tüketici haklarını",
+      "0850",
+    ]) {
+      assert.ok(!icerik.includes(yasak), `metinde bulunmamalı: ${yasak}`);
+    }
+
+    // Tutanak tutulmamasinin hak kaybina yol acmadigi acikca yazilmali.
+    assert.ok(
+      icerik.includes("haklarınızı kullanmanıza engel değildir"),
+      "tutanak yokluğunun hak kaybı olmadığı belirtilmeli"
+    );
   });
 
   test("KVKK metni kendi işaretlerini kullanır", async () => {
