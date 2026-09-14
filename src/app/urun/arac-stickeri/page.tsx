@@ -14,6 +14,7 @@ import { CANLI_ADRES, PAYLASIM_GORSELI } from "@/lib/seo";
 import { fiyatBicimle, SIPARIS_URUNLERI } from "@/lib/siparis";
 import SepeteEkleBaglantisi from "@/components/analitik/SepeteEkleBaglantisi";
 import UrunIzleyici from "@/components/analitik/UrunIzleyici";
+import CerezTercihleriBaglantisi from "@/components/CerezTercihleriBaglantisi";
 
 /**
  * Araç İletişim QR Sticker'ı ürün detay sayfası.
@@ -414,6 +415,17 @@ export default function AracStickeriPage() {
         <div className="flex justify-center">
           <ArkviumTamLogo genislik={170} />
         </div>
+        <div className="mt-5 flex flex-wrap justify-center gap-x-5 gap-y-2">
+          <Link
+            href="/cerez-politikasi"
+            className="underline underline-offset-2 hover:text-slate-700"
+          >
+            {ceviri.footer.cerezPolitikasi}
+          </Link>
+
+          <CerezTercihleriBaglantisi className="underline underline-offset-2 hover:text-slate-700" />
+        </div>
+
         <div className="mt-5">{ceviri.aracSayfasi.telifHakki}</div>
       </footer>
     </main>

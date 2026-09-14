@@ -327,6 +327,54 @@ export const EN: DerinKismi<Sozluk> = {
     etiketiEtkinlestir: "Activate My Tag",
   },
 
+  cerez: {
+    baslik: "Your cookie preferences",
+    metin:
+      "We use essential cookies to make ARKVIUM work. We would also like to use optional analytics cookies to understand how the site is used. These are only created if you accept.",
+    kabulEt: "Accept",
+    reddet: "Reject",
+    tercihler: "Preferences",
+    tercihleriKaydet: "Save preferences",
+    kapat: "Close",
+    politikayiGor: "Cookie Policy",
+    gizliligiGor: "Privacy and data security",
+    zorunluBaslik: "Essential cookies",
+    zorunluMetin:
+      "Required for signing in, language preference and remembering your cookie decision. The site does not work without them, so they cannot be turned off.",
+    zorunluDurum: "Always on",
+    analitikBaslik: "Analytics cookies",
+    analitikMetin:
+      "Help us understand how many people visit and which products draw interest. Your identity, IP address and browser fingerprint are not stored. If you reject, no analytics cookie is created.",
+    analitikAc: "Allow analytics cookies",
+    tercihiDegistir: "Change cookie preferences",
+    mevcutKabul: "Your current choice: analytics cookies allowed.",
+    mevcutRed: "Your current choice: analytics cookies rejected.",
+  },
+
+  cerezPolitikasi: {
+    baslik: "Cookie Policy",
+    girisMetni:
+      "This page explains the cookies used on ARKVIUM. Essential cookies are required for the site to work. Analytics cookies are only created with your explicit consent; without it they are never written to your browser.",
+    sonGuncelleme: "Last updated: 14 September 2026",
+    tabloBaslik: "Cookies we use",
+    sutunAd: "Cookie name",
+    sutunAmac: "Purpose",
+    sutunSure: "Duration",
+    sutunSaglayici: "Provider",
+    sutunTur: "Type",
+    turZorunlu: "Essential",
+    turAnalitik: "Analytics (optional)",
+    ucuncuTarafBaslik: "Third-party cookies",
+    ucuncuTarafMetin:
+      "ARKVIUM does not use third-party analytics or advertising cookies. At the payment step you are redirected to iyzico's own domain; cookies created there are subject to iyzico's own policy.",
+    haklarBaslik: "Your rights and changing your choice",
+    haklarMetin:
+      "You can change your choice at any time. When you reject analytics cookies, any previously created analytics cookies are deleted from your browser. You can also clear all cookies from your browser settings.",
+    iletisimBaslik: "Contact",
+    iletisimMetin:
+      "You can contact us with any questions about cookies and your personal data.",
+  },
+
   footer: {
     aciklama:
       "Digital Ownership Platform. Give your belongings a QR-based digital identity and be reachable without your details being shown.",
@@ -336,6 +384,8 @@ export const EN: DerinKismi<Sozluk> = {
     nasilCalisir: "How it works",
     ucAdimdaKullanim: "Three steps to get started",
     gizlilik: "Privacy",
+    cerezPolitikasi: "Cookie Policy",
+    cerezTercihleri: "Cookie Preferences",
     sss: "Frequently asked questions",
     hesap: "Account",
     girisYap: "Log in",

@@ -8,6 +8,7 @@ import {
   yolHaricMi,
   yoluTemizle,
 } from "@/lib/analitik";
+import { analitikIzinliMi, CEREZ_ONAY_COOKIE } from "@/lib/cerez-onayi";
 import {
   ZIYARET_COOKIE,
   ZIYARETCI_COOKIE,
@@ -44,6 +45,11 @@ import {
  * 6. GİRİŞ YAPMIŞ KULLANICIDA ANONİM KİMLİK YAZILMAZ. Oturum varsa olay
  *    yalnızca hesapla ilişkilendirilir; anonim ziyaretçi kimliği o satıra
  *    geçmez ve anonim iz hesapla birleştirilmez.
+ *
+ * 7. AÇIK ONAY OLMADAN HİÇBİR ŞEY YAPILMAZ. Çerez onayı "kabul" değilse
+ *    satır yazılmaz VE hiçbir çerez ayarlanmaz. Bu, istemci kapısının
+ *    atlatılması hâlinde de `arkvium_va` / `arkvium_vo` çerezlerinin
+ *    oluşmamasını garanti eden asıl kontroldür.
  * ────────────────────────────────────────────────────────────
  *
  * ────────────────────────────────────────────────────────────
@@ -154,6 +160,24 @@ export async function POST(request: Request) {
 
     if (oturum?.role === "ADMIN") {
       // Yönetici ziyareti sayılmaz. Yanıt ayırt edilemez tutulur.
+      return NextResponse.json({ success: true, kaydedildi: false });
+    }
+
+    /*
+      ONAY KAPISI — asıl garanti.
+
+      Onay yoksa hiçbir satır yazılmaz ve HİÇBİR çerez ayarlanmaz.
+      Yanıt, yönetici elemesindekiyle aynı biçimdedir: istemciye
+      neden kaydedilmediği sızdırılmaz.
+    */
+    const onayCerezi = request.headers
+      .get("cookie")
+      ?.split(";")
+      .map((parca) => parca.trim())
+      .find((parca) => parca.startsWith(`${CEREZ_ONAY_COOKIE}=`))
+      ?.slice(CEREZ_ONAY_COOKIE.length + 1);
+
+    if (!analitikIzinliMi(onayCerezi && decodeURIComponent(onayCerezi))) {
       return NextResponse.json({ success: true, kaydedildi: false });
     }
 

@@ -40,6 +40,9 @@ const { ZIYARETCI_COOKIE, ZIYARET_COOKIE } = await import(
 const { cerezAyarla, cerezleriTemizle } = await import(
   "../helpers/next-taklit.mjs"
 );
+const { CEREZ_ONAY_COOKIE, onayDegeriYaz } = await import(
+  "../../src/lib/cerez-onayi.ts"
+);
 
 const db: Client = await testVeritabaniIstemcisi();
 
@@ -71,7 +74,14 @@ function istek(
       `198.51.100.${1 + Math.floor(Math.random() * 250)}`,
   };
 
-  const cerezler: string[] = [];
+  /*
+    Bu dosyadaki testler analitik davranışını ölçer; çerez onayı ayrı bir
+    dosyada (cerez-onayi-akisi.test.mts) doğrulanır. Burada onay VERİLMİŞ
+    kabul edilir, aksi hâlde uç hiçbir şey kaydetmez.
+  */
+  const cerezler: string[] = [
+    `${CEREZ_ONAY_COOKIE}=${onayDegeriYaz("kabul")}`,
+  ];
 
   if (secenekler.ziyaretciCerezi) {
     cerezler.push(`${ZIYARETCI_COOKIE}=${secenekler.ziyaretciCerezi}`);
@@ -81,9 +91,7 @@ function istek(
     cerezler.push(`${ZIYARET_COOKIE}=${secenekler.ziyaretCerezi}`);
   }
 
-  if (cerezler.length > 0) {
-    basliklar.cookie = cerezler.join("; ");
-  }
+  basliklar.cookie = cerezler.join("; ");
 
   return new Request("http://localhost/api/analitik/olay", {
     method: "POST",

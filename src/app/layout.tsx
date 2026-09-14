@@ -6,6 +6,7 @@ import WhatsAppDestekButonu from "@/components/WhatsAppDestekButonu";
 import { DilSaglayici } from "@/lib/i18n/istemci";
 import { CANLI_ADRES, PAYLASIM_GORSELI } from "@/lib/seo";
 import SayfaIzleyici from "@/components/analitik/SayfaIzleyici";
+import CerezOnayi from "@/components/CerezOnayi";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -77,6 +78,13 @@ export default function RootLayout({
             ucunda elenir, üçüncü taraf hiçbir hizmete istek gitmez.
           */}
           <SayfaIzleyici />
+
+          {/*
+            Çerez bildirimi. Karar verilene kadar HİÇBİR analitik çerez
+            oluşmaz ve hiçbir olay gönderilmez; footer bağlantısı da bu
+            bileşendeki paneli açar.
+          */}
+          <CerezOnayi />
         </DilSaglayici>
       </body>
     </html>

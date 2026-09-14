@@ -332,6 +332,54 @@ export const TR = {
     etiketiEtkinlestir: "Etiketimi Etkinleştir",
   },
 
+  cerez: {
+    baslik: "Çerez tercihleriniz",
+    metin:
+      "ARKVIUM'un çalışması için gereken zorunlu çerezleri kullanıyoruz. Siteyi nasıl kullandığınızı anlamak için ayrıca isteğe bağlı analitik çerezleri kullanmak istiyoruz. Bunlar yalnızca siz kabul ederseniz oluşturulur.",
+    kabulEt: "Kabul Et",
+    reddet: "Reddet",
+    tercihler: "Tercihler",
+    tercihleriKaydet: "Tercihleri kaydet",
+    kapat: "Kapat",
+    politikayiGor: "Çerez Politikası",
+    gizliligiGor: "Gizlilik ve veri güvenliği",
+    zorunluBaslik: "Zorunlu çerezler",
+    zorunluMetin:
+      "Oturum açma, dil tercihi ve çerez kararınızın hatırlanması için gereklidir. Bu çerezler olmadan site çalışmaz, kapatılamaz.",
+    zorunluDurum: "Her zaman açık",
+    analitikBaslik: "Analitik çerezler",
+    analitikMetin:
+      "Ziyaret sayısını ve hangi ürünlerin ilgi gördüğünü anlamamızı sağlar. Kimliğiniz, IP adresiniz veya tarayıcı parmak iziniz saklanmaz. Reddederseniz hiçbir analitik çerez oluşturulmaz.",
+    analitikAc: "Analitik çerezlere izin ver",
+    tercihiDegistir: "Çerez tercihlerini değiştir",
+    mevcutKabul: "Şu anki tercihiniz: analitik çerezlere izin verildi.",
+    mevcutRed: "Şu anki tercihiniz: analitik çerezler reddedildi.",
+  },
+
+  cerezPolitikasi: {
+    baslik: "Çerez Politikası",
+    girisMetni:
+      "Bu sayfa ARKVIUM'da kullanılan çerezleri açıklar. Zorunlu çerezler sitenin çalışması için gereklidir. Analitik çerezler yalnızca açık onayınızla oluşturulur; onay vermezseniz tarayıcınıza yazılmaz.",
+    sonGuncelleme: "Son güncelleme: 14 Eylül 2026",
+    tabloBaslik: "Kullanılan çerezler",
+    sutunAd: "Çerez adı",
+    sutunAmac: "Amacı",
+    sutunSure: "Süresi",
+    sutunSaglayici: "Sağlayıcı",
+    sutunTur: "Türü",
+    turZorunlu: "Zorunlu",
+    turAnalitik: "Analitik (isteğe bağlı)",
+    ucuncuTarafBaslik: "Üçüncü taraf çerezler",
+    ucuncuTarafMetin:
+      "ARKVIUM üçüncü taraf analitik veya reklam çerezi kullanmaz. Ödeme adımında iyzico'nun kendi alan adına yönlendirilirsiniz; orada oluşan çerezler iyzico'nun kendi politikasına tabidir.",
+    haklarBaslik: "Haklarınız ve tercihinizi değiştirme",
+    haklarMetin:
+      "Tercihinizi istediğiniz zaman değiştirebilirsiniz. Analitik çerezleri reddettiğinizde daha önce oluşmuş analitik çerezler tarayıcınızdan silinir. Tarayıcı ayarlarınızdan da tüm çerezleri temizleyebilirsiniz.",
+    iletisimBaslik: "İletişim",
+    iletisimMetin:
+      "Çerezler ve kişisel verilerinizle ilgili sorularınız için bizimle iletişime geçebilirsiniz.",
+  },
+
   footer: {
     aciklama:
       "Dijital Sahiplik Platformu. Eşyalarına QR kodlu dijital kimlik ver; kişisel bilgilerin görünmeden sana ulaşılsın.",
@@ -341,6 +389,8 @@ export const TR = {
     nasilCalisir: "Nasıl çalışır",
     ucAdimdaKullanim: "Üç adımda kullanım",
     gizlilik: "Gizlilik",
+    cerezPolitikasi: "Çerez Politikası",
+    cerezTercihleri: "Çerez Tercihleri",
     sss: "Sık sorulan sorular",
     hesap: "Hesap",
     girisYap: "Giriş yap",
