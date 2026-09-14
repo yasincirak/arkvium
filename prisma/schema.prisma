@@ -382,11 +382,26 @@ model Order {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  /// --- Kargo bilgileri ---
+  /// `shippedAt` yukarıda; aşağıdakiler kargoya verilirken yazılır.
+  ///
+  /// Firma ve takip numarası serbest metindir: kargo firması listesi
+  /// uygulama kodunda tutulur ve zamanla değişir (Tag.productKod ile
+  /// aynı gerekçe). Geçerlilik denetimi uygulama ucunda yapılır.
+  kargoFirmasi String?
+  kargoTakipNo String?
+
+  /// Takip bağlantısı. YALNIZCA doğrulanmış bir adres yazılır; kullanıcı
+  /// girdisi doğrudan bağlantıya çevrilmez (bkz. src/lib/kargo.ts).
+  kargoTakipUrl String?
+
   items    OrderItem[]
   payments Payment[]
   tags     OrderTag[]
   events   OrderEvent[]
   consents OrderConsent[]
+  requests OrderRequest[]
+  refunds  Refund[]
 
   @@index([status])
   @@index([userId])
@@ -457,7 +472,8 @@ model Payment {
   confirmedAt DateTime?
   updatedAt   DateTime  @updatedAt
 
-  events PaymentEvent[]
+  events  PaymentEvent[]
+  refunds Refund[]
 
   @@index([orderId])
   @@index([status])
@@ -839,4 +855,128 @@ model AdminNotificationSetting {
   satisBildirimleriAcik Boolean @default(true)
 
   updatedAt DateTime @updatedAt
+}
+
+/// İptal veya iade talebinin türü.
+enum OrderRequestType {
+  cancel
+  refund
+}
+
+/// Talebin işlenme durumu.
+enum OrderRequestStatus {
+  pending
+  approved
+  rejected
+}
+
+/// Müşterinin oluşturduğu iptal veya iade talebi.
+///
+/// TALEP KARAR DEĞİLDİR: bu kayıt yalnızca müşterinin isteğini ve
+/// yöneticinin verdiği cevabı tutar. Siparişin durumunu değiştirmek,
+/// stoğu iade etmek ve parayı geri ödemek AYRI işlemlerdir
+/// (bkz. src/lib/siparis-iptal.ts ve src/lib/geri-odeme.ts).
+///
+/// Denetim kaydı olduğu için sipariş silinerek yok edilemez.
+model OrderRequest {
+  id String @id @default(cuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  type   OrderRequestType
+  status OrderRequestStatus @default(pending)
+
+  /// Müşterinin yazdığı gerekçe. Serbest metindir; uzunluğu uygulama
+  /// katmanında sınırlanır ve kişisel veri istenmez.
+  gerekce String
+
+  /// Yöneticinin ret veya onay notu. Müşteriye gösterilir.
+  yoneticiNotu String?
+
+  /// Kararı veren yönetici. Karar verilene kadar boştur.
+  actorAdminEmail String?
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  resolvedAt DateTime?
+
+  /// AYNI SİPARİŞ İÇİN İKİNCİ AKTİF TALEP AÇILAMAZ.
+  ///
+  /// Kısmi unique indeks Prisma şema dilinde ifade edilemediği için
+  /// `AnalyticsEvent.uniqueKey` ile aynı kalıp kullanılır: talep
+  /// beklemedeyken buraya sipariş kimliği yazılır, karara bağlanınca
+  /// null yapılır. PostgreSQL birden çok NULL'a izin verdiği için aynı
+  /// siparişin geçmiş talepleri birikebilir, ama aynı anda yalnızca
+  /// biri aktif olabilir.
+  aktifAnahtar String? @unique
+
+  @@index([orderId])
+  @@index([status, createdAt])
+}
+
+/// Geri ödeme denemesinin durumu.
+///
+/// `PaymentStatus` ile aynı kalıpta adlandırılmıştır.
+enum RefundStatus {
+  requested
+  processing
+  succeeded
+  failed
+}
+
+/// Geri ödeme kaydı — denetlenebilir ve tekil.
+///
+/// MALİ KAYITTIR: sipariş veya ödeme silinerek yok edilemez
+/// (onDelete: Restrict).
+///
+/// OTOMATİK İADE VARSAYILAN OLARAK KAPALIDIR. Sunucu tarafı özellik
+/// bayrağı açık değilse hiçbir dış ödeme çağrısı yapılmaz; kayıt
+/// `requested` durumunda kalır ve yönetici iyzico panelinden elle
+/// işlem yapıp işlem kimliğini `manuelIslemKimligi` alanına girer.
+model Refund {
+  id String @id @default(cuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  /// Hangi ödeme denemesinin iadesi. Ödeme kaydı olmadan iade olmaz.
+  paymentId String
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  /// İade edilecek tutar (kuruş). İSTEMCİDEN ALINMAZ: sunucuda sipariş
+  /// ve ödeme kayıtlarından hesaplanır ve ödenen tutarı aşamaz.
+  amountKurus Int
+  currency    String @default("TRY")
+
+  provider String @default("iyzico")
+
+  status RefundStatus @default(requested)
+
+  /// Sağlayıcının döndürdüğü iade/iptal işlem kimliği.
+  providerRefundId String?
+
+  /// Sağlayıcı hata kodu. Ham yanıt ve anahtar SAKLANMAZ.
+  errorCode String?
+
+  /// Otomatik iade kapalıyken yöneticinin iyzico panelinden yaptığı
+  /// işlemin kimliği. Elle girilir.
+  manuelIslemKimligi String?
+
+  /// İşlemi başlatan yönetici.
+  actorAdminEmail String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+
+  /// IDEMPOTENCY: aynı ödeme için ikinci bir açık iade kaydı
+  /// oluşmasını ENGELLEYEN tek gerçek kısıt. Değer `iade:<paymentId>`
+  /// biçimindedir; iade başarısız olup yeniden denenmesi gerekirse
+  /// null yapılır ve yeni kayıt açılabilir.
+  aktifAnahtar String? @unique
+
+  @@index([orderId])
+  @@index([paymentId])
+  @@index([status, createdAt])
 }
