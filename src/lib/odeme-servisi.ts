@@ -18,6 +18,12 @@ import {
   type EpostaIcerigi,
   type EpostaSonucu,
 } from "./email";
+import {
+  odemeBasarisizOlayi,
+  satinAlmaOlayi,
+  siparisinTekUrunKodu,
+} from "./analitik";
+import { yeniSiparisBildirimiOlustur } from "./bildirim";
 
 /**
  * Ödeme başlatma servisi.
@@ -382,6 +388,21 @@ export async function odemeSonucunuIsle(girdi: {
     // Etiketler stoğa döner (ayrı transaction; kendi olayını yazar).
     await rezervasyonuSerbestBirak(odeme.order.id, "ödeme başarısız");
 
+    /*
+      ANALİTİK — BAŞARISIZ ÖDEME.
+
+      Bu dal SATIŞ SAYMAZ: yalnızca `payment_failed` olayı yazılır.
+      Satış olayı ve bildirim yalnızca aşağıdaki başarı dalında,
+      siparişin ilk `paid` geçişinde üretilir.
+
+      Olay yazımı hata fırlatmaz ve ödeme sonucunu değiştirmez.
+    */
+    await odemeBasarisizOlayi({
+      orderId: odeme.order.id,
+      productKod: await siparisinTekUrunKodu(odeme.order.id),
+      paymentId: odeme.id,
+    });
+
     return {
       durum: "basarisiz",
       orderId: odeme.order.id,
@@ -434,6 +455,41 @@ export async function odemeSonucunuIsle(girdi: {
 
     return siparisGuncelleme.count;
   });
+
+  /*
+    SATIŞ VE BİLDİRİM — YALNIZCA GERÇEK BİR SATIŞTA.
+
+    Koşullu güncellemenin saydığı satır sayısı, siparişin İLK KEZ "paid"
+    olduğunun tek güvenilir ölçütüdür. Aynı bildirim tekrar gelse
+    `gecisSayisi` 0 olur ve buradaki hiçbir şey çalışmaz; ayrıca satış
+    olayı ve bildirim kendi veritabanı tekillik kısıtlarıyla ikinci kez
+    oluşamaz (üç ayrı kapı).
+
+    Bu blok hata FIRLATMAZ: analitik veya bildirim başarısız olsa bile
+    sipariş "paid" kalır ve QR rezervasyonu korunur.
+  */
+  if (gecisSayisi === 1) {
+    try {
+      const urunKodu = await siparisinTekUrunKodu(odeme.order.id);
+
+      await satinAlmaOlayi({
+        orderId: odeme.order.id,
+        productKod: urunKodu,
+        valueKurus: odeme.order.totalKurus,
+      });
+
+      await yeniSiparisBildirimiOlustur({
+        orderId: odeme.order.id,
+        orderNumber: odeme.order.orderNumber,
+        totalKurus: odeme.order.totalKurus,
+      });
+    } catch (hata) {
+      console.error(
+        "Satış olayı veya bildirimi üretilemedi:",
+        (hata as Error)?.name
+      );
+    }
+  }
 
   // E-posta YALNIZCA sipariş ilk kez "paid" olduğunda gönderilir; koşullu
   // güncellemenin saydığı satır sayısı bunun tek güvenilir ölçütüdür.

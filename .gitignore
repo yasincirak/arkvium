@@ -46,6 +46,9 @@ next-env.d.ts
 .next-build/
 .env*
 
+# Veritabani yedekleri — asla commit edilmez.
+backups/
+
 # Baski ciktilari — uretilmis dosyalar commit edilmez.
 # (Kaynak kodlar src/ ve tests/ altinda izlenir; burada YALNIZCA cikti vardir.)
 *.zip

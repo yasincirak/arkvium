@@ -1,5 +1,5 @@
-import Link from "next/link";
 import BolumGecisi from "@/components/animasyon/BolumGecisi";
+import SepeteEkleBaglantisi from "@/components/analitik/SepeteEkleBaglantisi";
 import {
   Gorsel,
   TemsiliRozet,
@@ -188,13 +188,17 @@ export default function UrunlerBolumu() {
                   </div>
                 </div>
 
-                <Link
-                  href={`/siparis?urun=${urun.kod}`}
+                {/*
+                  Görünüm ve adres AYNI: yalnızca tıklamada "sepete ekleme"
+                  analitik olayı gönderilir (bkz. SepeteEkleBaglantisi).
+                */}
+                <SepeteEkleBaglantisi
+                  urunKodu={urun.kod}
                   className="mt-6 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-ark-commerce px-6 py-3 font-semibold text-white transition duration-200 hover:bg-ark-commerce-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent active:scale-[0.98] motion-reduce:active:scale-100"
                 >
                   <span>{s.urunler.satinAl}</span>
                   <span className="sr-only"> — {pazarlama?.ad ?? urun.ad}</span>
-                </Link>
+                </SepeteEkleBaglantisi>
               </BolumGecisi>
             );
           })}

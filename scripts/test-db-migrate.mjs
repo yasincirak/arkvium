@@ -9,6 +9,11 @@
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import {
+  migrationIcinAdres,
+  referansListesiCoz,
+  testAdresiniDenetle,
+} from "./veritabani-kilidi.mjs";
 
 function envDegeriOku(dosya, anahtar) {
   if (!existsSync(dosya)) {
@@ -22,12 +27,6 @@ function envDegeriOku(dosya, anahtar) {
   return eslesme?.[1] || null;
 }
 
-function baglantiKimligi(url) {
-  const adres = new URL(url);
-
-  return `${adres.hostname}:${adres.port || "5432"}${adres.pathname}@${adres.username}`;
-}
-
 const testUrl = envDegeriOku(".env.test", "TEST_DATABASE_URL");
 
 if (!testUrl) {
@@ -37,30 +36,58 @@ if (!testUrl) {
   process.exit(1);
 }
 
-const testKimlik = baglantiKimligi(testUrl);
+/*
+  Kilit kuralı `scripts/veritabani-kilidi.mjs` içinde TEK YERDE tanımlıdır
+  ve birim testleriyle korunur.
 
-for (const anahtar of ["DATABASE_URL", "DIRECT_URL"]) {
-  const prodUrl = envDegeriOku(".env", anahtar);
-
-  if (prodUrl && baglantiKimligi(prodUrl) === testKimlik) {
-    console.error(
-      `GÜVENLİK DURDURMASI: TEST_DATABASE_URL, .env içindeki ${anahtar} ile aynı veritabanını gösteriyor.`
-    );
-    console.error("Hiçbir migration uygulanmadı.");
-    process.exit(1);
+  `.env` PRODUCTION VARSAYILMAZ: hedefin gerçekten test veritabanı olduğu
+  `.env.test` içindeki AÇIK BEYANDAN doğrulanır
+  (TEST_SUPABASE_PROJECT_REF / YASAK_SUPABASE_PROJECT_REFS).
+*/
+const karar = testAdresiniDenetle(
+  testUrl,
+  {
+    DATABASE_URL: envDegeriOku(".env", "DATABASE_URL"),
+    DIRECT_URL: envDegeriOku(".env", "DIRECT_URL"),
+  },
+  {
+    izinliTestRef: envDegeriOku(".env.test", "TEST_SUPABASE_PROJECT_REF"),
+    yasakRefler: referansListesiCoz(
+      envDegeriOku(".env.test", "YASAK_SUPABASE_PROJECT_REFS")
+    ),
   }
+);
+
+if (!karar.guvenli) {
+  console.error(`GÜVENLİK DURDURMASI: ${karar.sebep}`);
+  console.error("Hiçbir migration uygulanmadı.");
+  process.exit(1);
 }
 
-const hedef = new URL(testUrl);
+/*
+  Migration SESSION MODU ister (bkz. migrationIcinAdres). Transaction
+  pooler'a (6543) bağlanıldığında Prisma sessizce asılı kalır. Aynı
+  veritabanı, yalnızca farklı port.
+*/
+const migrationUrl = migrationIcinAdres(testUrl);
 
-console.log(`Test veritabanı: ${hedef.hostname}:${hedef.port || 5432}`);
+const hedef = new URL(migrationUrl);
+
+console.log(`Test veritabanı portu: ${hedef.port || 5432}`);
+
+if (migrationUrl !== testUrl) {
+  console.log(
+    "Not: migration için session pooler (5432) kullanılıyor; hedef veritabanı aynı."
+  );
+}
+
 console.log("Migration'lar uygulanıyor...\n");
 
 execFileSync("npx", ["prisma", "migrate", "deploy"], {
   stdio: "inherit",
   env: {
     ...process.env,
-    DATABASE_URL: testUrl,
-    DIRECT_URL: testUrl,
+    DATABASE_URL: migrationUrl,
+    DIRECT_URL: migrationUrl,
   },
 });

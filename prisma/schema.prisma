@@ -49,6 +49,11 @@ model User {
 
   /// Kullanıcının oluşturduğu acil durum profilleri (isteğe bağlı özellik).
   emergencyProfiles EmergencyProfile[]
+
+  /// Yönetici bildirimleri için cihaz abonelikleri ve bildirim tercihi.
+  /// Yalnızca ADMIN rolündeki kullanıcılar için doldurulur.
+  pushSubscriptions   PushSubscription[]
+  notificationSetting AdminNotificationSetting?
 }
 
 /// Şifre sıfırlama tokenları.
@@ -667,4 +672,171 @@ model EmergencyContact {
 
   @@unique([emergencyProfileId, priority])
   @@index([emergencyProfileId])
+}
+
+/// Analitik olay türü.
+///
+/// Enum kullanılmasının nedeni: tür değeri rapor sorgularının tamamında
+/// filtre olarak geçiyor. Serbest metin olsaydı yazım hatası sessizce
+/// "sonuç yok" üretirdi ve hata fark edilmezdi.
+///
+/// GÜVENLİK SINIRI: `checkout_started`, `payment_failed` ve `purchase`
+/// türleri tarayıcıdan KABUL EDİLMEZ (bkz. src/lib/analitik.ts içindeki
+/// `ISTEMCIDEN_KABUL_EDILEN`). Bu üç tür yalnızca sunucu tarafında,
+/// doğrulanmış ödeme sonucundan üretilir.
+enum AnalyticsEventType {
+  page_view
+  product_view
+  cart_add
+  cart_remove
+  checkout_started
+  payment_failed
+  purchase
+}
+
+/// Müşteri davranışı analitiği.
+///
+/// KİŞİSEL VERİ TUTULMAZ. Bu tabloda IP adresi, e-posta, telefon, adres,
+/// ad-soyad, kart bilgisi ve tarayıcı parmak izi (user-agent) HİÇBİR
+/// alanda bulunmaz. Ziyaretçi ayrımı yalnızca `visitorId` ile yapılır:
+/// bu değer birinci taraf çerezde duran, kişiyle ilişkilendirilmeyen
+/// rastgele bir kimliktir (bkz. src/lib/analitik-ziyaretci.ts).
+///
+/// YÖNETİCİ ZİYARETLERİ KAYDEDİLMEZ: olay ucu, oturumu ADMIN olan
+/// isteklerde hiçbir satır yazmadan döner.
+model AnalyticsEvent {
+  id String @id @default(cuid())
+
+  type AnalyticsEventType
+
+  /// Rastgele ziyaretçi kimliği (anonim, uzun ömürlü çerez).
+  ///
+  /// GİRİŞ YAPMIŞ KULLANICIDA YAZILMAZ: oturum varsa olay yalnızca
+  /// `userId` ile ilişkilendirilir ve bu alan null kalır. Böylece aynı
+  /// kişi için ikinci, paralel bir takip kimliği oluşmaz.
+  ///
+  /// Sunucu tarafı olaylarında (sağlayıcı dönüşü gibi tarayıcı çerezinin
+  /// gelmediği yerlerde) da null kalır.
+  visitorId String?
+
+  /// ZİYARET (oturum) kimliği — kısa ömürlü çerez.
+  ///
+  /// "Tekil ziyaretçi" ile "toplam ziyaret" farkını üretir: aynı kişi
+  /// farklı günlerde geldiğinde tekil ziyaretçi 1, ziyaret 2 olur.
+  /// Anonimdir ve kişisel veriden türetilmez.
+  sessionId String?
+
+  /// Giriş yapmış kullanıcının kimliği.
+  ///
+  /// Oturum varsa olay BU ALANLA ilişkilendirilir (bkz. `visitorId`).
+  /// Yabancı anahtar TANIMLANMAZ: analitik, kullanıcı silinse bile
+  /// bağımsız yaşamalı ve hiçbir cascade silme riski taşımamalıdır
+  /// (`orderId` ile aynı kalıp). Kişisel veri değildir; yalnızca
+  /// hesap kimliğidir, ad/e-posta/telefon buraya yazılmaz.
+  userId String?
+
+  /// Olayın gerçekleştiği yol (yalnızca `pathname`). Sorgu dizesi
+  /// KAYDEDİLMEZ: içinde token veya kişisel veri taşıyabilir.
+  path String?
+
+  /// İlgili ürün kodu (src/lib/siparis.ts katalog kodu). Ürün bazlı
+  /// görüntüleme ve dönüşüm hesabı bu alandan yapılır.
+  productKod String?
+
+  /// İlgili sipariş. Yalnızca sunucu tarafı olaylarında dolar.
+  orderId String?
+
+  /// Satış olaylarında siparişin toplam tutarı (kuruş). Gelir raporu
+  /// yine de `Order` tablosundan hesaplanır; bu alan olay kaydının
+  /// kendi içinde anlamlı olması içindir.
+  valueKurus Int?
+
+  /// IDEMPOTENCY: aynı olayın iki kez yazılmasını ENGELLEYEN tek kısıt.
+  /// Satış olayında `purchase:<orderId>` biçimindedir, bu yüzden bir
+  /// sipariş veritabanı düzeyinde en fazla bir kez satış sayılabilir.
+  /// Tekilliği önemsiz olan olaylarda null kalır (PostgreSQL birden çok
+  /// NULL'a izin verir).
+  uniqueKey String? @unique
+
+  createdAt DateTime @default(now())
+
+  @@index([type, createdAt])
+  @@index([productKod, type, createdAt])
+  @@index([visitorId, type])
+  @@index([sessionId, createdAt])
+  @@index([userId, type])
+  @@index([orderId])
+  @@index([createdAt])
+}
+
+/// Yönetim panelinde gösterilen bildirim.
+///
+/// `@@unique([type, orderId])` kısıtı, "aynı sipariş için yalnızca bir
+/// bildirim" kuralının TEK gerçek garantisidir; uygulama mantığı değil,
+/// veritabanı sağlar. Ödeme dönüşü tekrar gelse veya iki sunucu örneği
+/// aynı anda işlese bile ikinci kayıt oluşmaz.
+///
+/// Bildirim MALİ KAYIT DEĞİLDİR ama siparişe bağlıdır; sipariş silinmediği
+/// için (iptal `cancelled` ile yapılır) Cascade gerekmez.
+model AdminNotification {
+  id String @id @default(cuid())
+
+  /// yeni_siparis
+  type String
+
+  orderId String
+
+  /// Panelde görünen kısa başlık ve metin. Kişisel veri İÇERMEZ:
+  /// yalnızca sipariş numarası ve tutar yazılır.
+  baslik String
+  metin  String
+
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@unique([type, orderId])
+  @@index([readAt])
+  @@index([createdAt])
+}
+
+/// Yöneticinin web push aboneliği (tarayıcı/telefon başına bir kayıt).
+///
+/// Buradaki değerler YÖNETİCİNİN KENDİ cihazına aittir; müşteri verisi
+/// değildir. Abonelik sahibi hesap silinirse kayıt da silinir.
+model PushSubscription {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Push servisinin adresi. Cihazı tanımlar, tekildir.
+  endpoint String @unique
+
+  /// Tarayıcının ürettiği şifreleme anahtarları. Gönderim bunlarsız
+  /// yapılamaz; sunucu gizli anahtarı (VAPID) ayrıdır ve .env'de durur.
+  p256dh String
+  auth   String
+
+  createdAt     DateTime  @default(now())
+  lastSuccessAt DateTime?
+
+  /// Üst üste başarısız gönderim sayısı. Push servisi 404/410 dönerse
+  /// abonelik silinir; diğer hatalarda yalnızca sayaç artar.
+  failureCount Int @default(0)
+
+  @@index([userId])
+}
+
+/// Yönetici başına bildirim tercihi.
+///
+/// Kayıt yoksa varsayılan AÇIK kabul edilir; kullanıcı kapatınca satır
+/// oluşur. Böylece mevcut yöneticiler için veri taşıma gerekmez.
+model AdminNotificationSetting {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Panel bildirimi ve web push gönderimi bu anahtarla kapatılır.
+  satisBildirimleriAcik Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
 }

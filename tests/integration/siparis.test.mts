@@ -4,6 +4,7 @@ import { after, beforeEach, describe, test } from "node:test";
 import type { Client } from "pg";
 
 import {
+  stokDoldur,
   testVeritabaniAdresi,
   testVeritabaniIstemcisi,
   veritabaniniTemizle,
@@ -84,14 +85,28 @@ async function siparisVer(
   });
 }
 
-/** Stoğa belirtilen sayıda kullanılmamış etiket ekler. */
-async function etiketStoguOlustur(adet: number) {
-  for (let i = 0; i < adet; i += 1) {
-    await etiketOlustur();
-  }
+/**
+ * Stoğa kullanılmamış etiket ekler.
+ *
+ * ÜRÜN BAZLI: stok kontrolü `Tag.productKod` alanına bakar (bkz.
+ * `stoktakiEtiketSayisi`). Ürün kodu verilmezse katalogdaki HER ürün
+ * için `adet` kadar etiket açılır; verilirse yalnızca o ürün için.
+ *
+ * Kesin sayı doğrulayan testler (ör. `prisma.tag.count()`) ürün kodunu
+ * AÇIKÇA verir, aksi hâlde toplam etiket sayısı ürün sayısı kadar katlanır.
+ */
+async function etiketStoguOlustur(adet: number, productKod?: string) {
+  await stokDoldur({
+    prisma,
+    etiketUret,
+    urunKodlari: productKod
+      ? [productKod]
+      : SIPARIS_URUNLERI.map((urun) => urun.kod),
+    urunBasinaAdet: adet,
+  });
 }
 
-async function etiketOlustur() {
+async function etiketOlustur(productKod: string = STICKER.kod) {
   const uretilen = etiketUret();
 
   return prisma.tag.create({
@@ -99,6 +114,7 @@ async function etiketOlustur() {
       code: uretilen.code,
       publicToken: uretilen.publicToken,
       activationCodeHash: uretilen.activationCodeHash,
+      productKod,
     },
     select: { id: true, status: true, userId: true },
   });
@@ -393,7 +409,7 @@ describe("QR rezervasyonu", () => {
 
   test("stok tam yeterliyse sipariş geçer", async () => {
     await prisma.tag.deleteMany({});
-    await etiketStoguOlustur(3);
+    await etiketStoguOlustur(3, STICKER.kod);
 
     const sonuc = await siparisVer({
       sepet: [{ kod: STICKER.kod, adet: 1 }],
@@ -406,7 +422,7 @@ describe("QR rezervasyonu", () => {
 
   test("stok bir eksikse hiçbir kayıt kalmaz", async () => {
     await prisma.tag.deleteMany({});
-    await etiketStoguOlustur(2);
+    await etiketStoguOlustur(2, STICKER.kod);
 
     await assert.rejects(
       () =>
@@ -446,7 +462,7 @@ describe("QR rezervasyonu", () => {
 
   test("zaten rezerve edilmiş etiketler yeniden ayrılamaz", async () => {
     await prisma.tag.deleteMany({});
-    await etiketStoguOlustur(4);
+    await etiketStoguOlustur(4, STICKER.kod);
 
     await siparisVer({
       sepet: [{ kod: STICKER.kod, adet: 1 }],
@@ -468,7 +484,7 @@ describe("QR rezervasyonu", () => {
 
   test("aynı etiket iki siparişe ayrılamaz", async () => {
     await prisma.tag.deleteMany({});
-    await etiketStoguOlustur(1);
+    await etiketStoguOlustur(1, ANAHTARLIK.kod);
 
     const sonuclar = await Promise.allSettled([
       siparisVer({
@@ -494,7 +510,7 @@ describe("QR rezervasyonu", () => {
 
   test("süresi dolmuş rezervasyon temizlenip yeniden kullanılır", async () => {
     await prisma.tag.deleteMany({});
-    await etiketStoguOlustur(1);
+    await etiketStoguOlustur(1, ANAHTARLIK.kod);
 
     const eski = await siparisVer({
       sepet: [{ kod: ANAHTARLIK.kod, adet: 1 }],

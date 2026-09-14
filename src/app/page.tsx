@@ -12,6 +12,8 @@ import Logo, { ArkviumTamLogo } from "@/components/Logo";
 import { aktifDil, sozluk } from "@/lib/i18n";
 import { CANLI_ADRES, PAYLASIM_GORSELI } from "@/lib/seo";
 import UrunlerBolumu from "@/components/UrunlerBolumu";
+import CerezTercihleriBaglantisi from "@/components/CerezTercihleriBaglantisi";
+import { HUKUKI_BELGE_LISTESI } from "@/lib/hukuki-belgeler";
 
 /**
  * ARKVIUM ana sayfası — pazarlama katmanı.
@@ -505,6 +507,34 @@ export default function Home() {
                   >
                     {s.footer.sss}
                   </a>
+                </li>
+                {/*
+                  Hukuki belgeler TEK KAYNAKTAN üretilir; adresler burada
+                  elle yazılmaz (bkz. src/lib/hukuki-belgeler.ts).
+                */}
+                {HUKUKI_BELGE_LISTESI.map((belge) => (
+                  <li key={belge.yol}>
+                    <Link
+                      href={belge.yol}
+                      className={`flex min-h-[44px] items-center md:min-h-0 md:py-1.5 ${BAGLANTI}`}
+                    >
+                      {belge.baslik}
+                    </Link>
+                  </li>
+                ))}
+                <li>
+                  <Link
+                    href="/cerez-politikasi"
+                    className={`flex min-h-[44px] items-center md:min-h-0 md:py-1.5 ${BAGLANTI}`}
+                  >
+                    {s.footer.cerezPolitikasi}
+                  </Link>
+                </li>
+                <li>
+                  {/* Tercihi sonradan değiştirme: mevzuatın gereği. */}
+                  <CerezTercihleriBaglantisi
+                    className={`flex min-h-[44px] items-center text-left md:min-h-0 md:py-1.5 ${BAGLANTI}`}
+                  />
                 </li>
               </ul>
             </div>

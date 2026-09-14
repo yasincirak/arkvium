@@ -1,7 +1,16 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { hizSiniriKontrol, istemciIpAdresi } from "@/lib/rate-limit";
 import { odemeBaslat } from "@/lib/odeme-servisi";
 import { OdemeHatasi } from "@/lib/odeme-saglayici";
+import { prisma } from "@/lib/prisma";
+import { odemeBaslatmaOlayi } from "@/lib/analitik";
+import {
+  ZIYARET_COOKIE,
+  ZIYARETCI_COOKIE,
+  ziyaretciKimligiGecerliMi,
+} from "@/lib/analitik-ziyaretci";
+import { getUserSession } from "@/lib/session";
 
 /**
  * Ödeme başlatma.
@@ -15,7 +24,63 @@ import { OdemeHatasi } from "@/lib/odeme-saglayici";
  * - Kart bilgisi bu uca hiç gelmez (Checkout Form iyzico tarafında toplar).
  * - Sağlayıcı anahtarları ve callback adresi yanıtta yer almaz.
  * - Herkese açık olduğu için IP başına sınırlanır.
+ * - ANALİTİK: ödeme oturumu sağlayıcıda gerçekten açıldıktan SONRA
+ *   "ödemeye başlandı" olayı yazılır. Olay kaydı yalnızca sipariş
+ *   kimliği, ürün kodu, tutar ve anonim ziyaretçi kimliği içerir;
+ *   IP, kimlik numarası ve teslimat bilgisi analitiğe GİRMEZ.
  */
+
+/**
+ * "Ödemeye başlandı" analitik olayını yazar.
+ *
+ * HATA FIRLATMAZ: analitik yazımı ödeme akışını hiçbir koşulda bozmaz.
+ * Ziyaretçi çerezi yoksa olay ziyaretçisiz kaydedilir.
+ */
+async function odemeBaslatmaOlayiniYaz(orderId: string): Promise<void> {
+  try {
+    const cerezler = cookies();
+
+    const ziyaretciCerezi = cerezler.get(ZIYARETCI_COOKIE)?.value;
+    const ziyaretCerezi = cerezler.get(ZIYARET_COOKIE)?.value;
+
+    const visitorId = ziyaretciKimligiGecerliMi(ziyaretciCerezi)
+      ? ziyaretciCerezi
+      : null;
+
+    const sessionId = ziyaretciKimligiGecerliMi(ziyaretCerezi)
+      ? ziyaretCerezi
+      : null;
+
+    // Üye siparişte olay hesapla ilişkilendirilir; misafir siparişte
+    // anonim ziyaretçi kimliği kullanılır (bkz. olayKimligiCoz).
+    const oturum = await getUserSession();
+
+    const siparis = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: {
+        totalKurus: true,
+        items: { select: { productKod: true }, take: 2 },
+      },
+    });
+
+    if (!siparis) {
+      return;
+    }
+
+    await odemeBaslatmaOlayi({
+      visitorId,
+      sessionId,
+      userId: oturum?.userId ?? null,
+      orderId,
+      // Birden çok farklı ürün varsa tek bir ürüne yazılmaz.
+      productKod:
+        siparis.items.length === 1 ? siparis.items[0].productKod : null,
+      valueKurus: siparis.totalKurus,
+    });
+  } catch (hata) {
+    console.error("Ödeme başlatma olayı yazılamadı:", (hata as Error)?.name);
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -61,6 +126,8 @@ export async function POST(request: Request) {
       istemciIp: ip,
       kimlikNo: kimlikNo || undefined,
     });
+
+    await odemeBaslatmaOlayiniYaz(orderId);
 
     return NextResponse.json({
       success: true,

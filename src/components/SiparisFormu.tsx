@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useSozluk } from "@/lib/i18n/istemci";
 import { fiyatBicimle } from "@/lib/siparis";
+import { SIPARIS_ONAY_BELGELERI } from "@/lib/hukuki-belgeler";
 
 /**
  * Sipariş formu (herkese açık).
@@ -39,6 +40,8 @@ export default function SiparisFormu({
   // Sipariş gövdesinden AYRI: kimlik numarası siparişe yazılmaz, yalnızca
   // ödeme adımında sağlayıcıya iletilir.
   const [kimlikNo, setKimlikNo] = useState("");
+  // Hukuki belgelerin onayı. İşaretlenmeden sipariş gönderilemez.
+  const [onayVerildi, setOnayVerildi] = useState(false);
   const [calisiyor, setCalisiyor] = useState(false);
   const [durum, setDurum] = useState("");
   const [hata, setHata] = useState("");
@@ -59,7 +62,18 @@ export default function SiparisFormu({
       const siparisYanit = await fetch("/api/siparis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ urunKodu, ...alanlar }),
+        /*
+          Onaylanan belge KODLARI gönderilir; sürüm GÖNDERİLMEZ.
+          Sürümü sunucu kendi kayıt defterinden okur, aksi hâlde
+          istemci onayladığı metnin sürümünü değiştirebilirdi.
+        */
+        body: JSON.stringify({
+          urunKodu,
+          ...alanlar,
+          onaylar: SIPARIS_ONAY_BELGELERI.map(
+            (belge) => belge.onayBelgeKodu
+          ),
+        }),
       });
 
       const siparisVeri = await siparisYanit.json();
@@ -230,9 +244,46 @@ export default function SiparisFormu({
           <span>{fiyatBicimle(fiyatKurus + kargoKurus)}</span>
         </div>
 
+        {/*
+          HUKUKİ ONAY ALANI.
+
+          Onay kutusu `required`: işaretlenmeden ödeme adımına geçilemez.
+          Belge adresleri tek kaynaktan (src/lib/hukuki-belgeler.ts)
+          gelir; burada elle yazılmaz.
+
+          NOT: Onayın veritabanına yazılması (`OrderConsent`) henüz
+          devreye alınmamıştır; yayın öncesi tamamlanacak adımdır.
+        */}
+        <label className="mt-6 flex items-start gap-3 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            required
+            checked={onayVerildi}
+            onChange={(e) => setOnayVerildi(e.target.checked)}
+            className="mt-0.5 h-5 w-5 shrink-0 accent-emerald-600"
+          />
+
+          <span>
+            {SIPARIS_ONAY_BELGELERI.map((belge, sira) => (
+              <span key={belge.yol}>
+                {sira > 0 ? ", " : ""}
+                <a
+                  href={belge.yol}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-600 underline underline-offset-2 hover:text-indigo-700"
+                >
+                  {belge.baslik}
+                </a>
+              </span>
+            ))}
+            {"'ni okudum ve onaylıyorum."}
+          </span>
+        </label>
+
         <button
           type="submit"
-          disabled={calisiyor}
+          disabled={calisiyor || !onayVerildi}
           className="mt-6 w-full rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {calisiyor ? durum || "İşleniyor..." : ceviri.siparis.odemeyeGec}
