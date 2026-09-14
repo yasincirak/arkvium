@@ -1,4 +1,9 @@
 import { prisma } from "./prisma";
+import {
+  kargoBilgisiDogrula,
+  kargoBilgisiVarMi,
+  type KargoBilgisi,
+} from "./kargo";
 
 /**
  * Sipariş hazırlık ve kargo durumu yönetimi (yönetici işlemleri).
@@ -10,6 +15,16 @@ import { prisma } from "./prisma";
  * Geçişler koşullu güncelleme ile yapılır: aynı anda gelen iki yönetici
  * isteğinden yalnızca biri 1 satır günceller, ikincisi hiçbir değişiklik
  * yapmaz ve olay yazmaz.
+ *
+ * ────────────────────────────────────────────────────────────
+ * KARGO BİLGİSİ ZORUNLU DEĞİLDİR
+ *
+ * Bu katmanın ilk sürümü `shipped` geçişine kargo bilgisi olmadan izin
+ * veriyordu. Bilgiyi zorunlu yapmak mevcut iş kuralını değiştirmek
+ * olurdu ve bunun istenip istenmediği koddan okunamıyor; bu yüzden
+ * VARSAYIM YAPILMADI. Bilgi gönderilirse doğrulanır ve kaydedilir,
+ * gönderilmezse geçiş eskisi gibi çalışır.
+ * ────────────────────────────────────────────────────────────
  */
 
 export type YonetimDurumu = "preparing" | "shipped";
@@ -44,6 +59,8 @@ export class SiparisYonetimHatasi extends Error {
 export type DurumGuncellemeSonucu = {
   orderId: string;
   durum: YonetimDurumu;
+  /** `shipped` geçişinde kaydedilen kargo bilgisi; yoksa null. */
+  kargo: KargoBilgisi | null;
 };
 
 /**
@@ -58,12 +75,45 @@ export async function siparisDurumunuGuncelle(girdi: {
   orderId: string;
   hedefDurum: string;
   adminEmail: string;
+  /**
+   * `shipped` geçişinde kargo firması ve takip numarası.
+   *
+   * ZORUNLU DEĞİLDİR: mevcut iş kuralı kargo bilgisi olmadan da
+   * kargoya verme geçişine izin veriyordu ve bu davranış korunuyor
+   * (bkz. dosya başındaki not). Gönderilirse doğrulanır; kısmi
+   * gönderim reddedilir.
+   */
+  kargoFirmaKod?: unknown;
+  kargoTakipNo?: unknown;
 }): Promise<DurumGuncellemeSonucu> {
   const orderId = String(girdi?.orderId ?? "").trim();
   const hedef = String(girdi?.hedefDurum ?? "").trim() as YonetimDurumu;
 
   if (!orderId || !(hedef in IZINLI_GECISLER)) {
     throw new SiparisYonetimHatasi(GECERSIZ_DURUM);
+  }
+
+  /*
+    Kargo bilgisi YALNIZCA `shipped` geçişinde anlamlıdır. Kısmen
+    gönderilmişse (yalnızca firma veya yalnızca numara) reddedilir:
+    eksik bilgi müşteriye yanıltıcı bir takip satırı gösterirdi.
+  */
+  let kargo: KargoBilgisi | null = null;
+
+  const kargoGonderildi = kargoBilgisiVarMi({
+    firmaKod: girdi.kargoFirmaKod,
+    takipNo: girdi.kargoTakipNo,
+  });
+
+  if (hedef === "shipped" && kargoGonderildi) {
+    try {
+      kargo = kargoBilgisiDogrula({
+        firmaKod: girdi.kargoFirmaKod,
+        takipNo: girdi.kargoTakipNo,
+      });
+    } catch (hata) {
+      throw new SiparisYonetimHatasi((hata as Error).message);
+    }
   }
 
   const beklenenOncekiDurum = IZINLI_GECISLER[hedef];
@@ -75,7 +125,19 @@ export async function siparisDurumunuGuncelle(girdi: {
       where: { id: orderId, status: beklenenOncekiDurum },
       data:
         hedef === "shipped"
-          ? { status: hedef, shippedAt: simdi }
+          ? {
+              status: hedef,
+              shippedAt: simdi,
+              // Kargo bilgisi yalnızca gönderildiyse yazılır; eski
+              // değerler boşuna silinmez.
+              ...(kargo
+                ? {
+                    kargoFirmasi: kargo.firmaKod,
+                    kargoTakipNo: kargo.takipNo,
+                    kargoTakipUrl: kargo.takipUrl,
+                  }
+                : {}),
+            }
           : { status: hedef },
     });
 
@@ -99,5 +161,5 @@ export async function siparisDurumunuGuncelle(girdi: {
     throw new SiparisYonetimHatasi(GECIS_YAPILAMAZ);
   }
 
-  return { orderId, durum: hedef };
+  return { orderId, durum: hedef, kargo };
 }

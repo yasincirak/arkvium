@@ -37,9 +37,17 @@ export async function POST(
       orderId: params.id,
       hedefDurum: String(body?.durum || ""),
       adminEmail: admin.email,
+      // Kargo bilgisi isteğe bağlıdır; yalnızca `shipped` geçişinde
+      // dikkate alınır ve sunucuda doğrulanır.
+      kargoFirmaKod: body?.kargoFirmaKod,
+      kargoTakipNo: body?.kargoTakipNo,
     });
 
-    return NextResponse.json({ success: true, durum: sonuc.durum });
+    return NextResponse.json({
+      success: true,
+      durum: sonuc.durum,
+      kargo: sonuc.kargo,
+    });
   } catch (hata) {
     if (hata instanceof SiparisYonetimHatasi) {
       return NextResponse.json({ error: hata.message }, { status: 400 });

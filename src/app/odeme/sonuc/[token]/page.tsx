@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { fiyatBicimle } from "@/lib/siparis";
 import TalepFormu from "@/components/siparis/TalepFormu";
 import { siparisTalepleri } from "@/lib/siparis-talebi";
+import { kargoFirmaAdi } from "@/lib/kargo";
 
 /**
  * Ödeme sonuç sayfası.
@@ -83,6 +84,12 @@ export default async function OdemeSonucPage({ params }: Props) {
       totalKurus: true,
       createdAt: true,
       publicToken: true,
+      // Kargo bilgisi: müşteriye gösterilen tek dış bağlantı. Adres
+      // yöneticiden alınmaz, beyaz listeden üretilir (src/lib/kargo.ts).
+      shippedAt: true,
+      kargoFirmasi: true,
+      kargoTakipNo: true,
+      kargoTakipUrl: true,
       items: {
         select: { productAdi: true, quantity: true, lineTotalKurus: true },
       },
@@ -175,6 +182,53 @@ export default async function OdemeSonucPage({ params }: Props) {
 
         <p className="mt-8 text-center text-sm text-white/40">{ceviri.qr.markaAlt}</p>
       </div>
+
+      {/*
+        Kargo bilgisi — YALNIZCA doğrulanmış alanlar gösterilir. Takip
+        adresi yöneticiden alınmaz; beyaz listedeki firma kalıbından
+        üretilir (bkz. src/lib/kargo.ts).
+      */}
+      {siparis.kargoTakipNo && (
+        <div className="mx-auto mt-8 max-w-2xl rounded-2xl border border-white/10 bg-white/5 p-6">
+          <h2 className="text-lg font-semibold text-white">Kargo bilgisi</h2>
+
+          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-white/40">Firma</dt>
+              <dd className="text-white/80">
+                {kargoFirmaAdi(siparis.kargoFirmasi) ?? "—"}
+              </dd>
+            </div>
+
+            <div>
+              <dt className="text-white/40">Takip numarası</dt>
+              <dd className="font-mono text-white/80">
+                {siparis.kargoTakipNo}
+              </dd>
+            </div>
+
+            {siparis.shippedAt && (
+              <div>
+                <dt className="text-white/40">Kargoya verilme</dt>
+                <dd className="text-white/80">
+                  {new Date(siparis.shippedAt).toLocaleString("tr-TR")}
+                </dd>
+              </div>
+            )}
+          </dl>
+
+          {siparis.kargoTakipUrl && (
+            <a
+              href={siparis.kargoTakipUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-white/10 px-5 py-2 text-sm font-medium text-white transition hover:bg-white/15"
+            >
+              Kargoyu takip et
+            </a>
+          )}
+        </div>
+      )}
 
       {/*
         İptal / iade talebi. Sipariş sayfanın adresindeki kriptografik
