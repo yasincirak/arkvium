@@ -46,7 +46,8 @@ export const HUKUKI_BELGELER = {
   gizlilikPolitikasi: {
     yol: "/gizlilik-politikasi",
     baslik: "Gizlilik Politikası",
-    surum: "1.0",
+    // 2.0: metin koddaki gerçek davranışlara göre yeniden yazıldı.
+    surum: "2.0",
     // Sipariş onayına konu değildir; bilgilendirme belgesidir.
     onayBelgeKodu: null,
     siparisOnayinaDahil: false,

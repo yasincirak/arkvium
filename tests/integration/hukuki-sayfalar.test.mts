@@ -107,6 +107,57 @@ describe("taslak uyarısı ve eksik alanlar", () => {
     }
   });
 
+  test("Gizlilik Politikası kendi işaretlerini kullanır", async () => {
+    const { icerik } = await sayfa(HUKUKI_BELGELER.gizlilikPolitikasi.yol);
+
+    assert.ok(
+      icerik.includes("YASİN TARAFINDAN DOLDURULACAK"),
+      "işletme bilgisi işareti bulunmalı"
+    );
+
+    assert.ok(
+      icerik.includes("HUKUK DANIŞMANI ONAYI GEREKİYOR"),
+      "hukuki değerlendirme işareti bulunmalı"
+    );
+  });
+
+  test("Gizlilik Politikası kanıtlanmamış güvenlik iddiası içermez", async () => {
+    /*
+      Doğrulanamayan güvenlik iddialari hem yaniltici hem de hukuken
+      risklidir; metinde bulunmamalidir.
+    */
+    const { icerik } = await sayfa(HUKUKI_BELGELER.gizlilikPolitikasi.yol);
+
+    for (const yasak of [
+      "en üst düzey güvenlik",
+      "tamamen güvenli",
+      "sızma testi",
+      "Tüm veriler SSL",
+      "kabul etmiş sayılırsınız",
+      "Google Analytics",
+      "0850",
+    ]) {
+      assert.ok(
+        !icerik.includes(yasak),
+        `metinde bulunmamalı: ${yasak}`
+      );
+    }
+  });
+
+  test("Gizlilik Politikası KVKK metninin yerine geçmediğini söyler", async () => {
+    const { icerik } = await sayfa(HUKUKI_BELGELER.gizlilikPolitikasi.yol);
+
+    assert.ok(
+      icerik.includes("aynı belge değildir"),
+      "iki belgenin ayrı olduğu açıkça yazılmalı"
+    );
+
+    assert.ok(
+      icerik.includes(`href="${HUKUKI_BELGELER.kvkkAydinlatma.yol}"`),
+      "KVKK metnine bağlantı bulunmalı"
+    );
+  });
+
   test("KVKK metni kendi işaretlerini kullanır", async () => {
     /*
       KVKK Aydınlatma Metni iki ayrı işaret kullanır: işletme bilgisi
