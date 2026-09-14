@@ -62,7 +62,9 @@ export const HUKUKI_BELGELER = {
   mesafeliSatis: {
     yol: "/mesafeli-satis-sozlesmesi",
     baslik: "Mesafeli Satış Sözleşmesi",
-    surum: "1.0",
+    // 2.0: metin koddaki gerçek ürün ve işlemlere göre yeniden yazıldı.
+    // OrderConsent bu sürümü kaydeder; geçmiş onaylar 1.0 olarak kalır.
+    surum: "2.0",
     onayBelgeKodu: "mesafeli_satis",
     siparisOnayinaDahil: true,
   },

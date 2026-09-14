@@ -95,7 +95,6 @@ describe("taslak uyarısı ve eksik alanlar", () => {
     */
     for (const belge of [
       HUKUKI_BELGELER.onBilgilendirme,
-      HUKUKI_BELGELER.mesafeliSatis,
       HUKUKI_BELGELER.teslimatIade,
     ]) {
       const { icerik } = await sayfa(belge.yol);
@@ -156,6 +155,57 @@ describe("taslak uyarısı ve eksik alanlar", () => {
       icerik.includes(`href="${HUKUKI_BELGELER.kvkkAydinlatma.yol}"`),
       "KVKK metnine bağlantı bulunmalı"
     );
+  });
+
+  test("Mesafeli Satış Sözleşmesi kendi işaretlerini kullanır", async () => {
+    const { icerik } = await sayfa(HUKUKI_BELGELER.mesafeliSatis.yol);
+
+    assert.ok(icerik.includes("YASİN TARAFINDAN DOLDURULACAK"));
+    assert.ok(icerik.includes("HUKUK DANIŞMANI ONAYI GEREKİYOR"));
+  });
+
+  test("Sözleşme cayma istisnalarını KESİNLEŞTİRMEZ", async () => {
+    /*
+      Aktivasyonun, ambalaj açılmasının veya etiketin yapıştırılmasının
+      cayma hakkını kaldırdığı bir hüküm olarak yazılmamalidir; bunlar
+      hukuki degerlendirme gerektirir.
+    */
+    const { icerik } = await sayfa(HUKUKI_BELGELER.mesafeliSatis.yol);
+
+    assert.ok(
+      icerik.includes("kesinleştirilmemiştir"),
+      "istisnaların kesinleştirilmediği yazılmalı"
+    );
+
+    assert.ok(
+      icerik.includes("ayıplı mala ilişkin kanuni haklarını etkilemez"),
+      "cayma ile ayıplı mal hakları ayrıldığı belirtilmeli"
+    );
+  });
+
+  test("Sözleşme başvuru hakkını satıcının yeriyle sınırlamaz", async () => {
+    const { icerik } = await sayfa(HUKUKI_BELGELER.mesafeliSatis.yol);
+
+    assert.ok(
+      icerik.includes("kendi yerleşim yerindeki"),
+      "alıcının kendi yerleşim yerine başvurabileceği yazılmalı"
+    );
+  });
+
+  test("Sözleşme bulunmayan özellikleri saymaz", async () => {
+    const { icerik } = await sayfa(HUKUKI_BELGELER.mesafeliSatis.yol);
+
+    for (const yasak of [
+      "0850",
+      "maskeleme",
+      "SMS paketi",
+      "dakika paketi",
+      "abonelik",
+      "kontör",
+      "Hayat Kartım",
+    ]) {
+      assert.ok(!icerik.includes(yasak), `metinde bulunmamalı: ${yasak}`);
+    }
   });
 
   test("KVKK metni kendi işaretlerini kullanır", async () => {
