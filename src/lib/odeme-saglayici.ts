@@ -466,3 +466,103 @@ export async function checkoutFormSonucuGetir(
     currency: metinAlan(yanit, "currency"),
   };
 }
+
+/**
+ * Ödeme iptali (iade) isteği.
+ *
+ * ────────────────────────────────────────────────────────────
+ * NEDEN `cancel`, `refund` DEĞİL
+ *
+ * iyzipay paketi iki ayrı uç sunar (paketin kendi kaynağından
+ * doğrulandı):
+ *
+ *   iyzipay.cancel.create  → /payment/cancel, `paymentId` ister
+ *   iyzipay.refund.create  → /payment/refund, `paymentTransactionId` ister
+ *
+ * ARKVIUM `Payment.providerRef` alanında sağlayıcının ÖDEME kimliğini
+ * saklar; işlem (transaction) kimliğini SAKLAMAZ. Bu yüzden bugünkü
+ * veri modeliyle yapılabilen doğrulanmış işlem `cancel`'dır ve tam
+ * tutarlı iptali kapsar.
+ *
+ * KISMİ İADE BU YOLLA YAPILAMAZ. Kısmi iade `paymentTransactionId`
+ * gerektirir; o alan saklanmadığı için burada varmış gibi davranılmaz.
+ * ────────────────────────────────────────────────────────────
+ *
+ * Bu fonksiyon ÇAĞRILDIĞINDA GERÇEK İSTEK ATAR. Çağrılıp
+ * çağrılmayacağına `geri-odeme.ts` karar verir; otomatik iade özellik
+ * bayrağı kapalıyken hiç çağrılmaz. Testlerde tamamen taklit edilir.
+ */
+export type IptalIstegi = {
+  /** Sağlayıcının ödeme kimliği (`Payment.providerRef`). */
+  saglayiciOdemeKimligi: string;
+  conversationId: string;
+  /** Kısa gerekçe. Kişisel veri içermemelidir. */
+  aciklama?: string;
+  istemciIp?: string;
+};
+
+export type IptalSonucu = {
+  basarili: boolean;
+  /** Sağlayıcının döndürdüğü iptal/iade işlem kimliği. */
+  saglayiciIslemKimligi?: string;
+  /** Hata kodu. Ham yanıt ve anahtar TAŞINMAZ. */
+  hataKodu?: string;
+};
+
+export async function odemeyiIptalEt(
+  istek: IptalIstegi
+): Promise<IptalSonucu> {
+  const yapilandirma = odemeYapilandirmasi();
+
+  const iyzipay = new Iyzipay({
+    apiKey: yapilandirma.apiKey,
+    secretKey: yapilandirma.secretKey,
+    uri: yapilandirma.baseUrl,
+  });
+
+  const govde = {
+    locale: Iyzipay.LOCALE.TR,
+    conversationId: istek.conversationId,
+    paymentId: istek.saglayiciOdemeKimligi,
+    ip: istek.istemciIp,
+    description: istek.aciklama,
+  };
+
+  return new Promise<IptalSonucu>((cozumle) => {
+    try {
+      /*
+        Yanıtın tipi paket tarafından verilmiyor. Alanlar okunmadan
+        önce tek tek tür denetiminden geçirilir; `any` yerine bilinmeyen
+        alanlı bir kayıt kullanılır.
+      */
+      type SaglayiciYaniti = Record<string, unknown> | null | undefined;
+
+      iyzipay.cancel.create(govde, (hata: unknown, sonuc: SaglayiciYaniti) => {
+        if (hata) {
+          // Ham hata gövdesi TAŞINMAZ; yalnızca tür bilgisi.
+          cozumle({ basarili: false, hataKodu: "baglanti-hatasi" });
+
+          return;
+        }
+
+        if (sonuc?.status === "success") {
+          cozumle({
+            basarili: true,
+            saglayiciIslemKimligi:
+              typeof sonuc.paymentId === "string" ? sonuc.paymentId : undefined,
+          });
+
+          return;
+        }
+
+        cozumle({
+          basarili: false,
+          hataKodu:
+            typeof sonuc?.errorCode === "string" ? sonuc.errorCode : "bilinmeyen",
+        });
+      });
+    } catch {
+      cozumle({ basarili: false, hataKodu: "istek-kurulamadi" });
+    }
+  });
+}
