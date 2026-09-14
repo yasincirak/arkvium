@@ -41,6 +41,7 @@ const { etiketUret } = await import("../../src/lib/tags.ts");
 const { siparisDurumunuGuncelle, SiparisYonetimHatasi } = await import(
   "../../src/lib/siparis-yonetim.ts"
 );
+const { KARGO_FIRMALARI } = await import("../../src/lib/kargo.ts");
 const { POST: durumUcu } = await import(
   "../../src/app/api/admin/orders/[id]/durum/route.ts"
 );
@@ -55,6 +56,9 @@ after(async () => {
 const YONETICI = "admin@test.invalid";
 const SON_GECERLILIK = new Date(Date.now() + 15 * 60 * 1000);
 const STICKER = SIPARIS_URUNLERI.find((u) => u.kod === "sticker-seti")!;
+
+/** Beyaz listedeki ilk firma; liste değişirse test kendiliğinden uyar. */
+const GECERLI_FIRMA = KARGO_FIRMALARI[0].kod;
 
 const TESLIMAT = {
   fullName: "Test Müşteri",
@@ -160,17 +164,34 @@ async function olaylar(orderId: string, tur: string) {
 }
 
 /** Durum ucuna istek atar (çerez zaten ayarlanmış olmalı). */
-async function durumIstegi(orderId: string, durum: unknown) {
+async function durumIstegi(
+  orderId: string,
+  durum: unknown,
+  ekAlanlar: Record<string, unknown> = {}
+) {
   const yanit = await durumUcu(
     new Request(`http://localhost/api/admin/orders/${orderId}/durum`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ durum }),
+      body: JSON.stringify({ durum, ...ekAlanlar }),
     }),
     { params: { id: orderId } }
   );
 
   return { yanit, govde: await yanit.json() };
+}
+
+/** Siparişin kargo alanlarını okur. */
+async function kargoAlanlari(orderId: string) {
+  return prisma.order.findUniqueOrThrow({
+    where: { id: orderId },
+    select: {
+      status: true,
+      kargoFirmasi: true,
+      kargoTakipNo: true,
+      kargoTakipUrl: true,
+    },
+  });
 }
 
 describe("sipariş durum yönetimi — yetki", () => {
@@ -413,5 +434,221 @@ describe("sipariş durum yönetimi — ödeme ve rezervasyon korunur", () => {
       (await prisma.orderTag.count({ where: { orderId } })) > 0,
       "sipariş rezerve etiket içermeli"
     );
+  });
+});
+
+describe("kargo bilgisi", () => {
+  test("geçerli kargo bilgisi kargoya verme geçişinde kaydedilir", async () => {
+    const { orderId } = await siparisHazirla("preparing");
+
+    const sonuc = await siparisDurumunuGuncelle({
+      orderId,
+      hedefDurum: "shipped",
+      adminEmail: YONETICI,
+      kargoFirmaKod: GECERLI_FIRMA,
+      kargoTakipNo: "AB-1234567890",
+    });
+
+    assert.equal(sonuc.kargo?.firmaKod, GECERLI_FIRMA);
+    assert.equal(sonuc.kargo?.takipNo, "AB-1234567890");
+
+    const siparis = await kargoAlanlari(orderId);
+
+    assert.equal(siparis.status, "shipped");
+    assert.equal(siparis.kargoFirmasi, GECERLI_FIRMA);
+    assert.equal(siparis.kargoTakipNo, "AB-1234567890");
+  });
+
+  test("kargo bilgisi olmadan da kargoya verilebilir ve alanlar boş kalır", async () => {
+    /*
+      Mevcut iş kuralı korunuyor: bilgi ZORUNLU DEĞİLDİR.
+    */
+    const { orderId } = await siparisHazirla("preparing");
+
+    const sonuc = await siparisDurumunuGuncelle({
+      orderId,
+      hedefDurum: "shipped",
+      adminEmail: YONETICI,
+    });
+
+    assert.equal(sonuc.kargo, null);
+
+    const siparis = await kargoAlanlari(orderId);
+
+    assert.equal(siparis.status, "shipped");
+    assert.equal(siparis.kargoFirmasi, null);
+    assert.equal(siparis.kargoTakipNo, null);
+    assert.equal(siparis.kargoTakipUrl, null);
+  });
+
+  test("desteklenmeyen firma reddedilir ve sipariş hiç ilerlemez", async () => {
+    const { orderId } = await siparisHazirla("preparing");
+
+    await assert.rejects(
+      siparisDurumunuGuncelle({
+        orderId,
+        hedefDurum: "shipped",
+        adminEmail: YONETICI,
+        kargoFirmaKod: "uydurma-kargo",
+        kargoTakipNo: "AB-1234567890",
+      }),
+      SiparisYonetimHatasi
+    );
+
+    const siparis = await kargoAlanlari(orderId);
+
+    assert.equal(siparis.status, "preparing", "durum değişmemeli");
+    assert.deepEqual(await olaylar(orderId, "shipped"), []);
+  });
+
+  test("geçersiz takip numarası reddedilir ve sipariş hiç ilerlemez", async () => {
+    const { orderId } = await siparisHazirla("preparing");
+
+    for (const takipNo of ["12", "AB 123456", "<script>", "a".repeat(41)]) {
+      await assert.rejects(
+        siparisDurumunuGuncelle({
+          orderId,
+          hedefDurum: "shipped",
+          adminEmail: YONETICI,
+          kargoFirmaKod: GECERLI_FIRMA,
+          kargoTakipNo: takipNo,
+        }),
+        SiparisYonetimHatasi,
+        `"${takipNo}" kabul edilmemeli`
+      );
+    }
+
+    const siparis = await kargoAlanlari(orderId);
+
+    assert.equal(siparis.status, "preparing");
+    assert.deepEqual(await olaylar(orderId, "shipped"), []);
+  });
+
+  test("YARIM kargo bilgisi reddedilir", async () => {
+    const { orderId } = await siparisHazirla("preparing");
+
+    const yarimGirdiler = [
+      { kargoFirmaKod: GECERLI_FIRMA },
+      { kargoTakipNo: "AB-1234567890" },
+    ];
+
+    for (const yarim of yarimGirdiler) {
+      await assert.rejects(
+        siparisDurumunuGuncelle({
+          orderId,
+          hedefDurum: "shipped",
+          adminEmail: YONETICI,
+          ...yarim,
+        }),
+        SiparisYonetimHatasi
+      );
+    }
+
+    assert.equal((await kargoAlanlari(orderId)).status, "preparing");
+  });
+
+  test("hazırlığa alma geçişinde kargo bilgisi YAZILMAZ", async () => {
+    const { orderId } = await siparisHazirla("paid");
+
+    await siparisDurumunuGuncelle({
+      orderId,
+      hedefDurum: "preparing",
+      adminEmail: YONETICI,
+      kargoFirmaKod: GECERLI_FIRMA,
+      kargoTakipNo: "AB-1234567890",
+    });
+
+    const siparis = await kargoAlanlari(orderId);
+
+    assert.equal(siparis.status, "preparing");
+    assert.equal(siparis.kargoFirmasi, null);
+    assert.equal(siparis.kargoTakipNo, null);
+  });
+});
+
+describe("kargo bilgisi — uç güvenliği", () => {
+  test("yönetici oturumu olmadan kargo bilgisi yazılamaz", async () => {
+    const { orderId } = await siparisHazirla("preparing");
+
+    const { yanit } = await durumIstegi(orderId, "shipped", {
+      kargoFirmaKod: GECERLI_FIRMA,
+      kargoTakipNo: "AB-1234567890",
+    });
+
+    assert.equal(yanit.status, 401);
+
+    const siparis = await kargoAlanlari(orderId);
+
+    assert.equal(siparis.status, "preparing");
+    assert.equal(siparis.kargoTakipNo, null);
+  });
+
+  test("uç, geçerli bilgiyi kaydeder ve yanıtta döner", async () => {
+    const { orderId } = await siparisHazirla("preparing");
+
+    await yoneticiOturumuAc();
+
+    const { yanit, govde } = await durumIstegi(orderId, "shipped", {
+      kargoFirmaKod: GECERLI_FIRMA,
+      kargoTakipNo: "AB-1234567890",
+    });
+
+    assert.equal(yanit.status, 200);
+    assert.equal(govde.kargo?.firmaKod, GECERLI_FIRMA);
+    assert.equal(govde.kargo?.takipNo, "AB-1234567890");
+
+    assert.equal((await kargoAlanlari(orderId)).kargoTakipNo, "AB-1234567890");
+  });
+
+  test("uç, desteklenmeyen firmada 400 döner ve hiçbir şey değişmez", async () => {
+    const { orderId } = await siparisHazirla("preparing");
+    const once = await dokunulmazlarinGoruntusu(orderId);
+
+    await yoneticiOturumuAc();
+
+    const { yanit } = await durumIstegi(orderId, "shipped", {
+      kargoFirmaKod: "uydurma-kargo",
+      kargoTakipNo: "AB-1234567890",
+    });
+
+    assert.equal(yanit.status, 400);
+
+    const siparis = await kargoAlanlari(orderId);
+
+    assert.equal(siparis.status, "preparing");
+    assert.equal(siparis.kargoFirmasi, null);
+    assert.equal(await dokunulmazlarinGoruntusu(orderId), once);
+  });
+
+  test("İSTEMCİNİN GÖNDERDİĞİ TAKİP ADRESİ KULLANILMAZ", async () => {
+    /*
+      En kritik kural: müşteriye gösterilen bağlantı bir kullanıcı girdisi
+      değildir. İstek gövdesine adres yazılsa bile sunucu onu okumaz;
+      adres yalnızca beyaz listedeki firma kalıbından üretilir.
+    */
+    const { orderId } = await siparisHazirla("preparing");
+
+    await yoneticiOturumuAc();
+
+    const { yanit } = await durumIstegi(orderId, "shipped", {
+      kargoFirmaKod: GECERLI_FIRMA,
+      kargoTakipNo: "AB-1234567890",
+      kargoTakipUrl: "javascript:alert(1)",
+      takipUrl: "http://kotu.example/yonlendir",
+    });
+
+    assert.equal(yanit.status, 200);
+
+    const siparis = await kargoAlanlari(orderId);
+
+    if (siparis.kargoTakipUrl !== null) {
+      assert.ok(
+        siparis.kargoTakipUrl.startsWith("https://"),
+        "kaydedilen adres yalnızca https olabilir"
+      );
+    }
+
+    assert.notEqual(siparis.kargoTakipUrl, "javascript:alert(1)");
+    assert.notEqual(siparis.kargoTakipUrl, "http://kotu.example/yonlendir");
   });
 });
