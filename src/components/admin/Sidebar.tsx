@@ -44,6 +44,14 @@ export default function Sidebar() {
         </Link>
 
         <Link
+          href="/admin/talepler"
+          className="mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-white/5"
+        >
+          <span>↩️</span>
+          <span>Talepler</span>
+        </Link>
+
+        <Link
           href="/admin/analitik"
           className="mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-white/5"
         >

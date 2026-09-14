@@ -5,6 +5,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { fiyatBicimle } from "@/lib/siparis";
+import TalepFormu from "@/components/siparis/TalepFormu";
+import { siparisTalepleri } from "@/lib/siparis-talebi";
 
 /**
  * Ödeme sonuç sayfası.
@@ -80,6 +82,7 @@ export default async function OdemeSonucPage({ params }: Props) {
       status: true,
       totalKurus: true,
       createdAt: true,
+      publicToken: true,
       items: {
         select: { productAdi: true, quantity: true, lineTotalKurus: true },
       },
@@ -89,6 +92,17 @@ export default async function OdemeSonucPage({ params }: Props) {
   if (!siparis) {
     notFound();
   }
+
+  // Müşteri yalnızca KENDİ siparişinin taleplerini görür; sorgu
+  // `publicToken` üzerinden yapılır.
+  const talepler = (await siparisTalepleri(params.token)).map((talep) => ({
+    id: talep.id,
+    type: talep.type,
+    status: talep.status,
+    gerekce: talep.gerekce,
+    yoneticiNotu: talep.yoneticiNotu,
+    createdAt: talep.createdAt,
+  }));
 
   const gorunum = gorunumSec(siparis.status, ceviri);
 
@@ -161,6 +175,17 @@ export default async function OdemeSonucPage({ params }: Props) {
 
         <p className="mt-8 text-center text-sm text-white/40">{ceviri.qr.markaAlt}</p>
       </div>
+
+      {/*
+        İptal / iade talebi. Sipariş sayfanın adresindeki kriptografik
+        `publicToken` ile tanımlanır; sipariş kimliği tarayıcıya hiç
+        verilmez. Hangi türün açılabileceğine sunucu karar verir.
+      */}
+      <TalepFormu
+        publicToken={siparis.publicToken}
+        onerilenTur={siparis.status === "shipped" ? "refund" : "cancel"}
+        mevcutTalepler={talepler}
+      />
     </main>
   );
 }
