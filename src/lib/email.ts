@@ -266,3 +266,120 @@ ${c.imza}
     `.trim(),
   };
 }
+
+/**
+ * Sipariş iptal bildirimi.
+ *
+ * Adres, telefon, kart verisi veya ödeme sağlayıcısı anahtarı İÇERMEZ.
+ * Para iadesinin yapılıp yapılmayacağı ÇAĞIRAN tarafından bildirilir;
+ * bu şablon kendi başına iade taahhüdü üretmez.
+ */
+export function siparisIptalEpostasi(
+  adSoyad: string | null,
+  siparisNumarasi: string,
+  tutarMetni: string,
+  paraIadesiGerekir: boolean,
+  takipAdresi: string | null,
+  dil: Dil = VARSAYILAN_DIL
+): Omit<EpostaIcerigi, "alici"> {
+  const c = sozlukAl(dil).eposta;
+
+  return {
+    konu: c.siparisIptal.konu.replace("{numara}", siparisNumarasi),
+    metin: `
+${c.merhaba} ${adSoyad || ""},
+
+${c.siparisIptal.giris}
+
+${c.siparisIptal.numara.replace("{numara}", siparisNumarasi)}
+${c.siparisIptal.tutar.replace("{tutar}", tutarMetni)}
+
+${paraIadesiGerekir ? c.siparisIptal.iadeBaslatilacak : c.siparisIptal.iadeYok}
+${takipAdresi ? `\n${c.siparisIptal.takip}\n${takipAdresi}\n` : ""}
+${c.imza}
+    `.trim(),
+  };
+}
+
+/**
+ * Kargoya verildi bildirimi.
+ *
+ * Kargo firması, takip numarası ve takip bağlantısı YALNIZCA sunucuda
+ * doğrulanmış değerlerden gelir (bkz. src/lib/kargo.ts). Bilgi yoksa
+ * uydurulmaz: müşteriye bilginin sonradan görüneceği söylenir.
+ */
+export function siparisKargoEpostasi(
+  adSoyad: string | null,
+  siparisNumarasi: string,
+  kargo: {
+    firmaAdi: string | null;
+    takipNo: string | null;
+    takipUrl: string | null;
+  },
+  takipAdresi: string | null,
+  dil: Dil = VARSAYILAN_DIL
+): Omit<EpostaIcerigi, "alici"> {
+  const c = sozlukAl(dil).eposta;
+
+  // Yarım bilgi gösterilmez; ikisi de yoksa bilgi satırı hiç yazılmaz.
+  const kargoVar = Boolean(kargo.firmaAdi && kargo.takipNo);
+
+  const kargoBolumu = kargoVar
+    ? [
+        c.siparisKargo.firma.replace("{firma}", kargo.firmaAdi as string),
+        c.siparisKargo.takipNo.replace("{takipNo}", kargo.takipNo as string),
+        kargo.takipUrl
+          ? `\n${c.siparisKargo.kargoTakip}\n${kargo.takipUrl}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n")
+    : c.siparisKargo.bilgiYok;
+
+  return {
+    konu: c.siparisKargo.konu.replace("{numara}", siparisNumarasi),
+    metin: `
+${c.merhaba} ${adSoyad || ""},
+
+${c.siparisKargo.giris}
+
+${c.siparisKargo.numara.replace("{numara}", siparisNumarasi)}
+
+${kargoBolumu}
+${takipAdresi ? `\n${c.siparisKargo.takip}\n${takipAdresi}\n` : ""}
+${c.imza}
+    `.trim(),
+  };
+}
+
+/**
+ * İade tamamlandı bildirimi.
+ *
+ * YALNIZCA gerçekten tamamlanmış iade için gönderilir. Sağlayıcı işlem
+ * kimliği, ödeme anahtarı veya kart verisi İÇERMEZ.
+ */
+export function siparisIadeEpostasi(
+  adSoyad: string | null,
+  siparisNumarasi: string,
+  tutarMetni: string,
+  takipAdresi: string | null,
+  dil: Dil = VARSAYILAN_DIL
+): Omit<EpostaIcerigi, "alici"> {
+  const c = sozlukAl(dil).eposta;
+
+  return {
+    konu: c.siparisIade.konu.replace("{numara}", siparisNumarasi),
+    metin: `
+${c.merhaba} ${adSoyad || ""},
+
+${c.siparisIade.giris}
+
+${c.siparisIade.numara.replace("{numara}", siparisNumarasi)}
+${c.siparisIade.tutar.replace("{tutar}", tutarMetni)}
+
+${c.siparisIade.sure}
+${takipAdresi ? `\n${c.siparisIade.takip}\n${takipAdresi}\n` : ""}
+${c.imza}
+    `.trim(),
+  };
+}

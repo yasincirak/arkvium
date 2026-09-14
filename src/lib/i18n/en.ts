@@ -823,6 +823,41 @@ export const EN: DerinKismi<Sozluk> = {
       hatirlatma:
         "When your product arrives, remember to activate the QR tag\nfrom your ARKVIUM account.",
     },
+
+    // Cancellation, shipping and refund notices. Facts only: no delivery
+    // or refund timeframes are promised, matching the Turkish source.
+    siparisIptal: {
+      konu: "Your ARKVIUM order has been cancelled ({numara})",
+      giris: "Your order has been cancelled.",
+      numara: "Order number: {numara}",
+      tutar: "Order total: {tutar}",
+      iadeBaslatilacak:
+        "A refund will be processed for the amount charged. We'll let you\nknow once it is complete.",
+      iadeYok:
+        "No payment was charged for this order, so no refund will be\nissued.",
+      takip: "You can view your order status here:",
+    },
+
+    siparisKargo: {
+      konu: "Your ARKVIUM order has shipped ({numara})",
+      giris: "Your order has been handed over to the carrier.",
+      numara: "Order number: {numara}",
+      firma: "Carrier: {firma}",
+      takipNo: "Tracking number: {takipNo}",
+      kargoTakip: "Carrier tracking link:",
+      bilgiYok:
+        "Once the carrier and tracking number are added, they will appear\non your order tracking page.",
+      takip: "You can track your order status here:",
+    },
+
+    siparisIade: {
+      konu: "Your ARKVIUM refund is complete ({numara})",
+      giris: "The refund for your order has been completed.",
+      numara: "Order number: {numara}",
+      tutar: "Refunded amount: {tutar}",
+      sure: "How soon it appears in your account depends on your bank.",
+      takip: "You can view your order status here:",
+    },
   },
 
   acilDurumPaneli: {

@@ -1,4 +1,6 @@
 import { prisma } from "./prisma";
+import { iptalBildirimiGonder } from "./siparis-bildirim";
+import type { EpostaIcerigi, EpostaSonucu } from "./email";
 
 /*
   Karar tablosu ayrı dosyadadır (siparis-iptal-kurallari.ts):
@@ -72,6 +74,8 @@ export async function siparisiIptalEt(girdi: {
   adminEmail?: string | null;
   /** Olay notuna yazılacak kısa gerekçe. Kişisel veri içermemelidir. */
   not?: string | null;
+  /** Testler için e-posta gönderici; verilmezse gerçek katman kullanılır. */
+  epostaGonderici?: (icerik: EpostaIcerigi) => Promise<EpostaSonucu>;
 }): Promise<IptalSonucu> {
   const orderId = String(girdi?.orderId ?? "").trim();
 
@@ -152,6 +156,21 @@ export async function siparisiIptalEt(girdi: {
   if (sonuc === null) {
     throw new SiparisIptalHatasi(IPTAL_EDILEMEDI);
   }
+
+  /*
+    Bildirim TRANSACTION KAPANDIKTAN SONRA gönderilir ve hata fırlatmaz.
+    E-posta sağlayıcısı çökse bile iptal geri alınmaz; yalnızca olay
+    notuna "gönderilemedi" düşer.
+
+    İkinci bir iptal isteği buraya hiç ulaşamaz (koşullu güncelleme 0
+    satır döner ve yukarıda hata fırlatılır); bu yüzden aynı sipariş
+    için ikinci bir iptal e-postası gönderilmez.
+  */
+  await iptalBildirimiGonder({
+    orderId,
+    paraIadesiGerekir: davranis.paraIadesiGerekir,
+    gonderici: girdi.epostaGonderici,
+  });
 
   return {
     orderId,

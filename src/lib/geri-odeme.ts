@@ -8,6 +8,8 @@ import {
   ZATEN_ACIK_IADE,
 } from "./geri-odeme-kurallari";
 import { odemeyiIptalEt, type IptalSonucu } from "./odeme-saglayici";
+import { iadeBildirimiGonder } from "./siparis-bildirim";
+import type { EpostaIcerigi, EpostaSonucu } from "./email";
 
 /*
   Karar tablosu ve tutar hesabı ayrı dosyadadır; buradan yeniden dışa
@@ -234,6 +236,8 @@ export async function iadeyiSaglayiciyaGonder(girdi: {
   }) => Promise<IptalSonucu>;
   /** Testler için bayrak durumu; verilmezse ortamdan okunur. */
   otomatikAcik?: boolean;
+  /** Testler için e-posta gönderici; verilmezse gerçek katman kullanılır. */
+  epostaGonderici?: (icerik: EpostaIcerigi) => Promise<EpostaSonucu>;
 }): Promise<IadeKaydi> {
   const refundId = String(girdi?.refundId ?? "").trim();
 
@@ -336,6 +340,21 @@ export async function iadeyiSaglayiciyaGonder(girdi: {
     },
   });
 
+  /*
+    Bildirim YALNIZCA iade gerçekten tamamlandığında gider. Başarısız
+    yanıtta müşteriye "paranız iade edildi" denmez.
+
+    Gönderim kaydın güncellenmesinden SONRA yapılır ve hata fırlatmaz:
+    e-posta gitmese bile iade kaydı `succeeded` kalır. `processing`
+    kilidi sayesinde tek kayıt tek kez sonuçlanır; çift bildirim olmaz.
+  */
+  if (guncel.status === "succeeded") {
+    await iadeBildirimiGonder({
+      refundId: guncel.id,
+      gonderici: girdi.epostaGonderici,
+    });
+  }
+
   return kaydiDisaAktar(guncel);
 }
 
@@ -349,6 +368,8 @@ export async function manuelIadeyiKaydet(girdi: {
   refundId: string;
   islemKimligi: unknown;
   adminEmail: string;
+  /** Testler için e-posta gönderici; verilmezse gerçek katman kullanılır. */
+  epostaGonderici?: (icerik: EpostaIcerigi) => Promise<EpostaSonucu>;
 }): Promise<IadeKaydi> {
   const refundId = String(girdi?.refundId ?? "").trim();
 
@@ -400,6 +421,16 @@ export async function manuelIadeyiKaydet(girdi: {
       createdAt: true,
       completedAt: true,
     },
+  });
+
+  /*
+    Elle yapılan iade de müşteriye bildirilir. Koşullu güncelleme
+    sayesinde yalnızca gerçekten kapatan istek buraya ulaşır; zaten
+    kapanmış bir kayıt için ikinci bildirim gönderilmez.
+  */
+  await iadeBildirimiGonder({
+    refundId: kayit.id,
+    gonderici: girdi.epostaGonderici,
   });
 
   return kaydiDisaAktar(kayit);

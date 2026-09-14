@@ -839,6 +839,46 @@ export const TR = {
       hatirlatma:
         "Ürününüz elinize ulaştığında QR etiketini ARKVIUM hesabınızdan\netkinleştirmeyi unutmayın.",
     },
+
+    /*
+      İptal, kargo ve iade bilgilendirmeleri.
+
+      Bu metinler YALNIZCA doğrulanabilir bilgi içerir: sipariş numarası,
+      tutar, kargo firması ve takip numarası. Teslimat süresi, iade
+      süresi veya gün sayısı gibi taahhüt edilemeyen ifadeler yoktur.
+    */
+    siparisIptal: {
+      konu: "ARKVIUM siparişiniz iptal edildi ({numara})",
+      giris: "Siparişiniz iptal edildi.",
+      numara: "Sipariş numarası: {numara}",
+      tutar: "Sipariş tutarı: {tutar}",
+      iadeBaslatilacak:
+        "Tahsil edilen tutar için iade süreci yürütülecektir. İade\ntamamlandığında ayrıca bilgilendirileceksiniz.",
+      iadeYok:
+        "Bu sipariş için tahsil edilmiş bir ödeme bulunmadığından iade\nişlemi yapılmayacaktır.",
+      takip: "Sipariş durumunuzu buradan görebilirsiniz:",
+    },
+
+    siparisKargo: {
+      konu: "ARKVIUM siparişiniz kargoya verildi ({numara})",
+      giris: "Siparişiniz kargoya verildi.",
+      numara: "Sipariş numarası: {numara}",
+      firma: "Kargo firması: {firma}",
+      takipNo: "Takip numarası: {takipNo}",
+      kargoTakip: "Kargo takip bağlantısı:",
+      bilgiYok:
+        "Kargo firması ve takip numarası eklendiğinde sipariş takip\nsayfanızda görünecektir.",
+      takip: "Sipariş durumunuzu buradan izleyebilirsiniz:",
+    },
+
+    siparisIade: {
+      konu: "ARKVIUM iade işleminiz tamamlandı ({numara})",
+      giris: "Siparişinizle ilgili iade işlemi tamamlandı.",
+      numara: "Sipariş numarası: {numara}",
+      tutar: "İade edilen tutar: {tutar}",
+      sure: "İadenin hesabınıza yansıma süresi bankanıza bağlıdır.",
+      takip: "Sipariş durumunuzu buradan görebilirsiniz:",
+    },
   },
 
   acilDurumPaneli: {
