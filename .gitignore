@@ -53,6 +53,3 @@ backups/
 # (Kaynak kodlar src/ ve tests/ altinda izlenir; burada YALNIZCA cikti vardir.)
 *.zip
 /baskici-ciktilari/
-
-# Veritabani yedekleri — asla commit edilmez.
-backups/
