@@ -146,10 +146,17 @@ export default function KvkkAydinlatmaPage() {
             "Sipariş kalemleri, adetler, tutarlar, sipariş durumu ve sipariş geçmişi kayıtları.",
             "Hangi hukuki belgenin hangi sürümünü onayladığınız ve onay zamanı.",
             <>
-              Ödeme sağlayıcısının zorunlu tuttuğu kimlik numarası alanı
-              sipariş formunda istenir ve yalnızca ödeme adımında
-              sağlayıcıya iletilir. <strong>Saklanmaz</strong>: hiçbir
-              veritabanı tablosuna yazılmaz ve loglanmaz.
+              <strong>Kimlik numarası.</strong> Ödeme sağlayıcısının
+              zorunlu tuttuğu bu alan sipariş formunda istenir ve{" "}
+              <strong>
+                yalnızca ödeme işleminin gerçekleştirilmesi amacıyla
+                iyzico&apos;ya iletilir
+              </strong>
+              . Kodda doğrulanan kapsam: değer sağlayıcıya gönderilen
+              ödeme isteğinin alıcı bilgisine konur; ARKVIUM
+              veritabanında <strong>hiçbir tabloda saklanmaz</strong>,
+              hiçbir log kaydına yazılmaz ve başka hiçbir amaçla
+              kullanılmaz.
             </>,
             <>
               Kart bilgileri ARKVIUM sunucularına <strong>hiç gelmez</strong>.
@@ -188,22 +195,65 @@ export default function KvkkAydinlatmaPage() {
           e) Acil Durum Profili — isteğe bağlı, açık rızaya bağlı
         </p>
 
+        <p>
+          Aşağıdakiler, özelliğin kodda doğrulanan davranışıdır:
+        </p>
+
         <Liste
           maddeler={[
             <>
-              Kullanmayı seçerseniz beyan ettiğiniz kan grubu, alerjiler,
-              kullanılan ilaçlar, sağlık durumu, acil durum notu ve acil
-              durum yakınlarının ad ile telefonu işlenir.
+              <strong>İsteğe bağlıdır.</strong> Kullanmayı seçmezseniz bu
+              kategoride hiçbir veri işlenmez.
             </>,
             <>
-              Bu veriler KVKK m.6 anlamında <strong>özel nitelikli</strong>{" "}
-              kişisel veridir ve yalnızca <strong>açık rızanızla</strong>{" "}
-              işlenir.
+              <strong>Varsayılan olarak kapalıdır.</strong> Profilin
+              kendisi ve her bir alanın görünürlüğü ayrı ayrı kapalı
+              başlar; hiçbiri siz açmadan yayına girmez.
             </>,
-            "Özellik varsayılan olarak KAPALIDIR. Kullanmazsanız bu kategoride hiçbir veri işlenmez.",
-            "Her alan ayrı ayrı görünür yapılır; varsayılan olarak hepsi kapalıdır.",
-            "Beyan edilen tüm alanlar (kan grubu dâhil) uygulama katmanında AES-256-GCM ile şifrelenerek saklanır; veritabanında düz metin sağlık verisi bulunmaz.",
-            "Açık rızanızı geri çektiğinizde veya onay metninin sürümü değiştiğinde profil otomatik olarak yayından kalkar.",
+            <>
+              <strong>Ayrı bir açık rıza adımına bağlıdır.</strong> Rıza
+              zamanı ve onaylanan metnin sürümü kaydedilir. Metnin sürümü
+              değişirse eski rızayla verilen profil otomatik olarak
+              yayından kalkar; yeniden yayına almak için yeni rıza
+              gerekir.
+            </>,
+            <>
+              <strong>AES-256-GCM ile şifrelenir.</strong> Beyan edilen
+              tüm alanlar (kan grubu dâhil) uygulama katmanında
+              şifrelenerek saklanır; veritabanında düz metin sağlık
+              verisi bulunmaz.
+            </>,
+            <>
+              <strong>Rıza geri çekilebilir.</strong> Geri çektiğinizde
+              profil yayından kalkar; bağlı olduğu ürün kaydı silinirse
+              profil de birlikte silinir.
+            </>,
+          ]}
+        />
+
+        <p>
+          Kullanmayı seçerseniz beyan ettiğiniz kan grubu, alerjiler,
+          kullanılan ilaçlar, sağlık durumu, acil durum notu ve acil durum
+          yakınlarının ad ile telefonu işlenir.
+        </p>
+
+        <p>
+          Bu veriler KVKK m.6 anlamında <strong>özel nitelikli</strong>{" "}
+          kişisel veri niteliğindedir. Bu kategorinin işlenmesine ilişkin
+          hukuki değerlendirme ve alınan açık rızanın usulüne uygunluğu bu
+          metinde tahmin edilmemiştir:
+        </p>
+
+        <Liste
+          maddeler={[
+            <>
+              Özel nitelikli veri işlemenin şartları ve sınırları:{" "}
+              <HukukOnayi konu="sağlık verilerinin işlenmesi" />
+            </>,
+            <>
+              Açık rızanın alınma yöntemi, metni ve geri alınma usulü:{" "}
+              <HukukOnayi konu="açık rıza yöntemi" />
+            </>,
           ]}
         />
 
@@ -265,9 +315,12 @@ export default function KvkkAydinlatmaPage() {
         </p>
 
         <p>
-          Kodda kesin olan tek nokta şudur: Acil Durum Profili verileri{" "}
-          <strong>açık rıza</strong> alınmadan işlenmez ve rıza geri
-          çekildiğinde işleme durur.
+          Kodda kesin olan nokta şudur: Acil Durum Profili verileri açık
+          rıza alınmadan işlenmez, rıza zamanı ile onaylanan metnin
+          sürümü kaydedilir ve rıza geri çekildiğinde işleme durur.
+          Rızanın hangi usulle alınacağı ve metninin içeriği ise hukuki
+          değerlendirme gerektirir:{" "}
+          <HukukOnayi konu="açık rıza yöntemi ve metni" />
         </p>
       </Bolum>
 
