@@ -1,4 +1,6 @@
 import { prisma } from "./prisma";
+import { kargoBildirimiGonder } from "./siparis-bildirim";
+import type { EpostaIcerigi, EpostaSonucu } from "./email";
 import {
   kargoBilgisiDogrula,
   kargoBilgisiVarMi,
@@ -85,6 +87,8 @@ export async function siparisDurumunuGuncelle(girdi: {
    */
   kargoFirmaKod?: unknown;
   kargoTakipNo?: unknown;
+  /** Testler için e-posta gönderici; verilmezse gerçek katman kullanılır. */
+  epostaGonderici?: (icerik: EpostaIcerigi) => Promise<EpostaSonucu>;
 }): Promise<DurumGuncellemeSonucu> {
   const orderId = String(girdi?.orderId ?? "").trim();
   const hedef = String(girdi?.hedefDurum ?? "").trim() as YonetimDurumu;
@@ -159,6 +163,24 @@ export async function siparisDurumunuGuncelle(girdi: {
 
   if (gecisSayisi !== 1) {
     throw new SiparisYonetimHatasi(GECIS_YAPILAMAZ);
+  }
+
+  /*
+    Kargo bildirimi YALNIZCA kargoya verme geçişinde ve TRANSACTION
+    KAPANDIKTAN SONRA gönderilir; hata fırlatmaz. E-posta gitmese bile
+    sipariş `shipped` kalır.
+
+    Geçiş koşullu olduğu için aynı sipariş ikinci kez `shipped`
+    yapılamaz: tek geçiş, tek bildirim.
+
+    İçerik siparişin KAYITLI kargo alanlarından okunur; bu yüzden
+    e-postada yalnızca doğrulanmış bilgi yer alır.
+  */
+  if (hedef === "shipped") {
+    await kargoBildirimiGonder({
+      orderId,
+      gonderici: girdi.epostaGonderici,
+    });
   }
 
   return { orderId, durum: hedef, kargo };

@@ -552,7 +552,10 @@ model OrderEvent {
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Restrict)
 
   /// created | payment_started | paid | payment_failed | tags_reserved |
-  /// tags_released | preparing | shipped | cancelled
+  /// tags_released | preparing | shipped | cancelled | notification
+  ///
+  /// `notification`: iptal/kargo/iade bilgilendirme e-postasının gönderim
+  /// sonucu. Ayrı satır açılır; mevcut olayın notu EZİLMEZ.
   type String
 
   /// Yönetici işlemlerinde dolar; otomatik işlemlerde null.
