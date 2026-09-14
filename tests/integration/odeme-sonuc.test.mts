@@ -6,6 +6,7 @@ import {
   testVeritabaniAdresi,
   testVeritabaniIstemcisi,
   veritabaniniTemizle,
+  stokDoldur,
 } from "../helpers/test-ortami.mts";
 
 /**
@@ -59,17 +60,12 @@ const TESLIMAT = {
 beforeEach(async () => {
   await veritabaniniTemizle(db);
 
-  for (let i = 0; i < 10; i += 1) {
-    const uretilen = etiketUret();
-
-    await prisma.tag.create({
-      data: {
-        code: uretilen.code,
-        publicToken: uretilen.publicToken,
-        activationCodeHash: uretilen.activationCodeHash,
-      },
-    });
-  }
+  await stokDoldur({
+    prisma,
+    etiketUret,
+    urunKodlari: SIPARIS_URUNLERI.map((u) => u.kod),
+    urunBasinaAdet: 10,
+  });
 });
 
 /** Sipariş + başlatılmış ödeme hazırlar; conversationId döner. */

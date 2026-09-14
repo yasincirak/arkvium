@@ -2,7 +2,10 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
 import { createServer } from "node:net";
 import { Client } from "pg";
-import { testAdresiniDenetle } from "../../scripts/veritabani-kilidi.mjs";
+import {
+  referansListesiCoz,
+  testAdresiniDenetle,
+} from "../../scripts/veritabani-kilidi.mjs";
 
 /**
  * Entegrasyon testleri için izole ortam.
@@ -59,9 +62,10 @@ function envDegeriOku(dosya: string, anahtar: string): string | null {
  *
  * Kilit kuralı `scripts/veritabani-kilidi.mjs` içinde TEK YERDE tanımlıdır
  * ve birim testleriyle korunur (tests/unit/test-veritabani-kilidi.test.mts).
- * Bağlantı kimliğinin yanı sıra Supabase PROJE REFERANSINI de
- * karşılaştırır: aynı projeye farklı porttan veya farklı hosttan
- * bağlanmak "farklı veritabanı" sayılmaz.
+ *
+ * `.env` PRODUCTION VARSAYILMAZ: hedefin gerçekten test veritabanı olduğu
+ * `.env.test` içindeki AÇIK BEYANDAN doğrulanır
+ * (TEST_SUPABASE_PROJECT_REF / YASAK_SUPABASE_PROJECT_REFS).
  */
 export function testVeritabaniAdresi(): string {
   const testUrl = envDegeriOku(".env.test", "TEST_DATABASE_URL");
@@ -72,10 +76,19 @@ export function testVeritabaniAdresi(): string {
     );
   }
 
-  const karar = testAdresiniDenetle(testUrl, {
-    DATABASE_URL: envDegeriOku(".env", "DATABASE_URL"),
-    DIRECT_URL: envDegeriOku(".env", "DIRECT_URL"),
-  });
+  const karar = testAdresiniDenetle(
+    testUrl,
+    {
+      DATABASE_URL: envDegeriOku(".env", "DATABASE_URL"),
+      DIRECT_URL: envDegeriOku(".env", "DIRECT_URL"),
+    },
+    {
+      izinliTestRef: envDegeriOku(".env.test", "TEST_SUPABASE_PROJECT_REF"),
+      yasakRefler: referansListesiCoz(
+        envDegeriOku(".env.test", "YASAK_SUPABASE_PROJECT_REFS")
+      ),
+    }
+  );
 
   if (!karar.guvenli) {
     throw new Error(
@@ -251,4 +264,58 @@ export async function yoneticiOturumuKur(bagimliliklar: {
   );
 
   return { userId: kullanici.id, email: kullanici.email };
+}
+
+/**
+ * Test için ÜRÜN BAZINDA QR stoğu oluşturur.
+ *
+ * NEDEN GEREKLİ: Stok kontrolü 30 Ağustos 2026'dan beri ÜRÜN BAZLIDIR
+ * (bkz. `stoktakiEtiketSayisi` ve `Tag.productKod`). Ondan önce yazılmış
+ * testler etiketleri `productKod` VERMEDEN oluşturuyordu; bu etiketler
+ * hiçbir ürünün stoğuna sayılmıyor ve sipariş "stok yetersiz" ile
+ * düşüyordu.
+ *
+ * Bu yardımcı, katalogdaki HER ÜRÜN için ayrı stok açar; böylece test
+ * hangi ürünü sipariş ederse etsin stok bulunur.
+ *
+ * `prisma` ve `etiketUret` çağıran testten geçirilir: bu yardımcı dosya
+ * uygulama modüllerini kendisi yüklemez (test sırası bozulmasın).
+ */
+export async function stokDoldur(bagimliliklar: {
+  prisma: any;
+  etiketUret: () => {
+    code: string;
+    publicToken: string;
+    activationCodeHash: string;
+  };
+  urunKodlari: string[];
+  /** Ürün BAŞINA açılacak etiket sayısı. */
+  urunBasinaAdet?: number;
+}): Promise<void> {
+  const { prisma, etiketUret, urunKodlari } = bagimliliklar;
+  const adet = bagimliliklar.urunBasinaAdet ?? 12;
+
+  const satirlar: Array<{
+    code: string;
+    publicToken: string;
+    activationCodeHash: string;
+    productKod: string;
+  }> = [];
+
+  for (const productKod of urunKodlari) {
+    for (let i = 0; i < adet; i += 1) {
+      const uretilen = etiketUret();
+
+      satirlar.push({
+        code: uretilen.code,
+        publicToken: uretilen.publicToken,
+        activationCodeHash: uretilen.activationCodeHash,
+        productKod,
+      });
+    }
+  }
+
+  // Tek sorgu: her testin başında onlarca ayrı INSERT atmak testleri
+  // gereksiz yavaşlatıyordu.
+  await prisma.tag.createMany({ data: satirlar });
 }

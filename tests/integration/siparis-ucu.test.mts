@@ -6,6 +6,7 @@ import {
   testVeritabaniAdresi,
   testVeritabaniIstemcisi,
   veritabaniniTemizle,
+  stokDoldur,
 } from "../helpers/test-ortami.mts";
 
 /**
@@ -59,17 +60,12 @@ function rastgeleIp(): string {
 beforeEach(async () => {
   await veritabaniniTemizle(db);
 
-  for (let i = 0; i < 12; i += 1) {
-    const uretilen = etiketUret();
-
-    await prisma.tag.create({
-      data: {
-        code: uretilen.code,
-        publicToken: uretilen.publicToken,
-        activationCodeHash: uretilen.activationCodeHash,
-      },
-    });
-  }
+  await stokDoldur({
+    prisma,
+    etiketUret,
+    urunKodlari: SIPARIS_URUNLERI.map((u) => u.kod),
+    urunBasinaAdet: 12,
+  });
 });
 
 async function istek(govde: unknown, ip = rastgeleIp()) {
@@ -133,17 +129,12 @@ describe("herkese açık sipariş ucu", () => {
     for (const urun of SIPARIS_URUNLERI.slice(0, 3)) {
       await veritabaniniTemizle(db);
 
-      for (let i = 0; i < 12; i += 1) {
-        const uretilen = etiketUret();
-
-        await prisma.tag.create({
-          data: {
-            code: uretilen.code,
-            publicToken: uretilen.publicToken,
-            activationCodeHash: uretilen.activationCodeHash,
-          },
-        });
-      }
+      await stokDoldur({
+        prisma,
+        etiketUret,
+        urunKodlari: SIPARIS_URUNLERI.map((u) => u.kod),
+        urunBasinaAdet: 12,
+      });
 
       const { yanit, govde } = await istek({
         urunKodu: urun.kod,

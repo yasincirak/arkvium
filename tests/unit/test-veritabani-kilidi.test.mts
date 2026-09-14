@@ -28,6 +28,7 @@ import { describe, test } from "node:test";
 
 const {
   baglantiKimligi,
+  referansListesiCoz,
   supabaseProjeReferansi,
   testAdresiniDenetle,
 } = await import("../../scripts/veritabani-kilidi.mjs");
@@ -213,5 +214,126 @@ describe("güvenli tarafta hata verme", () => {
       testAdresiniDenetle(poolerIslem(REF_B), undefined as never).guvenli,
       true
     );
+  });
+});
+
+describe("referans listesi çözümü", () => {
+  test("virgülle ayrılmış liste diziye çevrilir", () => {
+    assert.deepEqual(referansListesiCoz(`${REF_A},${REF_B}`), [REF_A, REF_B]);
+  });
+
+  test("boşluklar kırpılır, boş parçalar atılır", () => {
+    assert.deepEqual(referansListesiCoz(` ${REF_A} , , ${REF_B} `), [
+      REF_A,
+      REF_B,
+    ]);
+  });
+
+  test("tanımsız veya boş değer boş dizi verir", () => {
+    assert.deepEqual(referansListesiCoz(null), []);
+    assert.deepEqual(referansListesiCoz(""), []);
+    assert.deepEqual(referansListesiCoz(undefined), []);
+  });
+});
+
+describe("AÇIK BEYAN — `.env` production varsayılmaz", () => {
+  /*
+    Bu blok, kilidin ters çalıştığı gerçek vakayı temsil eder:
+    `.env` TEST projesini tutuyordu, `.env.test` ise CANLI veritabanını
+    gösteriyordu. İkisi gerçekten farklı projeler olduğu için eski kural
+    "güvenli" dedi. Doğru soru "birbirlerinden farklı mı" değil, "hedef
+    GERÇEKTEN beyan edilen test veritabanı mı" sorusudur.
+  */
+
+  test("REGRESYON: .env test projesini tutarken canlı hedef ENGELLENİR", () => {
+    const karar = testAdresiniDenetle(
+      poolerIslem(REF_B), // hedef: CANLI
+      { DATABASE_URL: poolerIslem(REF_A) }, // .env: TEST projesi
+      { izinliTestRef: REF_A, yasakRefler: [REF_B] }
+    );
+
+    assert.equal(karar.guvenli, false, "canlı hedef geçirilmemeli");
+    assert.match(karar.sebep, /canlı olarak işaretlenmiş/);
+  });
+
+  test("eski kural bu vakayı kaçırıyordu (beyan olmadan geçerdi)", () => {
+    const beyansiz = testAdresiniDenetle(poolerIslem(REF_B), {
+      DATABASE_URL: poolerIslem(REF_A),
+    });
+
+    assert.equal(
+      beyansiz.guvenli,
+      true,
+      "beyan yokken iki farklı proje 'güvenli' görünür — kör nokta"
+    );
+  });
+
+  test("beyan edilen test projesi geçer", () => {
+    const karar = testAdresiniDenetle(
+      poolerIslem(REF_A),
+      { DATABASE_URL: poolerIslem(REF_B) },
+      { izinliTestRef: REF_A, yasakRefler: [REF_B] }
+    );
+
+    assert.equal(karar.guvenli, true);
+  });
+
+  test("`.env` AYNI test projesini gösterse bile engellenmez", () => {
+    /*
+      Beyan varken `.env` ile karşılaştırma YAPILMAZ. Bu projede `.env`
+      de test projesini tutuyor; eski kural bunu yanlışlıkla engellerdi.
+    */
+    const karar = testAdresiniDenetle(
+      poolerIslem(REF_A),
+      { DATABASE_URL: poolerIslem(REF_A), DIRECT_URL: dogrudan(REF_A) },
+      { izinliTestRef: REF_A, yasakRefler: [REF_B] }
+    );
+
+    assert.equal(karar.guvenli, true, "beyan `.env` karşılaştırmasını geçersiz kılar");
+  });
+
+  test("beyan edilenden farklı bir proje engellenir", () => {
+    const karar = testAdresiniDenetle(
+      poolerIslem("bambaskabirproje12345"),
+      {},
+      { izinliTestRef: REF_A, yasakRefler: [REF_B] }
+    );
+
+    assert.equal(karar.guvenli, false);
+    assert.match(karar.sebep, /test projesini göstermiyor/);
+  });
+
+  test("yasak liste beyan edilen test referansından ÖNCE uygulanır", () => {
+    // Yanlışlıkla aynı referans hem izinli hem yasak yazılırsa,
+    // güvenli olan karar ENGELLEMEKTİR.
+    const karar = testAdresiniDenetle(
+      poolerIslem(REF_A),
+      {},
+      { izinliTestRef: REF_A, yasakRefler: [REF_A] }
+    );
+
+    assert.equal(karar.guvenli, false);
+    assert.match(karar.sebep, /canlı olarak işaretlenmiş/);
+  });
+
+  test("beyan varken Supabase olmayan adres engellenir", () => {
+    const karar = testAdresiniDenetle(
+      "postgresql://kullanici:p@localhost:5432/arkvium_test",
+      {},
+      { izinliTestRef: REF_A, yasakRefler: [] }
+    );
+
+    assert.equal(karar.guvenli, false);
+    assert.match(karar.sebep, /Supabase adresi değil/);
+  });
+
+  test("yasak liste tek başına da korur (izinli beyan yokken)", () => {
+    const karar = testAdresiniDenetle(
+      poolerIslem(REF_B),
+      {},
+      { yasakRefler: [REF_B] }
+    );
+
+    assert.equal(karar.guvenli, false);
   });
 });

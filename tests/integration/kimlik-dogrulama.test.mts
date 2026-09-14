@@ -90,17 +90,30 @@ async function kullaniciOlustur(
   return cerez;
 }
 
-async function adminCereziAl(): Promise<string> {
-  const { yanit, govde } = await istek("/api/admin/login", {
-    govde: { email: "admin@test.invalid", password: "TestAdminSifresi123" },
-  });
+/**
+ * Yönetici oturumu açar.
+ *
+ * AYRI YÖNETİCİ GİRİŞİ KALDIRILDI: `/api/admin/login` ucu ve
+ * `arkvium_admin_session` çerezi artık yok. Yetkinin tek kaynağı
+ * kullanıcı hesabı ve veritabanındaki `User.role` (bkz. src/lib/session.ts).
+ *
+ * Bu yüzden yönetici de normal kullanıcı gibi kaydolur ve giriş yapar;
+ * rolü doğrudan veritabanında ADMIN yapılır. Oturum TAKLİT EDİLMEZ —
+ * imza ve rol denetimi gerçek koddan geçer.
+ */
+async function adminCereziAl(
+  eposta = "yonetici@test.invalid"
+): Promise<string> {
+  const cerez = await kullaniciOlustur(eposta);
 
-  const cerez = oturumCerezi(yanit, ADMIN_CEREZI);
-
-  assert.ok(
-    cerez,
-    `admin çerezi alınamadı — HTTP ${yanit.status}, yanıt: ${JSON.stringify(govde)}`
-  );
+  /*
+    Bu dosya uygulama modüllerini (prisma dâhil) bilerek yüklemez; her şeyi
+    HTTP üzerinden ve ham SQL ile yapar. Rol de doğrudan veritabanında
+    yükseltilir; sunucu rolü her istekte oradan okur.
+  */
+  await db.query(`UPDATE "User" SET role = 'ADMIN' WHERE email = $1`, [
+    eposta,
+  ]);
 
   return cerez;
 }
@@ -286,7 +299,13 @@ describe("yetkisiz erişim", () => {
       const yanit = await sayfaAl(yol);
 
       assert.equal(yanit.status, 307, `${yol} korumasız`);
-      assert.match(yanit.headers.get("location") ?? "", /\/admin\/login/);
+
+      /*
+        Ayrı yönetici giriş sayfası kaldırıldı; oturumsuz ziyaretçi ortak
+        giriş sayfasına gönderilir ve döneceği yol `next` ile taşınır
+        (bkz. src/lib/guvenli-yonlendirme.ts).
+      */
+      assert.match(yanit.headers.get("location") ?? "", /^\/login\?next=/);
     }
   });
 
@@ -300,16 +319,18 @@ describe("yetkisiz erişim", () => {
     assert.equal(yanit.status, 307);
   });
 
-  test("admin oturumu kullanıcı hesabına erişemez", async () => {
-    const adminCerez = await adminCereziAl();
-    const kullaniciDenemesi = adminCerez.replace(
-      ADMIN_CEREZI,
-      KULLANICI_CEREZI
-    );
+  test("yönetici kendi hesap sayfasına erişebilir", async () => {
+    /*
+      Eskiden burada "admin çerezi kullanıcı alanına geçemez" doğrulanıyordu.
+      Ayrı yönetici çerezi kaldırıldığı için böyle bir ayrım artık yok:
+      yönetici de bir kullanıcıdır ve kendi hesabına erişir. Yetki farkı
+      yalnızca /admin alanında, `User.role` üzerinden uygulanır.
+    */
+    const adminCerez = await adminCereziAl("hesap-erisimi@test.invalid");
 
-    const yanit = await sayfaAl("/account", kullaniciDenemesi);
+    const yanit = await sayfaAl("/account", adminCerez);
 
-    assert.equal(yanit.status, 307);
+    assert.equal(yanit.status, 200);
   });
 });
 
@@ -322,16 +343,20 @@ describe("yönetici girişi", () => {
   });
 
   test("yanlış şifre 401 döner", async () => {
-    const { yanit } = await istek("/api/admin/login", {
-      govde: { email: "admin@test.invalid", password: "YanlisSifre999" },
+    const eposta = "yanlis-sifre@test.invalid";
+
+    await adminCereziAl(eposta);
+
+    const { yanit } = await istek("/api/login", {
+      govde: { email: eposta, password: "YanlisSifre999" },
     });
 
     assert.equal(yanit.status, 401);
   });
 
   test("yanlış e-posta 401 döner", async () => {
-    const { yanit } = await istek("/api/admin/login", {
-      govde: { email: "sahte@test.invalid", password: "TestAdminSifresi123" },
+    const { yanit } = await istek("/api/login", {
+      govde: { email: "hicvarolmayan@test.invalid", password: "GucluSifre12345" },
     });
 
     assert.equal(yanit.status, 401);

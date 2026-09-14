@@ -29,10 +29,53 @@
  * veritabanıdır — port ve host farklı olsa bile.
  * ────────────────────────────────────────────────────────────
  *
+ * ────────────────────────────────────────────────────────────
+ * `.env` PRODUCTION VARSAYILMAZ — ÖNEMLİ
+ *
+ * Bu kilidin ilk sürümü "production" adresini `.env` dosyasından
+ * çıkarıyordu. Bu VARSAYIM YANLIŞTI: `.env` yerel geliştirme dosyasıdır
+ * ve pekâlâ TEST projesini gösterebilir (bu projede öyle).
+ *
+ * Sonuç tehlikeliydi: `.env` test projesini tutarken `.env.test` CANLI
+ * veritabanını gösterdi ve kilit "güvenli" dedi — çünkü ikisi gerçekten
+ * farklı projelerdi. Kilit doğru soruyu sormuyordu.
+ *
+ * Doğru soru "birbirlerinden farklı mı" değil, "hedef GERÇEKTEN test
+ * veritabanı mı" sorusudur. Bu ancak AÇIK BEYANLA yanıtlanabilir:
+ *
+ *   TEST_SUPABASE_PROJECT_REF      — izin verilen TEK hedef
+ *   YASAK_SUPABASE_PROJECT_REFS    — asla dokunulmayacaklar (virgülle)
+ *
+ * Bu iki değer `.env.test` içinde durur (Git'e girmez); bu dosya
+ * yalnızca kuralı içerir, hiçbir gerçek referans veya bağlantı bilgisi
+ * İÇERMEZ.
+ *
+ * Beyan varsa karar YALNIZCA beyana göre verilir; `.env` ile
+ * karşılaştırma yapılmaz. Beyan yoksa eski davranışa düşülür (geriye
+ * dönük uyumluluk).
+ * ────────────────────────────────────────────────────────────
+ *
  * GÜVENLİ TARAFTA HATA VERME: adres ayrıştırılamazsa "farklı" değil,
  * "engelle" kararı verilir. Bozuk bir adres yüzünden production'a
  * yazma riski alınmaz.
  */
+
+/**
+ * Virgülle ayrılmış referans listesini diziye çevirir.
+ *
+ * @param {string|null|undefined} deger
+ * @returns {string[]}
+ */
+export function referansListesiCoz(deger) {
+  if (typeof deger !== "string") {
+    return [];
+  }
+
+  return deger
+    .split(",")
+    .map((parca) => parca.trim())
+    .filter(Boolean);
+}
 
 /**
  * Bağlantının kaba kimliği: host, port, veritabanı adı ve kullanıcı.
@@ -96,24 +139,27 @@ export function supabaseProjeReferansi(url) {
  */
 
 /**
- * Test adresinin production adreslerinden GERÇEKTEN farklı olup
- * olmadığını belirler.
+ * Test adresinin gerçekten TEST veritabanını gösterip göstermediğini
+ * belirler.
  *
- * Engelleme koşulları:
- *   1. Test adresi ayrıştırılamıyor.
- *   2. Bir production adresi tanımlı ama ayrıştırılamıyor.
- *   3. Bağlantı kimliği aynı (eski kural).
- *   4. Supabase proje referansı aynı (YENİ kural — port/host farkı
- *      artık kaçış yolu değil).
+ * KARAR SIRASI:
  *
- * `productionAdresleri` içinde değeri null/boş olan anahtarlar
- * ATLANIR: o değişken tanımlı değildir, karşılaştırılacak bir şey yoktur.
+ *   1. Test adresi ayrıştırılamıyorsa → ENGELLE.
+ *   2. Referans YASAK listesindeyse → ENGELLE (en yüksek öncelik;
+ *      beyan olsun olmasın her zaman uygulanır).
+ *   3. `izinliTestRef` beyan edilmişse: referans ona TAM EŞİT değilse
+ *      → ENGELLE. Eşitse GÜVENLİ ve `.env` karşılaştırması YAPILMAZ —
+ *      `.env` production olmak zorunda değildir.
+ *   4. Beyan yoksa eski davranış: kimlik veya proje referansı
+ *      `karsilastirilacakAdresler` içindekilerden biriyle aynıysa
+ *      → ENGELLE.
  *
  * @param {string|null} testUrl
- * @param {Record<string, string|null|undefined>} productionAdresleri
+ * @param {Record<string, string|null|undefined>} karsilastirilacakAdresler
+ * @param {{izinliTestRef?: string|null, yasakRefler?: string[]}} [beyan]
  * @returns {KilitKarari}
  */
-export function testAdresiniDenetle(testUrl, productionAdresleri) {
+export function testAdresiniDenetle(testUrl, karsilastirilacakAdresler, beyan) {
   if (!testUrl) {
     return {
       guvenli: false,
@@ -134,8 +180,51 @@ export function testAdresiniDenetle(testUrl, productionAdresleri) {
     };
   }
 
+  const izinliTestRef = beyan?.izinliTestRef ?? null;
+  const yasakRefler = beyan?.yasakRefler ?? [];
+
+  /*
+    YASAK LİSTESİ — en yüksek öncelik.
+    Beyan edilen bir referans hiçbir koşulda hedef olamaz.
+  */
+  if (testRef && yasakRefler.includes(testRef)) {
+    return {
+      guvenli: false,
+      sebep:
+        "TEST_DATABASE_URL, YASAK_SUPABASE_PROJECT_REFS listesindeki bir " +
+        "projeyi gösteriyor. Bu proje canlı olarak işaretlenmiş.",
+    };
+  }
+
+  /*
+    AÇIK BEYAN — varsa tek ölçüt budur.
+    `.env` ile karşılaştırma yapılmaz: `.env` test projesini de
+    gösterebilir ve o durumda karşılaştırma yanlış sonuç üretir.
+  */
+  if (izinliTestRef) {
+    if (!testRef) {
+      return {
+        guvenli: false,
+        sebep:
+          "TEST_SUPABASE_PROJECT_REF beyan edilmiş ama TEST_DATABASE_URL " +
+          "bir Supabase adresi değil.",
+      };
+    }
+
+    if (testRef !== izinliTestRef) {
+      return {
+        guvenli: false,
+        sebep:
+          "TEST_DATABASE_URL, TEST_SUPABASE_PROJECT_REF ile beyan edilen " +
+          "test projesini göstermiyor.",
+      };
+    }
+
+    return { guvenli: true, sebep: "" };
+  }
+
   for (const [anahtar, prodUrl] of Object.entries(
-    productionAdresleri ?? {}
+    karsilastirilacakAdresler ?? {}
   )) {
     if (!prodUrl) {
       continue;
@@ -182,4 +271,57 @@ export function testAdresiniDenetle(testUrl, productionAdresleri) {
   }
 
   return { guvenli: true, sebep: "" };
+}
+
+/**
+ * MIGRATION için kullanılacak adresi üretir.
+ *
+ * Supabase iki havuzlayıcı (pooler) modu sunar ve ikisi AYNI veritabanına
+ * bağlanır:
+ *
+ *   6543 — transaction pooler : her sorgu ayrı oturum alabilir
+ *   5432 — session pooler     : oturum boyunca tek bağlantı
+ *
+ * `prisma migrate deploy` SESSION MODU ZORUNLU tutar: migration'ları
+ * advisory lock ile serileştirir ve oturum durumu kullanır. Transaction
+ * pooler'a bağlandığında "can-connect-to-database" adımında SESSİZCE
+ * ASILI KALIR — hata da vermez, ilerlemez de (ölçüldü).
+ *
+ * Bu yüzden adres transaction pooler ise migration için portu 5432'ye
+ * çevrilir. Kullanıcı adı, host, veritabanı ve şifre AYNEN korunur;
+ * yalnızca port değişir, dolayısıyla hedef veritabanı değişmez.
+ *
+ * Şifre bölümüne dokunulmaması için `@` işaretinden SONRAKİ kısımda
+ * düzenleme yapılır: şifrenin içinde ":6543" benzeri bir dizi bulunsa
+ * bile bozulmaz.
+ *
+ * Supabase dışı adresler ve zaten 5432 olan adresler DEĞİŞTİRİLMEDEN
+ * döner.
+ *
+ * @param {string} url
+ * @returns {string}
+ */
+export function migrationIcinAdres(url) {
+  let adres;
+
+  try {
+    adres = new URL(url);
+  } catch {
+    return url;
+  }
+
+  if (!adres.hostname.includes("pooler.supabase.") || adres.port !== "6543") {
+    return url;
+  }
+
+  const sonAt = url.lastIndexOf("@");
+
+  if (sonAt === -1) {
+    return url;
+  }
+
+  const kullaniciBolumu = url.slice(0, sonAt + 1);
+  const sunucuBolumu = url.slice(sonAt + 1);
+
+  return kullaniciBolumu + sunucuBolumu.replace(/:6543(?=\/|\?|$)/, ":5432");
 }

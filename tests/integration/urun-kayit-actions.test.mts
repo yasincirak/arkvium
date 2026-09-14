@@ -69,7 +69,7 @@ async function oturumAc(kullanici: {
 }
 
 async function yoneticiOturumuAc() {
-  await yoneticiOturumuKur({ prisma, cerezAyarla });
+  return yoneticiOturumuKur({ prisma, cerezAyarla });
 }
 
 async function urunOlustur(kullaniciId: string | null) {
@@ -135,8 +135,19 @@ describe("createRecord yetki kontrolü", () => {
     assert.equal(kayitlar[0].assetName, "Yeni Eşya");
   });
 
-  test("yönetici oturumunda kayıt sahipsiz oluşur", async () => {
-    await yoneticiOturumuAc();
+  test("yönetici oturumunda kayıt yöneticiye bağlanır", async () => {
+    /*
+      AYRI YÖNETİCİ ÇEREZİ KALDIRILDI.
+
+      Eskiden yönetici ayrı bir çerezle tanınırdı; `getUserSession()` o
+      oturumda null döndüğü için kayıt SAHİPSİZ oluşuyordu. Artık yetkinin
+      tek kaynağı kullanıcı hesabı ve `User.role` — yönetici de bir
+      kullanıcıdır, açtığı kayıt kendisine bağlanır.
+
+      Sahipsiz kayıt yalnızca eski (legacy) verilerde bulunur; oturumlu
+      hiçbir akış artık sahipsiz kayıt üretmez.
+    */
+    const yonetici = await yoneticiOturumuAc();
 
     await createRecord(YENI_KAYIT);
 
@@ -145,7 +156,7 @@ describe("createRecord yetki kontrolü", () => {
     });
 
     assert.equal(kayitlar.length, 1);
-    assert.equal(kayitlar[0].userId, null);
+    assert.equal(kayitlar[0].userId, yonetici.userId);
   });
 
   test("geçersiz imzalı çerez oturum sayılmaz", async () => {

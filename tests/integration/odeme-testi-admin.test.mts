@@ -7,6 +7,7 @@ import {
   testVeritabaniIstemcisi,
   veritabaniniTemizle,
   yoneticiOturumuKur,
+  stokDoldur,
 } from "../helpers/test-ortami.mts";
 import { cerezAyarla, cerezleriTemizle } from "../helpers/next-taklit.mjs";
 
@@ -23,6 +24,10 @@ const testVeritabani = testVeritabaniAdresi();
 
 process.env.DATABASE_URL = testVeritabani;
 process.env.DIRECT_URL = testVeritabani;
+// Yönetici oturumu gerçek imzalı token kullanır; anahtar olmadan
+// `createUserSessionToken` bilerek hata fırlatır.
+process.env.USER_SESSION_SECRET =
+  "test-kullanici-anahtari-" + "u".repeat(32);
 
 const { prisma } = await import("../../src/lib/prisma.ts");
 const { SIPARIS_URUNLERI, KARGO_UCRETI_KURUS } = await import(
@@ -56,17 +61,12 @@ beforeEach(async () => {
   await veritabaniniTemizle(db);
   cerezleriTemizle();
 
-  for (let i = 0; i < 10; i += 1) {
-    const uretilen = etiketUret();
-
-    await prisma.tag.create({
-      data: {
-        code: uretilen.code,
-        publicToken: uretilen.publicToken,
-        activationCodeHash: uretilen.activationCodeHash,
-      },
-    });
-  }
+  await stokDoldur({
+    prisma,
+    etiketUret,
+    urunKodlari: SIPARIS_URUNLERI.map((u) => u.kod),
+    urunBasinaAdet: 10,
+  });
 });
 
 async function yoneticiOturumuAc() {

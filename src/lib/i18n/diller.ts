@@ -68,10 +68,22 @@ export function tarayiciDili(acceptLanguage: string | null): Dil {
       return "tr";
     }
 
-    // Türkçe dışındaki her dil İngilizceye yönlendirilir.
-    if (tercih.kok) {
-      return "en";
+    /*
+      "*" JOKERİ DİL TERCİHİ DEĞİLDİR.
+
+      RFC 9110'a göre `Accept-Language: *` "herhangi bir dil olur"
+      anlamına gelir; İngilizce isteği DEĞİLDİR. Jokeri bir dil sanmak,
+      tercih belirtmeyen istemcilere (bazı botlar, HTTP kütüphaneleri,
+      Node'un kendi `fetch`i) varsayılan Türkçe yerine İngilizce
+      göstermeye yol açıyordu. Joker ve boş değerler atlanır; başka
+      tercih yoksa aşağıdaki varsayılana düşülür.
+    */
+    if (tercih.kok === "*" || !tercih.kok) {
+      continue;
     }
+
+    // Türkçe dışındaki her GERÇEK dil İngilizceye yönlendirilir.
+    return "en";
   }
 
   return VARSAYILAN_DIL;
