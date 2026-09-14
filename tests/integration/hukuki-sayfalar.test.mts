@@ -94,7 +94,6 @@ describe("taslak uyarısı ve eksik alanlar", () => {
       uydurulmak yerine açıkça işaretlenmelidir.
     */
     for (const belge of [
-      HUKUKI_BELGELER.kvkkAydinlatma,
       HUKUKI_BELGELER.onBilgilendirme,
       HUKUKI_BELGELER.mesafeliSatis,
       HUKUKI_BELGELER.teslimatIade,
@@ -106,6 +105,54 @@ describe("taslak uyarısı ve eksik alanlar", () => {
         `${belge.yol} doldurulacak alan işareti taşımalı`
       );
     }
+  });
+
+  test("KVKK metni kendi işaretlerini kullanır", async () => {
+    /*
+      KVKK Aydınlatma Metni iki ayrı işaret kullanır: işletme bilgisi
+      ("YASİN TARAFINDAN DOLDURULACAK") ile hukuki değerlendirme
+      gerektiren maddeler ("HUKUK DANIŞMANI ONAYI GEREKİYOR") aynı şey
+      değildir ve karıştırılmamalıdır.
+    */
+    const { icerik } = await sayfa(HUKUKI_BELGELER.kvkkAydinlatma.yol);
+
+    assert.ok(
+      icerik.includes("YASİN TARAFINDAN DOLDURULACAK"),
+      "işletme bilgisi işareti bulunmalı"
+    );
+
+    assert.ok(
+      icerik.includes("HUKUK DANIŞMANI ONAYI GEREKİYOR"),
+      "hukuki değerlendirme işareti bulunmalı"
+    );
+  });
+
+  test("KVKK metninde rakip marka veya yabancı iletişim bilgisi yoktur", async () => {
+    const { icerik } = await sayfa(HUKUKI_BELGELER.kvkkAydinlatma.yol);
+
+    for (const yasak of [
+      "Hayat Kartım",
+      "hayatkartim",
+      "Funda Akın",
+      "0850",
+      "Google Analytics",
+      "SGK",
+      "numara maskeleme",
+    ]) {
+      assert.ok(
+        !icerik.includes(yasak),
+        `metinde bulunmamalı: ${yasak}`
+      );
+    }
+  });
+
+  test("KVKK metni aydınlatma ile rızayı karıştırmaz", async () => {
+    const { icerik } = await sayfa(HUKUKI_BELGELER.kvkkAydinlatma.yol);
+
+    assert.ok(
+      icerik.includes("onay veya rıza belgesi"),
+      "belgenin rıza metni olmadığı açıkça yazılmalı"
+    );
   });
 });
 

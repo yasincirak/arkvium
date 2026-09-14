@@ -38,7 +38,8 @@ export const HUKUKI_BELGELER = {
   kvkkAydinlatma: {
     yol: "/kvkk-aydinlatma",
     baslik: "KVKK Aydınlatma Metni",
-    surum: "1.0",
+    // 2.0: metin koddaki gerçek veri akışlarına göre yeniden yazıldı.
+    surum: "2.0",
     onayBelgeKodu: "kvkk_aydinlatma",
     siparisOnayinaDahil: true,
   },

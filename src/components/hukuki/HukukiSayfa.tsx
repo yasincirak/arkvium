@@ -27,6 +27,37 @@ export function Doldurulacak({ not }: { not?: string }) {
   );
 }
 
+/**
+ * İşletme sahibinin dolduracağı alan işareti.
+ *
+ * `Doldurulacak` ile aynı işi görür ama alanın KİMDEN beklendiğini de
+ * söyler. Yalnızca KVKK Aydınlatma Metni kullanır; diğer belgeler
+ * mevcut `Doldurulacak` işaretini kullanmaya devam eder.
+ */
+export function YasinDoldurur({ alan }: { alan: string }) {
+  return (
+    <mark className="rounded bg-amber-100 px-1.5 py-0.5 font-mono text-xs font-semibold text-amber-900">
+      [YASİN TARAFINDAN DOLDURULACAK: {alan}]
+    </mark>
+  );
+}
+
+/**
+ * Hukuki değerlendirme gerektiren madde işareti.
+ *
+ * Hukuki sebep, saklama süresi ve yurt dışına aktarım gibi konular
+ * koddan doğrulanamaz ve TAHMİN EDİLMEZ; bir hukuk danışmanının karar
+ * vermesi gerekir.
+ */
+export function HukukOnayi({ konu }: { konu?: string }) {
+  return (
+    <mark className="rounded bg-sky-100 px-1.5 py-0.5 font-mono text-xs font-semibold text-sky-900">
+      [HUKUK DANIŞMANI ONAYI GEREKİYOR]
+      {konu ? ` — ${konu}` : ""}
+    </mark>
+  );
+}
+
 export function Bolum({
   baslik,
   children,
@@ -58,9 +89,16 @@ export function Liste({ maddeler }: { maddeler: React.ReactNode[] }) {
 export default function HukukiSayfa({
   belge,
   children,
+  isaretAciklamasi,
 }: {
   belge: HukukiBelge;
   children: React.ReactNode;
+  /**
+   * Taslak uyarısındaki işaret açıklaması. Verilmezse mevcut
+   * `[YAYIN ÖNCESİ DOLDURULACAK]` metni kullanılır; böylece diğer
+   * belgelerin çıktısı değişmez.
+   */
+  isaretAciklamasi?: React.ReactNode;
 }) {
   const digerBelgeler = HUKUKI_BELGE_LISTESI.filter(
     (diger) => diger.yol !== belge.yol
@@ -92,9 +130,14 @@ export default function HukukiSayfa({
           <p className="mt-2 text-sm leading-relaxed text-amber-900">
             Bu metin, ARKVIUM uygulamasının kaynak kodundan doğrulanabilen
             veri akışlarına dayanarak hazırlanmıştır. Hukuki uygunluk
-            iddiası taşımaz ve hukuki görüş yerine geçmez. İçindeki{" "}
-            <Doldurulacak /> işaretli alanlar doldurulmadan ve bir hukuk
-            danışmanı tarafından incelenmeden yayımlanmamalıdır.
+            iddiası taşımaz ve hukuki görüş yerine geçmez.{" "}
+            {isaretAciklamasi ?? (
+              <>
+                İçindeki <Doldurulacak /> işaretli alanlar doldurulmadan ve
+                bir hukuk danışmanı tarafından incelenmeden
+                yayımlanmamalıdır.
+              </>
+            )}
           </p>
         </div>
 
