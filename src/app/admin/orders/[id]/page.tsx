@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import SiparisDurumFormu from "@/components/admin/SiparisDurumFormu";
+import { kargoFirmaAdi } from "@/lib/kargo";
 import { prisma } from "@/lib/prisma";
 import { fiyatBicimle } from "@/lib/siparis";
 import { durumEtiketi, durumSinifi } from "@/lib/siparis-durumlari";
@@ -48,6 +49,9 @@ export default async function AdminOrderDetailPage({
       createdAt: true,
       paidAt: true,
       shippedAt: true,
+      kargoFirmasi: true,
+      kargoTakipNo: true,
+      kargoTakipUrl: true,
       items: {
         select: {
           id: true,
@@ -249,6 +253,48 @@ export default async function AdminOrderDetailPage({
             <p className="mt-1 text-white">{tarihBicimle(siparis.shippedAt)}</p>
           </div>
         </div>
+
+        {/*
+          Kaydedilmiş kargo bilgisi. Yönetici müşteriye ne gittiğini
+          buradan görür. Bağlantı yalnızca https ise tıklanabilir
+          gösterilir: eski bir satırda güvensiz bir değer bulunsa bile
+          panelde bağlantı olarak açılmaz.
+        */}
+        {siparis.kargoTakipNo && (
+          <div className="mt-6 grid gap-5 border-t border-white/10 pt-5 text-sm sm:grid-cols-3">
+            <div>
+              <p className="text-white/40">Kargo firması</p>
+              <p className="mt-1 text-white">
+                {kargoFirmaAdi(siparis.kargoFirmasi) ?? "—"}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-white/40">Takip numarası</p>
+              <p className="mt-1 font-mono text-white">
+                {siparis.kargoTakipNo}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-white/40">Takip bağlantısı</p>
+              <p className="mt-1 text-white">
+                {siparis.kargoTakipUrl?.startsWith("https://") ? (
+                  <a
+                    href={siparis.kargoTakipUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-indigo-300 underline"
+                  >
+                    Aç
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="mt-6 border-t border-white/10 pt-5">
           <SiparisDurumFormu orderId={siparis.id} durum={siparis.status} />
