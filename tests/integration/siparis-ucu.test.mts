@@ -25,7 +25,7 @@ process.env.DIRECT_URL = testVeritabani;
 process.env.RATE_LIMIT_SECRET = "test-hiz-siniri-" + "r".repeat(32);
 
 const { prisma } = await import("../../src/lib/prisma.ts");
-const { SIPARIS_ONAY_BELGELERI } = await import(
+const { SIPARIS_ONAY_BELGELERI, HUKUKI_BELGELER_YAYINDA } = await import(
   "../../src/lib/hukuki-belgeler.ts"
 );
 const { SIPARIS_URUNLERI, KARGO_UCRETI_KURUS } = await import(
@@ -194,11 +194,11 @@ describe("herkese açık sipariş ucu", () => {
     assert.equal(await prisma.order.count(), 0);
   });
 
-  test("OrderConsent kaydı YAZILIR", async () => {
+  test("OrderConsent kaydı yayınlanmış belge sayısı kadar yazılır", async () => {
     /*
-      Bu test eskiden tersini doğruluyordu: hukuki metinler yokken sahte
-      onay kaydı üretilmesin diye OrderConsent bilerek yazılmıyordu.
-      Metinler ve sürümleri artık mevcut, onay da kaydediliyor.
+      Taslak kilidi kapalıyken yayınlanmış belge yoktur ve SAHTE ONAY
+      KAYDI ÜRETİLMEZ: sayı sıfırdır. Kilit açıldığında aynı test
+      yayınlanmış belge sayısını doğrular.
     */
     const { govde } = await istek({ urunKodu: STICKER.kod, ...TESLIMAT });
 
@@ -224,7 +224,17 @@ describe("herkese açık sipariş ucu", () => {
 });
 
 describe("hukuki onay kapısı", () => {
-  test("onay gönderilmezse sipariş OLUŞMAZ", async () => {
+  /*
+    Bu blok YALNIZCA taslak kilidi AÇIKKEN anlamlıdır: onaylatılacak
+    yayınlanmış belge yoksa "eksik onay" diye bir durum oluşmaz.
+  */
+  test("onay gönderilmezse sipariş OLUŞMAZ", async (t) => {
+    if (!HUKUKI_BELGELER_YAYINDA) {
+      t.skip("taslak kilidi kapalı — onay kapısı devre dışı");
+
+      return;
+    }
+
     const { yanit, govde } = await istek({
       urunKodu: STICKER.kod,
       ...TESLIMAT,
@@ -243,7 +253,13 @@ describe("hukuki onay kapısı", () => {
     assert.equal(await prisma.orderConsent.count(), 0);
   });
 
-  test("eksik onayda hata mesajı eksik belgeyi söyler", async () => {
+  test("eksik onayda hata mesajı eksik belgeyi söyler", async (t) => {
+    if (!HUKUKI_BELGELER_YAYINDA) {
+      t.skip("taslak kilidi kapalı — onay kapısı devre dışı");
+
+      return;
+    }
+
     const eksik = TUM_ONAYLAR.slice(1);
 
     const { yanit, govde } = await istek({
@@ -261,7 +277,13 @@ describe("hukuki onay kapısı", () => {
     assert.equal(await prisma.order.count(), 0);
   });
 
-  test("onay alanı hiç gönderilmezse sipariş oluşmaz", async () => {
+  test("onay alanı hiç gönderilmezse sipariş oluşmaz", async (t) => {
+    if (!HUKUKI_BELGELER_YAYINDA) {
+      t.skip("taslak kilidi kapalı — onay kapısı devre dışı");
+
+      return;
+    }
+
     const yanit = await siparisUcu(
       new Request("http://localhost/api/siparis", {
         method: "POST",
@@ -373,5 +395,66 @@ describe("OrderConsent kaydı", () => {
       0,
       "sipariş yoksa onay da olmamalı"
     );
+  });
+});
+
+describe("TASLAK KİLİDİ KAPALI — sipariş akışı korunur", () => {
+  test("onay gönderilmeden sipariş OLUŞUR", async (t) => {
+    /*
+      En kritik kural: hukuki metinler yayından kaldırıldı diye satış
+      durmamalıdır. Müşteri, açılamayan bir belgeyi onaylamak zorunda
+      bırakılmaz.
+    */
+    if (HUKUKI_BELGELER_YAYINDA) {
+      t.skip("kilit açık — onay zorunludur");
+
+      return;
+    }
+
+    const yanit = await siparisUcu(
+      new Request("http://localhost/api/siparis", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-forwarded-for": rastgeleIp(),
+        },
+        body: JSON.stringify({ urunKodu: STICKER.kod, ...TESLIMAT }),
+      })
+    );
+
+    assert.equal(yanit.status, 200, "sipariş oluşmalı");
+    assert.equal(await prisma.order.count(), 1);
+  });
+
+  test("SAHTE ONAY KAYDI yazılmaz", async (t) => {
+    if (HUKUKI_BELGELER_YAYINDA) {
+      t.skip("kilit açık");
+
+      return;
+    }
+
+    await istek({ urunKodu: STICKER.kod, ...TESLIMAT });
+
+    assert.equal(
+      await prisma.orderConsent.count(),
+      0,
+      "yayınlanmamış belgeye onay kaydı üretilmemeli"
+    );
+  });
+
+  test("UYDURMA onay kodu gönderilse bile kayda girmez", async (t) => {
+    if (HUKUKI_BELGELER_YAYINDA) {
+      t.skip("kilit açık");
+
+      return;
+    }
+
+    await istek({
+      urunKodu: STICKER.kod,
+      ...TESLIMAT,
+      onaylar: ["mesafeli_satis", "kvkk_aydinlatma", "uydurma_belge"],
+    });
+
+    assert.equal(await prisma.orderConsent.count(), 0);
   });
 });

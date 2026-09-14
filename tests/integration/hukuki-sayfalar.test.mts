@@ -10,7 +10,11 @@ import {
 /**
  * Hukuki sayfaların uçtan uca erişilebilirliği.
  *
- * Doğrulananlar:
+ * TASLAK KİLİDİ: `HUKUKI_BELGELER_YAYINDA` kapalıyken bu sayfalar
+ * YAYINDA DEĞİLDİR. Testler kilidin iki durumunu da kapsar; kilit
+ * açıldığında aynı dosya yayın davranışını doğrular.
+ *
+ * Kilit AÇIKKEN doğrulananlar:
  *  - Her belge adresi 200 döner (bağlantılar boşa düşmez).
  *  - Sayfalar taslak uyarısını ve doldurulacak alan işaretini taşır.
  *  - Belgeler birbirine ve çerez politikasına bağlanır.
@@ -27,6 +31,7 @@ process.env.DIRECT_URL = testVeritabani;
 
 const {
   HUKUKI_BELGELER,
+  HUKUKI_BELGELER_YAYINDA,
   HUKUKI_BELGE_LISTESI,
   SIPARIS_ONAY_BELGELERI,
   CEREZ_POLITIKASI_YOLU,
@@ -88,11 +93,17 @@ describe("taslak uyarısı ve eksik alanlar", () => {
     });
   }
 
-  test("satıcı bilgisi gerektiren sayfalar doldurulacak alan işaretler", async () => {
+  test("satıcı bilgisi gerektiren sayfalar doldurulacak alan işaretler", async (t) => {
     /*
       Satıcı unvanı, adresi ve vergi bilgisi koddan doğrulanamaz;
       uydurulmak yerine açıkça işaretlenmelidir.
     */
+    if (!HUKUKI_BELGELER_YAYINDA) {
+      t.skip("taslak kilidi kapalı — sayfalar yayında değil");
+
+      return;
+    }
+
     for (const belge of [
       HUKUKI_BELGELER.kvkkAydinlatma,
       HUKUKI_BELGELER.onBilgilendirme,
@@ -173,14 +184,111 @@ describe("sipariş onay alanı", () => {
     }
   });
 
-  test("onay kutusu zorunludur", async () => {
+  test("onay kutusu zorunludur", async (t) => {
+    if (!HUKUKI_BELGELER_YAYINDA) {
+      t.skip("taslak kilidi kapalı — onaya tabi yayınlanmış belge yok");
+
+      return;
+    }
+
     const urun = SIPARIS_URUNLERI[0];
 
     const { icerik } = await sayfa(`/siparis?urun=${urun.kod}`);
 
-    assert.ok(
-      icerik.includes("onaylıyorum"),
-      "onay metni görünmeli"
-    );
+    assert.ok(icerik.includes("onaylıyorum"), "onay metni görünmeli");
+  });
+});
+
+/**
+ * TASLAK KİLİDİ KAPALIYKEN beklenen davranış.
+ *
+ * Kilit açıldığında bu blok kendini atlar; silinmesi gerekmez.
+ */
+describe("TASLAK KİLİDİ KAPALI", () => {
+  const belgeler = Object.values(HUKUKI_BELGELER);
+
+  test("beş hukuki sayfa da 404 döner", async (t) => {
+    if (HUKUKI_BELGELER_YAYINDA) {
+      t.skip("kilit açık");
+
+      return;
+    }
+
+    for (const belge of belgeler) {
+      const { yanit } = await sayfa(belge.yol);
+
+      assert.equal(yanit.status, 404, `${belge.yol} yayında olmamalı`);
+    }
+  });
+
+  test("YER TUTUCULU METİN hiçbir sayfada görünmez", async (t) => {
+    if (HUKUKI_BELGELER_YAYINDA) {
+      t.skip("kilit açık");
+
+      return;
+    }
+
+    for (const belge of belgeler) {
+      const { icerik } = await sayfa(belge.yol);
+
+      assert.ok(
+        !icerik.includes(DOLDURULACAK),
+        `${belge.yol} taslak işareti sızdırmamalı`
+      );
+    }
+  });
+
+  test("çerez politikası ETKİLENMEZ ve açılır", async (t) => {
+    /*
+      Çerez politikasında yer tutucu yoktur ve çerez onayı bandı bu
+      sayfaya bağlanır; kilit onu kapatmamalıdır.
+    */
+    if (HUKUKI_BELGELER_YAYINDA) {
+      t.skip("kilit açık");
+
+      return;
+    }
+
+    const { yanit } = await sayfa(CEREZ_POLITIKASI_YOLU);
+
+    assert.equal(yanit.status, 200);
+  });
+
+  test("footer'larda yayından kaldırılmış belgeye bağlantı KALMAZ", async (t) => {
+    if (HUKUKI_BELGELER_YAYINDA) {
+      t.skip("kilit açık");
+
+      return;
+    }
+
+    for (const yol of ["/", "/urun/arac-stickeri"]) {
+      const { icerik } = await sayfa(yol);
+
+      for (const belge of belgeler) {
+        assert.ok(
+          !icerik.includes(`href="${belge.yol}"`),
+          `${yol} sayfasında ${belge.yol} bağlantısı kalmamalı`
+        );
+      }
+    }
+  });
+
+  test("SİPARİŞ AKIŞI ÇALIŞIR: sayfa açılır, onay istenmez", async (t) => {
+    /*
+      En kritik kural: hukuki metinler yayından kaldırıldı diye sipariş
+      akışı kırılmamalıdır. Sayfa açılmalı ve müşteri açılamayan bir
+      belgeyi onaylamak zorunda bırakılmamalıdır.
+    */
+    if (HUKUKI_BELGELER_YAYINDA) {
+      t.skip("kilit açık");
+
+      return;
+    }
+
+    const urun = SIPARIS_URUNLERI[0];
+    const { yanit, icerik } = await sayfa(`/siparis?urun=${urun.kod}`);
+
+    assert.equal(yanit.status, 200, "sipariş sayfası açılmalı");
+    assert.ok(!icerik.includes("onaylıyorum"), "onay kutusu görünmemeli");
   });
 });

@@ -14,6 +14,7 @@ import { resolve } from "node:path";
 
 const {
   HUKUKI_BELGELER,
+  HUKUKI_BELGELER_YAYINDA,
   HUKUKI_BELGE_LISTESI,
   SIPARIS_ONAY_BELGELERI,
   CEREZ_POLITIKASI_YOLU,
@@ -27,13 +28,20 @@ function sayfaDosyasi(yol: string): string {
   return resolve("src/app", yol.replace(/^\//, ""), "page.tsx");
 }
 
+/*
+  Kayıt defteri, TASLAK KİLİDİNDEN BAĞIMSIZ olarak beş belgeyi tanımlar.
+  Kilit yalnızca bunların YAYINDA olup olmadığını belirler; tanımları
+  silmez. Bu yüzden tutarlılık testleri ham kayıt üzerinden yürür.
+*/
+const TUM_BELGELER = Object.values(HUKUKI_BELGELER);
+
 describe("kayıt defteri tutarlılığı", () => {
   test("beş hukuki belge tanımlıdır", () => {
-    assert.equal(HUKUKI_BELGE_LISTESI.length, 5);
+    assert.equal(TUM_BELGELER.length, 5);
   });
 
   test("her belgenin adresi kök yoldan başlar", () => {
-    for (const belge of HUKUKI_BELGE_LISTESI) {
+    for (const belge of TUM_BELGELER) {
       assert.ok(
         belge.yol.startsWith("/"),
         `${belge.baslik} adresi "/" ile başlamalı`
@@ -42,8 +50,8 @@ describe("kayıt defteri tutarlılığı", () => {
   });
 
   test("adresler ve başlıklar benzersizdir", () => {
-    const yollar = HUKUKI_BELGE_LISTESI.map((b) => b.yol);
-    const basliklar = HUKUKI_BELGE_LISTESI.map((b) => b.baslik);
+    const yollar = TUM_BELGELER.map((b) => b.yol);
+    const basliklar = TUM_BELGELER.map((b) => b.baslik);
 
     assert.equal(new Set(yollar).size, yollar.length, "adresler benzersiz");
     assert.equal(
@@ -54,7 +62,7 @@ describe("kayıt defteri tutarlılığı", () => {
   });
 
   test("her belgenin sürümü tanımlıdır", () => {
-    for (const belge of HUKUKI_BELGE_LISTESI) {
+    for (const belge of TUM_BELGELER) {
       assert.match(
         belge.surum,
         /^\d+\.\d+$/,
@@ -68,15 +76,13 @@ describe("kayıt defteri tutarlılığı", () => {
       Çerez politikası sipariş onayına konu değildir; ayrı sayfadır ve
       çerez bildiriminden erişilir.
     */
-    assert.ok(
-      !HUKUKI_BELGE_LISTESI.some((b) => b.yol === CEREZ_POLITIKASI_YOLU)
-    );
+    assert.ok(!TUM_BELGELER.some((b) => b.yol === CEREZ_POLITIKASI_YOLU));
   });
 });
 
 describe("sayfalar gerçekten var (bağlantılar boşa düşmez)", () => {
   test("her hukuki belge için bir sayfa dosyası bulunur", () => {
-    for (const belge of HUKUKI_BELGE_LISTESI) {
+    for (const belge of TUM_BELGELER) {
       assert.ok(
         existsSync(sayfaDosyasi(belge.yol)),
         `${belge.yol} için sayfa dosyası yok`
@@ -133,10 +139,11 @@ describe("sipariş onayı belgeleri", () => {
     assert.equal(HUKUKI_BELGELER.gizlilikPolitikasi.onayBelgeKodu, null);
   });
 
-  test("ön bilgilendirme dâhil dört belge onaya tabidir", () => {
-    assert.equal(SIPARIS_ONAY_BELGELERI.length, 4);
-
-    const kodlar = SIPARIS_ONAY_BELGELERI.map((b) => b.onayBelgeKodu).sort();
+  test("kayıt defterinde ön bilgilendirme dâhil dört belge onaya tabidir", () => {
+    // Kilitten bağımsız: tanımın kendisi doğrulanır.
+    const kodlar = TUM_BELGELER.filter((b) => b.siparisOnayinaDahil)
+      .map((b) => b.onayBelgeKodu)
+      .sort();
 
     assert.deepEqual(kodlar, [
       "iade_kosullari",
@@ -144,6 +151,52 @@ describe("sipariş onayı belgeleri", () => {
       "mesafeli_satis",
       "on_bilgilendirme",
     ]);
+  });
+});
+
+describe("TASLAK KİLİDİ", () => {
+  /*
+    Metinlerde `[YAYIN ÖNCESİ DOLDURULACAK]` işaretli alanlar durduğu
+    sürece kilit KAPALI olmalıdır. Kilit açıldığında bu testler
+    kendiliğinden karşı tarafı doğrular.
+  */
+  test("kilit kapalıyken yayınlanmış belge YOKTUR", () => {
+    if (HUKUKI_BELGELER_YAYINDA) {
+      assert.equal(HUKUKI_BELGE_LISTESI.length, 5);
+      assert.equal(SIPARIS_ONAY_BELGELERI.length, 4);
+
+      return;
+    }
+
+    assert.deepEqual(HUKUKI_BELGE_LISTESI, []);
+    assert.deepEqual(SIPARIS_ONAY_BELGELERI, []);
+  });
+
+  test("kilit kapalıyken sipariş onay İSTEMEZ", () => {
+    /*
+      Onaylatılacak yayınlanmış metin yoksa sipariş akışı onay
+      beklememelidir; aksi hâlde müşteri hiç açılamayan bir belgeyi
+      onaylamak zorunda kalır ve sipariş veremez.
+    */
+    if (HUKUKI_BELGELER_YAYINDA) {
+      assert.equal(siparisOnaylariTamMi([]), false);
+
+      return;
+    }
+
+    assert.equal(siparisOnaylariTamMi([]), true);
+    assert.deepEqual(siparisOnaylariniCoz([]).onaylar, []);
+    assert.deepEqual(siparisOnaylariniCoz([]).eksikBaslikar, []);
+  });
+
+  test("kilit kapalıyken UYDURMA kod da onay kaydı üretmez", () => {
+    if (HUKUKI_BELGELER_YAYINDA) {
+      return;
+    }
+
+    const cozum = siparisOnaylariniCoz(["mesafeli_satis", "uydurma"]);
+
+    assert.deepEqual(cozum.onaylar, [], "kapalıyken hiçbir onay yazılmamalı");
   });
 });
 
@@ -182,6 +235,13 @@ describe("sipariş onaylarının çözümü", () => {
   });
 
   test("eksik onay başlıkla bildirilir", () => {
+    // Kilit kapalıyken onaya tabi belge yoktur; "eksik" kavramı oluşmaz.
+    if (SIPARIS_ONAY_BELGELERI.length === 0) {
+      assert.equal(siparisOnaylariTamMi([]), true);
+
+      return;
+    }
+
     const eksikli = tumKodlar.slice(1);
 
     const cozum = siparisOnaylariniCoz(eksikli);

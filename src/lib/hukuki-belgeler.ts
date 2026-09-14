@@ -73,10 +73,48 @@ export const HUKUKI_BELGELER = {
   },
 } as const satisfies Record<string, HukukiBelge>;
 
-export const HUKUKI_BELGE_LISTESI: HukukiBelge[] =
-  Object.values(HUKUKI_BELGELER);
+/**
+ * ────────────────────────────────────────────────────────────
+ * TASLAK METİN KİLİDİ — GEÇİCİ YAYIN ENGELİ
+ *
+ * `false` olduğu sürece hukuki belge sayfaları YAYINDA DEĞİLDİR:
+ * sayfalar 404 döner, footer bağlantıları görünmez ve sipariş
+ * formunda hukuki onay kutusu istenmez.
+ *
+ * NEDEN: bu metinlerde satıcı unvanı, adres, vergi bilgisi ve yasal
+ * saklama süreleri gibi KODDAN DOĞRULANAMAYAN alanlar
+ * `[YAYIN ÖNCESİ DOLDURULACAK]` işaretiyle duruyor. Yarım bir mesafeli
+ * satış sözleşmesini müşteriye onaylatmak, hiç göstermemekten daha
+ * kötüdür.
+ *
+ * Ortam değişkeni DEĞİL, kod sabiti olmasının sebebi: bu değer hem
+ * sunucu hem istemci derlemesinde aynı olmalı ve yanlışlıkla eksik
+ * bir ortam değişkeni yüzünden AÇIK duruma düşmemeli.
+ *
+ * AÇMAK İÇİN: tüm yer tutucular doldurulacak, hukuk danışmanı onayı
+ * alınacak, belge sürümleri artırılacak; ancak ondan sonra `true`.
+ * ────────────────────────────────────────────────────────────
+ */
+export const HUKUKI_BELGELER_YAYINDA = false;
 
-/** Sipariş formunda onaylanması gereken belgeler. */
+/**
+ * Yayındaki hukuki belgeler.
+ *
+ * Kilit kapalıyken BOŞTUR; footer, çerez politikası ve belgeler arası
+ * bağlantı listeleri bu diziden üretildiği için hepsi kendiliğinden
+ * gizlenir.
+ */
+export const HUKUKI_BELGE_LISTESI: HukukiBelge[] = HUKUKI_BELGELER_YAYINDA
+  ? Object.values(HUKUKI_BELGELER)
+  : [];
+
+/**
+ * Sipariş formunda onaylanması gereken belgeler.
+ *
+ * Taslak kilidi kapalıyken BOŞTUR: onaylatılacak yayınlanmış bir metin
+ * yoktur, dolayısıyla sipariş akışı onay istemez ve `OrderConsent`
+ * satırı yazılmaz.
+ */
 export const SIPARIS_ONAY_BELGELERI: HukukiBelge[] =
   HUKUKI_BELGE_LISTESI.filter((belge) => belge.siparisOnayinaDahil);
 

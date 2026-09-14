@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import SayfaUstBari from "@/components/SayfaUstBari";
 import {
   CEREZ_POLITIKASI_YOLU,
   DOLDURULACAK,
+  HUKUKI_BELGELER_YAYINDA,
   HUKUKI_BELGE_LISTESI,
   type HukukiBelge,
 } from "@/lib/hukuki-belgeler";
@@ -62,6 +64,18 @@ export default function HukukiSayfa({
   belge: HukukiBelge;
   children: React.ReactNode;
 }) {
+  /*
+    TASLAK KİLİDİ — tek kapı.
+
+    Beş hukuki sayfanın tamamı bu kabuğu kullanır; kilit burada
+    denetlendiği için sayfalar tek yerden yayından kaldırılır.
+    Kapalıyken sayfa YOK gibi davranır: içerik hiç render edilmez,
+    yer tutuculu taslak metin ziyaretçiye ulaşmaz.
+  */
+  if (!HUKUKI_BELGELER_YAYINDA) {
+    notFound();
+  }
+
   const digerBelgeler = HUKUKI_BELGE_LISTESI.filter(
     (diger) => diger.yol !== belge.yol
   );

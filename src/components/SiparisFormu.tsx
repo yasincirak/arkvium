@@ -40,7 +40,16 @@ export default function SiparisFormu({
   // Sipariş gövdesinden AYRI: kimlik numarası siparişe yazılmaz, yalnızca
   // ödeme adımında sağlayıcıya iletilir.
   const [kimlikNo, setKimlikNo] = useState("");
-  // Hukuki belgelerin onayı. İşaretlenmeden sipariş gönderilemez.
+  /*
+    Hukuki belgelerin onayı.
+
+    Onay YALNIZCA yayınlanmış belge varsa istenir. Taslak kilidi
+    kapalıyken (bkz. src/lib/hukuki-belgeler.ts) liste boştur;
+    onaylatılacak metin olmadığı için kutu gösterilmez ve sipariş
+    engellenmez. Sunucu da aynı kaynaktan karar verir, bu yüzden
+    istemci ile sunucu asla ayrışmaz.
+  */
+  const onayGerekli = SIPARIS_ONAY_BELGELERI.length > 0;
   const [onayVerildi, setOnayVerildi] = useState(false);
   const [calisiyor, setCalisiyor] = useState(false);
   const [durum, setDurum] = useState("");
@@ -251,39 +260,41 @@ export default function SiparisFormu({
           Belge adresleri tek kaynaktan (src/lib/hukuki-belgeler.ts)
           gelir; burada elle yazılmaz.
 
-          NOT: Onayın veritabanına yazılması (`OrderConsent`) henüz
-          devreye alınmamıştır; yayın öncesi tamamlanacak adımdır.
+          Taslak kilidi kapalıyken bu blok HİÇ RENDER EDİLMEZ; onaya
+          konu yayınlanmış belge yoktur.
         */}
-        <label className="mt-6 flex items-start gap-3 text-sm text-slate-600">
-          <input
-            type="checkbox"
-            required
-            checked={onayVerildi}
-            onChange={(e) => setOnayVerildi(e.target.checked)}
-            className="mt-0.5 h-5 w-5 shrink-0 accent-emerald-600"
-          />
+        {onayGerekli && (
+          <label className="mt-6 flex items-start gap-3 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              required
+              checked={onayVerildi}
+              onChange={(e) => setOnayVerildi(e.target.checked)}
+              className="mt-0.5 h-5 w-5 shrink-0 accent-emerald-600"
+            />
 
-          <span>
-            {SIPARIS_ONAY_BELGELERI.map((belge, sira) => (
-              <span key={belge.yol}>
-                {sira > 0 ? ", " : ""}
-                <a
-                  href={belge.yol}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-indigo-600 underline underline-offset-2 hover:text-indigo-700"
-                >
-                  {belge.baslik}
-                </a>
-              </span>
-            ))}
-            {"'ni okudum ve onaylıyorum."}
-          </span>
-        </label>
+            <span>
+              {SIPARIS_ONAY_BELGELERI.map((belge, sira) => (
+                <span key={belge.yol}>
+                  {sira > 0 ? ", " : ""}
+                  <a
+                    href={belge.yol}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-indigo-600 underline underline-offset-2 hover:text-indigo-700"
+                  >
+                    {belge.baslik}
+                  </a>
+                </span>
+              ))}
+              {"'ni okudum ve onaylıyorum."}
+            </span>
+          </label>
+        )}
 
         <button
           type="submit"
-          disabled={calisiyor || !onayVerildi}
+          disabled={calisiyor || (onayGerekli && !onayVerildi)}
           className="mt-6 w-full rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {calisiyor ? durum || "İşleniyor..." : ceviri.siparis.odemeyeGec}
