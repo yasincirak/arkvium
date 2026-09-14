@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { SIPARIS_URUNLERI } from "./siparis";
 import type { Aralik } from "./analitik-aralik";
 import type { OrderStatus } from "@/generated/prisma/enums";
+import { tekilKimlik } from "./analitik-dogrulama";
 
 /**
  * Analitik rapor sorguları (yalnızca okur).
@@ -26,11 +27,16 @@ export type UrunSatiri = {
   ad: string;
   goruntuleme: number;
   sepeteEkleme: number;
+  sepettenCikarma: number;
   odemeBaslatma: number;
   satisAdedi: number;
   gelirKurus: number;
   /** Satış / görüntüleme oranı (yüzde, iki ondalık). */
   donusumYuzde: number | null;
+  /** Görüntüleyenlerin yüzde kaçı sepete ekledi. */
+  goruntulemedenSepeteYuzde: number | null;
+  /** Sepete ekleyenlerin yüzde kaçı satın aldı. */
+  sepettenSatisaYuzde: number | null;
 };
 
 /**
@@ -56,9 +62,12 @@ export type Huni = {
 
 export type AnalitikRaporu = {
   tekilZiyaretci: number;
+  /** Toplam ziyaret (oturum). Aynı kişinin her gelişi ayrı sayılır. */
+  toplamZiyaret: number;
   sayfaGoruntuleme: number;
   urunGoruntuleme: number;
   sepeteEkleme: number;
+  sepettenCikarma: number;
   odemeBaslatma: number;
   basarisizOdeme: number;
   satisAdedi: number;
@@ -84,7 +93,13 @@ export function urunFiltresiCoz(deger: unknown): string | null {
   return SIPARIS_URUNLERI.some((urun) => urun.kod === kod) ? kod : null;
 }
 
-/** Tekil ziyaretçi sayısı: aynı ziyaretçinin kaç olayı olduğu önemsizdir. */
+/**
+ * Tekil KİŞİ sayısı.
+ *
+ * Kimlik `userId` VEYA `visitorId` olabilir: giriş yapmış kullanıcıda
+ * olay yalnızca hesapla ilişkilendirilir (bkz. olayKimligiCoz). İkisi
+ * `tekilKimlik` ile tek havuzda, çakışmadan sayılır.
+ */
 async function tekilZiyaretciSayisi(
   aralik: Aralik,
   turler: Array<
@@ -93,11 +108,39 @@ async function tekilZiyaretciSayisi(
   urunKodu: string | null
 ): Promise<number> {
   const gruplar = await prisma.analyticsEvent.groupBy({
-    by: ["visitorId"],
+    by: ["visitorId", "userId"],
     where: {
       type: { in: turler },
       createdAt: { gte: aralik.baslangic, lt: aralik.bitis },
-      visitorId: { not: null },
+      OR: [{ visitorId: { not: null } }, { userId: { not: null } }],
+      ...(urunKodu ? { productKod: urunKodu } : {}),
+    },
+  });
+
+  const kimlikler = new Set(
+    gruplar
+      .map((grup) => tekilKimlik(grup))
+      .filter((kimlik): kimlik is string => kimlik !== null)
+  );
+
+  return kimlikler.size;
+}
+
+/**
+ * Toplam ZİYARET sayısı.
+ *
+ * Tekil ziyaretçiden farkı: aynı kişi farklı zamanlarda geldiğinde her
+ * geliş ayrı sayılır (bkz. ZIYARET_COOKIE — kayan 30 dakikalık pencere).
+ */
+async function toplamZiyaretSayisi(
+  aralik: Aralik,
+  urunKodu: string | null
+): Promise<number> {
+  const gruplar = await prisma.analyticsEvent.groupBy({
+    by: ["sessionId"],
+    where: {
+      createdAt: { gte: aralik.baslangic, lt: aralik.bitis },
+      sessionId: { not: null },
       ...(urunKodu ? { productKod: urunKodu } : {}),
     },
   });
@@ -130,7 +173,7 @@ async function olaySayisi(
 /** Ürün kodu bazında olay sayıları. */
 async function urunBazliOlay(
   aralik: Aralik,
-  tur: "product_view" | "cart_add" | "checkout_started",
+  tur: "product_view" | "cart_add" | "cart_remove" | "checkout_started",
   urunKodu: string | null
 ): Promise<Record<string, number>> {
   const gruplar = await prisma.analyticsEvent.groupBy({
@@ -165,41 +208,41 @@ async function sepetiBirakanSayisi(
   aralik: Aralik,
   urunKodu: string | null
 ): Promise<number> {
-  const sepetGruplari = await prisma.analyticsEvent.groupBy({
-    by: ["visitorId"],
-    where: {
-      type: "cart_add",
-      createdAt: { gte: aralik.baslangic, lt: aralik.bitis },
-      visitorId: { not: null },
-      ...(urunKodu ? { productKod: urunKodu } : {}),
-    },
-  });
+  const kimlikKumesi = async (
+    tur: "cart_add" | "purchase"
+  ): Promise<Set<string>> => {
+    const gruplar = await prisma.analyticsEvent.groupBy({
+      by: ["visitorId", "userId"],
+      where: {
+        type: tur,
+        createdAt: { gte: aralik.baslangic, lt: aralik.bitis },
+        OR: [{ visitorId: { not: null } }, { userId: { not: null } }],
+        ...(urunKodu ? { productKod: urunKodu } : {}),
+      },
+    });
 
-  const sepetekleyenler = sepetGruplari
-    .map((grup) => grup.visitorId)
-    .filter((kimlik): kimlik is string => Boolean(kimlik));
+    return new Set(
+      gruplar
+        .map((grup) => tekilKimlik(grup))
+        .filter((kimlik): kimlik is string => kimlik !== null)
+    );
+  };
 
-  if (sepetekleyenler.length === 0) {
+  const sepeteEkleyenler = await kimlikKumesi("cart_add");
+
+  if (sepeteEkleyenler.size === 0) {
     return 0;
   }
 
-  const satinAlanGruplari = await prisma.analyticsEvent.groupBy({
-    by: ["visitorId"],
-    where: {
-      type: "purchase",
-      createdAt: { gte: aralik.baslangic, lt: aralik.bitis },
-      visitorId: { in: sepetekleyenler },
-      ...(urunKodu ? { productKod: urunKodu } : {}),
-    },
-  });
+  const satinAlanlar = await kimlikKumesi("purchase");
 
-  const satinAlanlar = new Set(
-    satinAlanGruplari
-      .map((grup) => grup.visitorId)
-      .filter((kimlik): kimlik is string => Boolean(kimlik))
-  );
-
-  return sepetekleyenler.filter((kimlik) => !satinAlanlar.has(kimlik)).length;
+  /*
+    `Array.from` kullanılıyor: tsconfig hedefi Set üzerinde doğrudan
+    `for...of` yinelemesine izin vermiyor (downlevelIteration kapalı).
+  */
+  return Array.from(sepeteEkleyenler).filter(
+    (kimlik) => !satinAlanlar.has(kimlik)
+  ).length;
 }
 
 /** Satış adedi ve gelir — sipariş tablosundan (mali gerçek kaynak). */
@@ -285,14 +328,17 @@ export async function analitikRaporu(
 ): Promise<AnalitikRaporu> {
   const [
     tekilZiyaretci,
+    toplamZiyaret,
     sayfaGoruntuleme,
     urunGoruntuleme,
     sepeteEkleme,
+    sepettenCikarma,
     odemeBaslatma,
     basarisizOdeme,
     satis,
     goruntulemeler,
     sepetEklemeleri,
+    sepetCikarmalari,
     odemeBaslatmalari,
     satislar,
     sepetiBirakan,
@@ -306,14 +352,17 @@ export async function analitikRaporu(
       ["page_view", "product_view", "cart_add", "checkout_started", "purchase"],
       urunKodu
     ),
+    toplamZiyaretSayisi(aralik, urunKodu),
     olaySayisi(aralik, "page_view", urunKodu),
     olaySayisi(aralik, "product_view", urunKodu),
     olaySayisi(aralik, "cart_add", urunKodu),
+    olaySayisi(aralik, "cart_remove", urunKodu),
     olaySayisi(aralik, "checkout_started", urunKodu),
     olaySayisi(aralik, "payment_failed", urunKodu),
     satisOzeti(aralik, urunKodu),
     urunBazliOlay(aralik, "product_view", urunKodu),
     urunBazliOlay(aralik, "cart_add", urunKodu),
+    urunBazliOlay(aralik, "cart_remove", urunKodu),
     urunBazliOlay(aralik, "checkout_started", urunKodu),
     urunBazliSatis(aralik, urunKodu),
     sepetiBirakanSayisi(aralik, urunKodu),
@@ -340,25 +389,31 @@ export async function analitikRaporu(
     (urun) => !urunKodu || urun.kod === urunKodu
   ).map((urun) => {
     const goruntuleme = goruntulemeler[urun.kod] ?? 0;
+    const sepeteEklemeSayisi = sepetEklemeleri[urun.kod] ?? 0;
     const satisSatiri = satislar[urun.kod] ?? { adet: 0, gelirKurus: 0 };
 
     return {
       kod: urun.kod,
       ad: urunAdi(urun.kod),
       goruntuleme,
-      sepeteEkleme: sepetEklemeleri[urun.kod] ?? 0,
+      sepeteEkleme: sepeteEklemeSayisi,
+      sepettenCikarma: sepetCikarmalari[urun.kod] ?? 0,
       odemeBaslatma: odemeBaslatmalari[urun.kod] ?? 0,
       satisAdedi: satisSatiri.adet,
       gelirKurus: satisSatiri.gelirKurus,
       donusumYuzde: yuzde(satisSatiri.adet, goruntuleme),
+      goruntulemedenSepeteYuzde: yuzde(sepeteEklemeSayisi, goruntuleme),
+      sepettenSatisaYuzde: yuzde(satisSatiri.adet, sepeteEklemeSayisi),
     };
   });
 
   return {
     tekilZiyaretci,
+    toplamZiyaret,
     sayfaGoruntuleme,
     urunGoruntuleme,
     sepeteEkleme,
+    sepettenCikarma,
     odemeBaslatma,
     basarisizOdeme,
     satisAdedi: satis.adet,

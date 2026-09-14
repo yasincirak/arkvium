@@ -709,9 +709,31 @@ model AnalyticsEvent {
 
   type AnalyticsEventType
 
-  /// Rastgele ziyaretçi kimliği. Sunucu tarafı olaylarında (sağlayıcı
-  /// dönüşü gibi tarayıcı çerezinin gelmediği yerlerde) null kalır.
+  /// Rastgele ziyaretçi kimliği (anonim, uzun ömürlü çerez).
+  ///
+  /// GİRİŞ YAPMIŞ KULLANICIDA YAZILMAZ: oturum varsa olay yalnızca
+  /// `userId` ile ilişkilendirilir ve bu alan null kalır. Böylece aynı
+  /// kişi için ikinci, paralel bir takip kimliği oluşmaz.
+  ///
+  /// Sunucu tarafı olaylarında (sağlayıcı dönüşü gibi tarayıcı çerezinin
+  /// gelmediği yerlerde) da null kalır.
   visitorId String?
+
+  /// ZİYARET (oturum) kimliği — kısa ömürlü çerez.
+  ///
+  /// "Tekil ziyaretçi" ile "toplam ziyaret" farkını üretir: aynı kişi
+  /// farklı günlerde geldiğinde tekil ziyaretçi 1, ziyaret 2 olur.
+  /// Anonimdir ve kişisel veriden türetilmez.
+  sessionId String?
+
+  /// Giriş yapmış kullanıcının kimliği.
+  ///
+  /// Oturum varsa olay BU ALANLA ilişkilendirilir (bkz. `visitorId`).
+  /// Yabancı anahtar TANIMLANMAZ: analitik, kullanıcı silinse bile
+  /// bağımsız yaşamalı ve hiçbir cascade silme riski taşımamalıdır
+  /// (`orderId` ile aynı kalıp). Kişisel veri değildir; yalnızca
+  /// hesap kimliğidir, ad/e-posta/telefon buraya yazılmaz.
+  userId String?
 
   /// Olayın gerçekleştiği yol (yalnızca `pathname`). Sorgu dizesi
   /// KAYDEDİLMEZ: içinde token veya kişisel veri taşıyabilir.
@@ -741,6 +763,8 @@ model AnalyticsEvent {
   @@index([type, createdAt])
   @@index([productKod, type, createdAt])
   @@index([visitorId, type])
+  @@index([sessionId, createdAt])
+  @@index([userId, type])
   @@index([orderId])
   @@index([createdAt])
 }

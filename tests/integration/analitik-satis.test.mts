@@ -50,6 +50,9 @@ const { SIPARIS_URUNLERI, KARGO_UCRETI_KURUS } = await import(
 );
 const { etiketUret } = await import("../../src/lib/tags.ts");
 const { olayKaydet } = await import("../../src/lib/analitik.ts");
+const { bildirimleriGetir, bildirimiOkunduIsaretle } = await import(
+  "../../src/lib/bildirim.ts"
+);
 const { analitikRaporu } = await import("../../src/lib/analitik-rapor.ts");
 const { aralikCoz } = await import("../../src/lib/analitik-aralik.ts");
 
@@ -712,5 +715,182 @@ describe("mevcut ödeme akışı bozulmadı", () => {
       0,
       "başarısız ödemede rezervasyon serbest bırakılmalı"
     );
+  });
+});
+
+describe("bildirim içeriği", () => {
+  test("bildirim sipariş ayrıntılarını siparişten okur", async () => {
+    const { siparis, conversationId } = await odemeHazirla(ANAHTARLIK.kod, 2);
+
+    await odemeSonucunuIsle({
+      token: "t",
+      dogrulayici: sahteDogrulayici({
+        conversationId,
+        paymentStatus: "SUCCESS",
+        paymentId: "iyz-bildirim-icerik",
+        paidPrice: beklenenTutar(ANAHTARLIK.fiyatKurus, 2),
+        currency: "TRY",
+      }),
+    });
+
+    const liste = await bildirimleriGetir();
+
+    assert.equal(liste.bildirimler.length, 1);
+
+    const bildirim = liste.bildirimler[0];
+
+    assert.equal(bildirim.orderNumber, siparis.orderNumber);
+    assert.equal(bildirim.musteriAdi, TESLIMAT.fullName);
+    assert.equal(bildirim.eposta, TESLIMAT.email);
+    assert.equal(bildirim.telefon, TESLIMAT.phone);
+    assert.equal(
+      bildirim.totalKurus,
+      ANAHTARLIK.fiyatKurus * 2 + KARGO_UCRETI_KURUS
+    );
+    assert.ok(bildirim.siparisTarihi, "sipariş tarihi olmalı");
+    assert.ok(bildirim.odemeTarihi, "ödeme tarihi olmalı");
+
+    assert.equal(bildirim.kalemler.length, 1);
+    assert.equal(bildirim.kalemler[0].ad, ANAHTARLIK.ad);
+    assert.equal(bildirim.kalemler[0].adet, 2);
+  });
+
+  test("kişisel veri bildirim SATIRINA kopyalanmaz", async () => {
+    const { siparis, conversationId } = await odemeHazirla(ANAHTARLIK.kod);
+
+    await odemeSonucunuIsle({
+      token: "t",
+      dogrulayici: sahteDogrulayici({
+        conversationId,
+        paymentStatus: "SUCCESS",
+        paymentId: "iyz-bildirim-gizlilik",
+        paidPrice: beklenenTutar(ANAHTARLIK.fiyatKurus, 1),
+        currency: "TRY",
+      }),
+    });
+
+    const satir = await prisma.adminNotification.findFirst({
+      where: { orderId: siparis.id },
+    });
+
+    const metin = JSON.stringify(satir);
+
+    for (const kisisel of [
+      TESLIMAT.fullName,
+      TESLIMAT.email,
+      TESLIMAT.phone,
+      TESLIMAT.addressLine,
+    ]) {
+      assert.ok(
+        !metin.includes(kisisel),
+        `bildirim satırına kopyalanmamalı: ${kisisel}`
+      );
+    }
+  });
+
+  test("okunmamış sayacı ve okundu işaretleme çalışır", async () => {
+    const { conversationId } = await odemeHazirla(ANAHTARLIK.kod);
+
+    await odemeSonucunuIsle({
+      token: "t",
+      dogrulayici: sahteDogrulayici({
+        conversationId,
+        paymentStatus: "SUCCESS",
+        paymentId: "iyz-okundu",
+        paidPrice: beklenenTutar(ANAHTARLIK.fiyatKurus, 1),
+        currency: "TRY",
+      }),
+    });
+
+    const once = await bildirimleriGetir();
+
+    assert.equal(once.okunmamis, 1);
+    assert.equal(once.bildirimler[0].okundu, false);
+
+    await bildirimiOkunduIsaretle(once.bildirimler[0].id);
+
+    const sonra = await bildirimleriGetir();
+
+    assert.equal(sonra.okunmamis, 0);
+    assert.equal(sonra.bildirimler[0].okundu, true);
+  });
+});
+
+describe("toplam ziyaret ve kullanıcı ilişkisi", () => {
+  test("tekil ziyaretçi ile toplam ziyaret ayrı sayılır", async () => {
+    const ziyaretci = "d".repeat(32);
+
+    for (const ziyaret of ["1".repeat(32), "1".repeat(32), "2".repeat(32)]) {
+      await olayKaydet({
+        type: "page_view",
+        visitorId: ziyaretci,
+        sessionId: ziyaret,
+        path: "/",
+      });
+    }
+
+    const rapor = await analitikRaporu(BUGUN());
+
+    assert.equal(rapor.tekilZiyaretci, 1, "tek kişi");
+    assert.equal(rapor.toplamZiyaret, 2, "iki ayrı ziyaret");
+    assert.equal(rapor.sayfaGoruntuleme, 3, "üç görüntüleme");
+  });
+
+  test("giriş yapan kullanıcı hesabıyla tekil sayılır", async () => {
+    // Aynı kullanıcı iki farklı cihazdan (iki ziyaret) geliyor.
+    for (const ziyaret of ["3".repeat(32), "4".repeat(32)]) {
+      await olayKaydet({
+        type: "product_view",
+        userId: "kullanici-1",
+        visitorId: "yok-sayilmali".padEnd(32, "x"),
+        sessionId: ziyaret,
+        productKod: ANAHTARLIK.kod,
+      });
+    }
+
+    const olaylar = await prisma.analyticsEvent.findMany({
+      select: { userId: true, visitorId: true },
+    });
+
+    for (const olay of olaylar) {
+      assert.equal(olay.userId, "kullanici-1");
+      assert.equal(olay.visitorId, null, "anonim kimlik yazılmamalı");
+    }
+
+    const rapor = await analitikRaporu(BUGUN());
+
+    assert.equal(rapor.tekilZiyaretci, 1, "iki cihaz tek kişi sayılmalı");
+    assert.equal(rapor.toplamZiyaret, 2);
+  });
+
+  test("ürün bazlı huni oranları hesaplanır", async () => {
+    for (let i = 0; i < 4; i += 1) {
+      await olayKaydet({
+        type: "product_view",
+        visitorId: String(i).repeat(32).slice(0, 32),
+        productKod: VALIZ.kod,
+      });
+    }
+
+    await olayKaydet({
+      type: "cart_add",
+      visitorId: "5".repeat(32),
+      productKod: VALIZ.kod,
+    });
+
+    await olayKaydet({
+      type: "cart_remove",
+      visitorId: "5".repeat(32),
+      productKod: VALIZ.kod,
+    });
+
+    const rapor = await analitikRaporu(BUGUN(), VALIZ.kod);
+    const satir = rapor.urunler[0];
+
+    assert.equal(satir.goruntuleme, 4);
+    assert.equal(satir.sepeteEkleme, 1);
+    assert.equal(satir.sepettenCikarma, 1);
+    assert.equal(satir.goruntulemedenSepeteYuzde, 25);
+    assert.equal(satir.sepettenSatisaYuzde, 0);
   });
 });

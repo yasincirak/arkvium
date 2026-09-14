@@ -21,6 +21,8 @@ import { describe, test } from "node:test";
 const {
   ISTEMCIDEN_KABUL_EDILEN,
   istemciOlayTuruMu,
+  olayKimligiCoz,
+  tekilKimlik,
   urunKoduGecerliMi,
   yoluTemizle,
   yolHaricMi,
@@ -31,6 +33,11 @@ const { SIPARIS_URUNLERI } = await import("../../src/lib/siparis.ts");
 const {
   ziyaretciKimligiGecerliMi,
   ziyaretciKimligiUret,
+  ziyaretKimligiUret,
+  ZIYARET_COOKIE,
+  ZIYARETCI_COOKIE,
+  ZIYARET_COOKIE_OMRU,
+  ZIYARETCI_COOKIE_OMRU,
 } = await import("../../src/lib/analitik-ziyaretci.ts");
 
 describe("olay türü beyaz listesi", () => {
@@ -139,5 +146,77 @@ describe("ziyaretçi kimliği", () => {
     assert.equal(ziyaretciKimligiGecerliMi("ZZZZ".repeat(8)), false);
     assert.equal(ziyaretciKimligiGecerliMi("ab".repeat(8)), false);
     assert.equal(ziyaretciKimligiGecerliMi(null), false);
+  });
+});
+
+describe("kimlik çözümü — giriş yapan kullanıcı", () => {
+  /*
+    KURAL: Giriş yapmış kullanıcıda olay YALNIZCA hesapla ilişkilendirilir.
+    Anonim ziyaretçi kimliği o satıra YAZILMAZ; aksi hâlde aynı kişi için
+    ikinci, paralel bir takip kimliği oluşur ve anonim iz hesapla
+    birleştirilmiş olurdu.
+  */
+
+  test("oturum varsa yalnızca kullanıcı kimliği yazılır", () => {
+    const kimlik = olayKimligiCoz({
+      userId: "kullanici-1",
+      visitorId: "a".repeat(32),
+    });
+
+    assert.equal(kimlik.userId, "kullanici-1");
+    assert.equal(kimlik.visitorId, null, "anonim kimlik düşürülmeli");
+  });
+
+  test("oturum yoksa anonim ziyaretçi kimliği kullanılır", () => {
+    const kimlik = olayKimligiCoz({ visitorId: "b".repeat(32) });
+
+    assert.equal(kimlik.userId, null);
+    assert.equal(kimlik.visitorId, "b".repeat(32));
+  });
+
+  test("ikisi de yoksa her ikisi null kalır", () => {
+    const kimlik = olayKimligiCoz({});
+
+    assert.equal(kimlik.userId, null);
+    assert.equal(kimlik.visitorId, null);
+  });
+});
+
+describe("tekil kimlik — rapor sayımı", () => {
+  test("kullanıcı ve ziyaretçi kimlikleri çakışmaz", () => {
+    // Aynı metin hem kullanıcı hem ziyaretçi kimliği olsa bile ayrı sayılır.
+    assert.notEqual(
+      tekilKimlik({ userId: "ayni" }),
+      tekilKimlik({ visitorId: "ayni" })
+    );
+  });
+
+  test("kullanıcı kimliği ziyaretçi kimliğine göre önceliklidir", () => {
+    assert.equal(
+      tekilKimlik({ userId: "k1", visitorId: "z1" }),
+      tekilKimlik({ userId: "k1" })
+    );
+  });
+
+  test("kimliksiz satır sayıma girmez", () => {
+    assert.equal(tekilKimlik({}), null);
+    assert.equal(tekilKimlik({ userId: null, visitorId: null }), null);
+  });
+});
+
+describe("ziyaret (oturum) kimliği", () => {
+  test("ziyaret kimliği ziyaretçi kimliğiyle aynı biçimdedir", () => {
+    assert.equal(ziyaretciKimligiGecerliMi(ziyaretKimligiUret()), true);
+  });
+
+  test("ziyaret ve ziyaretçi çerezleri farklı adlardadır", () => {
+    assert.notEqual(ZIYARET_COOKIE, ZIYARETCI_COOKIE);
+  });
+
+  test("ziyaret çerezi kısa, ziyaretçi çerezi uzun ömürlüdür", () => {
+    assert.ok(
+      ZIYARET_COOKIE_OMRU < ZIYARETCI_COOKIE_OMRU,
+      "ziyaret penceresi ziyaretçi kimliğinden kısa olmalı"
+    );
   });
 });

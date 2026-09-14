@@ -141,7 +141,9 @@ export default async function AdminAnalitikPage({ searchParams }: Props) {
 
         <p className="mt-2 text-sm text-white/50">
           Müşteri davranışı ve satış özeti. Yönetici ziyaretleri bu
-          rakamlara dâhil değildir; kişisel veri kaydedilmez.
+          rakamlara dâhil değildir. Ziyaretçiler anonim bir çerez kimliğiyle
+          sayılır; giriş yapmış kullanıcılar yalnızca hesaplarıyla
+          ilişkilendirilir. IP adresi ve tarayıcı parmak izi saklanmaz.
         </p>
       </div>
 
@@ -254,7 +256,13 @@ export default async function AdminAnalitikPage({ searchParams }: Props) {
         <Kart
           etiket="Tekil ziyaretçi"
           deger={String(rapor.tekilZiyaretci)}
-          not="Anonim çerez kimliğine göre"
+          not="Aynı kişi bir kez sayılır"
+        />
+
+        <Kart
+          etiket="Toplam ziyaret"
+          deger={String(rapor.toplamZiyaret)}
+          not="Her geliş ayrı sayılır"
         />
 
         <Kart
@@ -268,6 +276,12 @@ export default async function AdminAnalitikPage({ searchParams }: Props) {
         />
 
         <Kart etiket="Sepete ekleme" deger={String(rapor.sepeteEkleme)} />
+
+        <Kart
+          etiket="Sepetten çıkarma"
+          deger={String(rapor.sepettenCikarma)}
+          not="Almadan vazgeçenler"
+        />
 
         <Kart
           etiket="Ödeme başlatma"
@@ -340,17 +354,89 @@ export default async function AdminAnalitikPage({ searchParams }: Props) {
         </div>
       </div>
 
+      {/* --- Ürün bazlı huni --- */}
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+        <h2 className="text-lg font-semibold text-white">
+          Ürün bazlı dönüşüm hunisi
+        </h2>
+
+        <p className="mt-1 text-sm text-white/50">
+          Her ürün için görüntüleme → sepete ekleme → satın alma. Oranlar
+          bir önceki adıma göredir. Satış adedi sipariş tablosundan okunur.
+        </p>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          {rapor.urunler.map((satir) => (
+            <div
+              key={satir.kod}
+              className="rounded-xl border border-white/10 bg-black/20 p-5"
+            >
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="font-medium text-white">{satir.ad}</h3>
+
+                <span className="text-xs text-white/40">
+                  {satir.donusumYuzde === null
+                    ? "dönüşüm —"
+                    : `dönüşüm %${satir.donusumYuzde.toFixed(2)}`}
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                <HuniSatiri
+                  etiket="Görüntüleme"
+                  deger={satir.goruntuleme}
+                  taban={satir.goruntuleme}
+                />
+
+                <HuniSatiri
+                  etiket="Sepete ekleme"
+                  deger={satir.sepeteEkleme}
+                  taban={satir.goruntuleme}
+                />
+
+                <HuniSatiri
+                  etiket="Satın alma"
+                  deger={satir.satisAdedi}
+                  taban={satir.goruntuleme}
+                />
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-xs text-white/50">
+                <span>
+                  Görüntüleme → Sepet:{" "}
+                  <span className="font-semibold text-white/80">
+                    {satir.goruntulemedenSepeteYuzde === null
+                      ? "—"
+                      : `%${satir.goruntulemedenSepeteYuzde.toFixed(1)}`}
+                  </span>
+                </span>
+
+                <span>
+                  Sepet → Satış:{" "}
+                  <span className="font-semibold text-white/80">
+                    {satir.sepettenSatisaYuzde === null
+                      ? "—"
+                      : `%${satir.sepettenSatisaYuzde.toFixed(1)}`}
+                  </span>
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* --- Ürün tablosu --- */}
       <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
         <h2 className="text-lg font-semibold text-white">Ürün bazlı özet</h2>
 
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
+          <table className="w-full min-w-[860px] text-left text-sm">
             <thead>
               <tr className="border-b border-white/10 text-xs uppercase tracking-wide text-white/40">
                 <th className="pb-3 pr-4 font-medium">Ürün</th>
                 <th className="pb-3 pr-4 font-medium">Görüntüleme</th>
                 <th className="pb-3 pr-4 font-medium">Sepete ekleme</th>
+                <th className="pb-3 pr-4 font-medium">Sepetten çıkarma</th>
                 <th className="pb-3 pr-4 font-medium">Ödeme başlatma</th>
                 <th className="pb-3 pr-4 font-medium">Satış</th>
                 <th className="pb-3 pr-4 font-medium">Gelir</th>
@@ -367,6 +453,9 @@ export default async function AdminAnalitikPage({ searchParams }: Props) {
                   </td>
                   <td className="py-3 pr-4 text-white/70">
                     {satir.sepeteEkleme}
+                  </td>
+                  <td className="py-3 pr-4 text-white/70">
+                    {satir.sepettenCikarma}
                   </td>
                   <td className="py-3 pr-4 text-white/70">
                     {satir.odemeBaslatma}

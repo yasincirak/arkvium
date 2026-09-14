@@ -34,7 +34,7 @@ process.env.USER_SESSION_SECRET = "test-kullanici-anahtari-" + "u".repeat(32);
 const { prisma } = await import("../../src/lib/prisma.ts");
 const { POST } = await import("../../src/app/api/analitik/olay/route.ts");
 const { SIPARIS_URUNLERI } = await import("../../src/lib/siparis.ts");
-const { ZIYARETCI_COOKIE } = await import(
+const { ZIYARETCI_COOKIE, ZIYARET_COOKIE } = await import(
   "../../src/lib/analitik-ziyaretci.ts"
 );
 const { cerezAyarla, cerezleriTemizle } = await import(
@@ -58,7 +58,11 @@ beforeEach(async () => {
 /** Uca istek gönderir. Her çağrı farklı IP kullanır (hız sınırı için). */
 function istek(
   govde: unknown,
-  secenekler: { ziyaretciCerezi?: string; ip?: string } = {}
+  secenekler: {
+    ziyaretciCerezi?: string;
+    ziyaretCerezi?: string;
+    ip?: string;
+  } = {}
 ): Request {
   const basliklar: Record<string, string> = {
     "Content-Type": "application/json",
@@ -67,8 +71,18 @@ function istek(
       `198.51.100.${1 + Math.floor(Math.random() * 250)}`,
   };
 
+  const cerezler: string[] = [];
+
   if (secenekler.ziyaretciCerezi) {
-    basliklar.cookie = `${ZIYARETCI_COOKIE}=${secenekler.ziyaretciCerezi}`;
+    cerezler.push(`${ZIYARETCI_COOKIE}=${secenekler.ziyaretciCerezi}`);
+  }
+
+  if (secenekler.ziyaretCerezi) {
+    cerezler.push(`${ZIYARET_COOKIE}=${secenekler.ziyaretCerezi}`);
+  }
+
+  if (cerezler.length > 0) {
+    basliklar.cookie = cerezler.join("; ");
   }
 
   return new Request("http://localhost/api/analitik/olay", {
@@ -205,10 +219,16 @@ describe("ziyaretçi kimliği", () => {
       istek({ tur: "page_view", yol: "/" }, { ziyaretciCerezi: kimlik })
     );
 
-    assert.equal(
-      yanit.headers.get("set-cookie"),
-      null,
-      "mevcut kimlik varken çerez yeniden yazılmamalı"
+    /*
+      ZİYARET çerezi her olayda tazelenir (kayan pencere), bu yüzden
+      `set-cookie` boş olmaz. Doğrulanması gereken, ZİYARETÇİ kimliğinin
+      yeniden yazılmadığıdır.
+    */
+    assert.ok(
+      !(yanit.headers.get("set-cookie") ?? "").includes(
+        `${ZIYARETCI_COOKIE}=`
+      ),
+      "mevcut ziyaretçi kimliği varken o çerez yeniden yazılmamalı"
     );
 
     const olay = await prisma.analyticsEvent.findFirst();
@@ -310,5 +330,139 @@ describe("kişisel veri saklanmaz", () => {
     // Tabloda böyle bir alan hiç yoktur.
     assert.equal("ip" in (olay as Record<string, unknown>), false);
     assert.equal("userAgent" in (olay as Record<string, unknown>), false);
+  });
+});
+
+describe("ziyaret (oturum) kimliği", () => {
+  test("çerez yoksa ziyaret kimliği üretilir ve yanıtta gönderilir", async () => {
+    const yanit = await POST(istek({ tur: "page_view", yol: "/" }));
+
+    const cerez = yanit.headers.get("set-cookie") ?? "";
+
+    assert.ok(cerez.includes(`${ZIYARET_COOKIE}=`), "ziyaret çerezi ayarlanmalı");
+
+    const olay = await prisma.analyticsEvent.findFirst();
+
+    assert.ok(olay?.sessionId, "ziyaret kimliği yazılmalı");
+    assert.equal(olay?.sessionId?.length, 32);
+  });
+
+  test("aynı ziyaret tek sayılır, farklı ziyaret ayrı sayılır", async () => {
+    const ziyaretci = "a".repeat(32);
+    const ziyaret1 = "1".repeat(32);
+    const ziyaret2 = "2".repeat(32);
+
+    for (const ziyaret of [ziyaret1, ziyaret1, ziyaret2]) {
+      await POST(
+        istek(
+          { tur: "page_view", yol: "/" },
+          { ziyaretciCerezi: ziyaretci, ziyaretCerezi: ziyaret }
+        )
+      );
+    }
+
+    const olaylar = await prisma.analyticsEvent.findMany({
+      select: { sessionId: true, visitorId: true },
+    });
+
+    assert.equal(olaylar.length, 3, "üç olay yazılmalı");
+
+    assert.equal(
+      new Set(olaylar.map((o) => o.visitorId)).size,
+      1,
+      "tek ziyaretçi"
+    );
+
+    assert.equal(
+      new Set(olaylar.map((o) => o.sessionId)).size,
+      2,
+      "iki ayrı ziyaret"
+    );
+  });
+
+  test("ziyaret çerezi her olayda tazelenir", async () => {
+    const ziyaret = "3".repeat(32);
+
+    const yanit = await POST(
+      istek({ tur: "page_view", yol: "/" }, { ziyaretCerezi: ziyaret })
+    );
+
+    const cerez = yanit.headers.get("set-cookie") ?? "";
+
+    assert.ok(
+      cerez.includes(`${ZIYARET_COOKIE}=${ziyaret}`),
+      "mevcut ziyaret kimliği korunarak süresi uzatılmalı"
+    );
+  });
+});
+
+describe("giriş yapan kullanıcı yalnızca hesapla ilişkilendirilir", () => {
+  test("oturumlu olayda anonim ziyaretçi kimliği YAZILMAZ", async () => {
+    const kullanici = await yoneticiOturumuKur({
+      prisma,
+      cerezAyarla,
+      eposta: "uye@test.invalid",
+      rol: "CUSTOMER",
+    });
+
+    await POST(
+      istek(
+        { tur: "page_view", yol: "/" },
+        { ziyaretciCerezi: "b".repeat(32) }
+      )
+    );
+
+    const olay = await prisma.analyticsEvent.findFirst({
+      select: { userId: true, visitorId: true },
+    });
+
+    assert.equal(olay?.userId, kullanici.userId, "hesapla ilişkilendirilmeli");
+    assert.equal(olay?.visitorId, null, "anonim kimlik yazılmamalı");
+  });
+
+  test("oturumlu ziyaretçiye yeni anonim çerez verilmez", async () => {
+    await yoneticiOturumuKur({
+      prisma,
+      cerezAyarla,
+      eposta: "uye2@test.invalid",
+      rol: "CUSTOMER",
+    });
+
+    const yanit = await POST(istek({ tur: "page_view", yol: "/" }));
+
+    const cerez = yanit.headers.get("set-cookie") ?? "";
+
+    assert.ok(
+      !cerez.includes(`${ZIYARETCI_COOKIE}=`),
+      "giriş yapmış kullanıcıya ikinci takip kimliği verilmemeli"
+    );
+  });
+
+  test("oturumsuz olayda kullanıcı kimliği boş kalır", async () => {
+    await POST(istek({ tur: "page_view", yol: "/" }));
+
+    const olay = await prisma.analyticsEvent.findFirst({
+      select: { userId: true, visitorId: true },
+    });
+
+    assert.equal(olay?.userId, null);
+    assert.ok(olay?.visitorId);
+  });
+});
+
+describe("sepetten çıkarma olayı", () => {
+  test("cart_remove kabul edilir ve ürünle kaydedilir", async () => {
+    const yanit = await POST(
+      istek({ tur: "cart_remove", yol: "/siparis", urunKodu: URUN.kod })
+    );
+
+    assert.equal(yanit.status, 200);
+
+    const olay = await prisma.analyticsEvent.findFirst({
+      where: { type: "cart_remove" },
+      select: { productKod: true },
+    });
+
+    assert.equal(olay?.productKod, URUN.kod);
   });
 });

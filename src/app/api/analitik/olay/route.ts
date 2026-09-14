@@ -9,10 +9,13 @@ import {
   yoluTemizle,
 } from "@/lib/analitik";
 import {
+  ZIYARET_COOKIE,
   ZIYARETCI_COOKIE,
   ziyaretciCookieAyarlari,
   ziyaretciKimligiGecerliMi,
   ziyaretciKimligiUret,
+  ziyaretCookieAyarlari,
+  ziyaretKimligiUret,
 } from "@/lib/analitik-ziyaretci";
 
 /**
@@ -37,6 +40,10 @@ import {
  *
  * 5. Ziyaretçi kimliği rastgeledir ve kişisel veriden türetilmez.
  *    İstemcinin çereze yazdığı bozuk değer kabul edilmez, yenisi üretilir.
+ *
+ * 6. GİRİŞ YAPMIŞ KULLANICIDA ANONİM KİMLİK YAZILMAZ. Oturum varsa olay
+ *    yalnızca hesapla ilişkilendirilir; anonim ziyaretçi kimliği o satıra
+ *    geçmez ve anonim iz hesapla birleştirilmez.
  * ────────────────────────────────────────────────────────────
  *
  * ────────────────────────────────────────────────────────────
@@ -82,15 +89,16 @@ const ZIYARETCI_SAATLIK_SINIR = 200;
  */
 const IP_SAATLIK_SINIR = 3000;
 
-/** İsteğin çerez başlığından ziyaretçi kimliğini okur. */
-function ziyaretciCereziniOku(request: Request): string | null {
+/** İsteğin çerez başlığından adı verilen kimliği okur ve doğrular. */
+function cereziOku(request: Request, ad: string): string | null {
   const deger = request.headers
     .get("cookie")
     ?.split(";")
     .map((parca) => parca.trim())
-    .find((parca) => parca.startsWith(`${ZIYARETCI_COOKIE}=`))
-    ?.slice(ZIYARETCI_COOKIE.length + 1);
+    .find((parca) => parca.startsWith(`${ad}=`))
+    ?.slice(ad.length + 1);
 
+  // Her iki kimlik de aynı biçimdedir (32 onaltılık karakter).
   return ziyaretciKimligiGecerliMi(deger) ? deger : null;
 }
 
@@ -149,7 +157,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, kaydedildi: false });
     }
 
-    const mevcutKimlik = ziyaretciCereziniOku(request);
+    const mevcutKimlik = cereziOku(request, ZIYARETCI_COOKIE);
+    const mevcutZiyaret = cereziOku(request, ZIYARET_COOKIE);
 
     // 1. katman: tarayıcı başına sınır (paylaşılan IP'den etkilenmez).
     if (mevcutKimlik) {
@@ -178,19 +187,34 @@ export async function POST(request: Request) {
     }
 
     const visitorId = mevcutKimlik ?? ziyaretciKimligiUret();
+    const sessionId = mevcutZiyaret ?? ziyaretKimligiUret();
 
     await olayKaydet({
       type: tur,
+      // Oturum varsa `olayKaydet` anonim kimliği düşürür ve yalnızca
+      // hesabı yazar (bkz. olayKimligiCoz).
       visitorId,
+      sessionId,
+      userId: oturum?.userId ?? null,
       path: yol,
       productKod: urunKodu,
     });
 
     const yanit = NextResponse.json({ success: true, kaydedildi: true });
 
-    if (!mevcutKimlik) {
+    /*
+      Anonim ziyaretçi çerezi YALNIZCA oturumsuz ziyaretçiye verilir.
+      Giriş yapmış kullanıcıya ikinci bir takip kimliği yazılmaz.
+    */
+    if (!mevcutKimlik && !oturum) {
       yanit.cookies.set(ZIYARETCI_COOKIE, visitorId, ziyaretciCookieAyarlari);
     }
+
+    /*
+      Ziyaret çerezi HER olayda tazelenir (kayan pencere): ziyaretçi
+      hareketsiz kalırsa süre dolar ve sonraki geliş yeni ziyaret sayılır.
+    */
+    yanit.cookies.set(ZIYARET_COOKIE, sessionId, ziyaretCookieAyarlari);
 
     return yanit;
   } catch (hata) {

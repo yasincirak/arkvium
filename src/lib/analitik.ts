@@ -8,6 +8,8 @@ import { prisma } from "./prisma";
 export {
   ISTEMCIDEN_KABUL_EDILEN,
   istemciOlayTuruMu,
+  olayKimligiCoz,
+  tekilKimlik,
   urunKoduGecerliMi,
   yoluTemizle,
   yolHaricMi,
@@ -15,7 +17,10 @@ export {
   type IstemciOlayTuru,
 } from "./analitik-dogrulama";
 
-import type { AnalitikOlayTuru } from "./analitik-dogrulama";
+import {
+  olayKimligiCoz,
+  type AnalitikOlayTuru,
+} from "./analitik-dogrulama";
 import { ANALITIK_SAKLAMA_GUNU } from "./analitik-aralik";
 
 export { ANALITIK_SAKLAMA_GUNU } from "./analitik-aralik";
@@ -76,7 +81,12 @@ async function suresiDolanOlaylariTemizle(): Promise<void> {
 
 export type OlayGirdisi = {
   type: AnalitikOlayTuru;
+  /** Anonim ziyaretçi kimliği. `userId` doluysa YOK SAYILIR. */
   visitorId?: string | null;
+  /** Ziyaret (oturum) kimliği; tekil ziyaretçi/toplam ziyaret ayrımı için. */
+  sessionId?: string | null;
+  /** Giriş yapmış kullanıcı. Doluysa olay yalnızca hesapla ilişkilendirilir. */
+  userId?: string | null;
   path?: string | null;
   productKod?: string | null;
   orderId?: string | null;
@@ -99,10 +109,21 @@ export type OlayGirdisi = {
  */
 export async function olayKaydet(girdi: OlayGirdisi): Promise<boolean> {
   try {
+    /*
+      Giriş yapmış kullanıcıda anonim ziyaretçi kimliği YAZILMAZ; olay
+      yalnızca hesapla ilişkilendirilir (bkz. olayKimligiCoz).
+    */
+    const kimlik = olayKimligiCoz({
+      userId: girdi.userId,
+      visitorId: girdi.visitorId,
+    });
+
     await prisma.analyticsEvent.create({
       data: {
         type: girdi.type,
-        visitorId: girdi.visitorId ?? null,
+        visitorId: kimlik.visitorId,
+        userId: kimlik.userId,
+        sessionId: girdi.sessionId ?? null,
         path: girdi.path ?? null,
         productKod: girdi.productKod ?? null,
         orderId: girdi.orderId ?? null,
@@ -138,6 +159,8 @@ export async function olayKaydet(girdi: OlayGirdisi): Promise<boolean> {
  */
 export async function odemeBaslatmaOlayi(girdi: {
   visitorId: string | null;
+  sessionId?: string | null;
+  userId?: string | null;
   orderId: string;
   productKod: string | null;
   valueKurus: number;
@@ -145,6 +168,8 @@ export async function odemeBaslatmaOlayi(girdi: {
   await olayKaydet({
     type: "checkout_started",
     visitorId: girdi.visitorId,
+    sessionId: girdi.sessionId ?? null,
+    userId: girdi.userId ?? null,
     orderId: girdi.orderId,
     productKod: girdi.productKod,
     valueKurus: girdi.valueKurus,
@@ -175,19 +200,23 @@ export async function satinAlmaOlayi(girdi: {
   valueKurus: number;
 }): Promise<boolean> {
   let visitorId: string | null = null;
+  let sessionId: string | null = null;
+  let userId: string | null = null;
 
   try {
     const baslatma = await prisma.analyticsEvent.findFirst({
       where: {
         orderId: girdi.orderId,
         type: "checkout_started",
-        visitorId: { not: null },
+        OR: [{ visitorId: { not: null } }, { userId: { not: null } }],
       },
       orderBy: { createdAt: "desc" },
-      select: { visitorId: true },
+      select: { visitorId: true, sessionId: true, userId: true },
     });
 
     visitorId = baslatma?.visitorId ?? null;
+    sessionId = baslatma?.sessionId ?? null;
+    userId = baslatma?.userId ?? null;
   } catch (hata) {
     console.error(
       "Satış olayı için ziyaretçi eşleştirilemedi:",
@@ -198,6 +227,8 @@ export async function satinAlmaOlayi(girdi: {
   return olayKaydet({
     type: "purchase",
     visitorId,
+    sessionId,
+    userId,
     orderId: girdi.orderId,
     productKod: girdi.productKod,
     valueKurus: girdi.valueKurus,

@@ -6,9 +6,11 @@ import { OdemeHatasi } from "@/lib/odeme-saglayici";
 import { prisma } from "@/lib/prisma";
 import { odemeBaslatmaOlayi } from "@/lib/analitik";
 import {
+  ZIYARET_COOKIE,
   ZIYARETCI_COOKIE,
   ziyaretciKimligiGecerliMi,
 } from "@/lib/analitik-ziyaretci";
+import { getUserSession } from "@/lib/session";
 
 /**
  * Ödeme başlatma.
@@ -36,9 +38,22 @@ import {
  */
 async function odemeBaslatmaOlayiniYaz(orderId: string): Promise<void> {
   try {
-    const cerez = cookies().get(ZIYARETCI_COOKIE)?.value;
+    const cerezler = cookies();
 
-    const visitorId = ziyaretciKimligiGecerliMi(cerez) ? cerez : null;
+    const ziyaretciCerezi = cerezler.get(ZIYARETCI_COOKIE)?.value;
+    const ziyaretCerezi = cerezler.get(ZIYARET_COOKIE)?.value;
+
+    const visitorId = ziyaretciKimligiGecerliMi(ziyaretciCerezi)
+      ? ziyaretciCerezi
+      : null;
+
+    const sessionId = ziyaretciKimligiGecerliMi(ziyaretCerezi)
+      ? ziyaretCerezi
+      : null;
+
+    // Üye siparişte olay hesapla ilişkilendirilir; misafir siparişte
+    // anonim ziyaretçi kimliği kullanılır (bkz. olayKimligiCoz).
+    const oturum = await getUserSession();
 
     const siparis = await prisma.order.findUnique({
       where: { id: orderId },
@@ -54,6 +69,8 @@ async function odemeBaslatmaOlayiniYaz(orderId: string): Promise<void> {
 
     await odemeBaslatmaOlayi({
       visitorId,
+      sessionId,
+      userId: oturum?.userId ?? null,
       orderId,
       // Birden çok farklı ürün varsa tek bir ürüne yazılmaz.
       productKod:

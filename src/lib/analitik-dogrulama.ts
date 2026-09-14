@@ -102,3 +102,45 @@ export function yolHaricMi(yol: string | null): boolean {
   );
 }
 
+
+/**
+ * Bir olayın kime ait olduğunu belirleyen kimlik.
+ *
+ * KURAL: Giriş yapmış kullanıcıda olay YALNIZCA hesapla ilişkilendirilir;
+ * anonim ziyaretçi kimliği YAZILMAZ. Böylece aynı kişi için ikinci,
+ * paralel bir takip kimliği oluşmaz ve anonim iz hesapla birleştirilmez.
+ *
+ * Oturum yoksa anonim ziyaretçi kimliği kullanılır.
+ */
+export function olayKimligiCoz(girdi: {
+  userId?: string | null;
+  visitorId?: string | null;
+}): { userId: string | null; visitorId: string | null } {
+  if (girdi.userId) {
+    return { userId: girdi.userId, visitorId: null };
+  }
+
+  return { userId: null, visitorId: girdi.visitorId ?? null };
+}
+
+/**
+ * Raporlarda "tekil kişi" sayımı için kullanılan birleşik kimlik.
+ *
+ * Giriş yapmış kullanıcı ile anonim ziyaretçi aynı havuzda sayılır;
+ * önek çakışmayı önler (bir kullanıcı kimliği bir ziyaretçi kimliğiyle
+ * aynı metin olsa bile ayrı sayılır).
+ */
+export function tekilKimlik(satir: {
+  userId?: string | null;
+  visitorId?: string | null;
+}): string | null {
+  if (satir.userId) {
+    return `u:${satir.userId}`;
+  }
+
+  if (satir.visitorId) {
+    return `z:${satir.visitorId}`;
+  }
+
+  return null;
+}

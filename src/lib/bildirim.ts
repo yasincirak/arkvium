@@ -19,8 +19,17 @@ import { pushGonderiminiBaslat } from "./web-push-gonderim";
  * (bkz. src/lib/odeme-servisi.ts).
  * ────────────────────────────────────────────────────────────
  *
- * KİŞİSEL VERİ YAZILMAZ: bildirim metninde ad, e-posta, telefon ve
- * adres bulunmaz; yalnızca sipariş numarası ve tutar yer alır.
+ * KİŞİSEL VERİ KOPYALANMAZ: bildirim satırında yalnızca sipariş numarası
+ * ve tutar durur. Yöneticinin siparişi karşılamak için ihtiyaç duyduğu
+ * müşteri bilgileri (ad-soyad, e-posta, telefon, kalemler) bildirime
+ * YAZILMAZ; liste okunurken `Order` tablosundan CANLI okunur.
+ *
+ * Neden böyle: veri tek yerde kalır (sipariş güncellenirse bildirim de
+ * güncel görünür) ve kişisel veri ikinci bir tabloya çoğaltılmaz.
+ *
+ * WEB PUSH GÖVDESİ AYRIDIR: push üçüncü taraf bir servis üzerinden
+ * geçtiği için yalnızca sipariş numarası ve tutar taşır; müşteri
+ * bilgisi push gövdesine KONMAZ.
  */
 
 export const YENI_SIPARIS = "yeni_siparis";
@@ -84,6 +93,12 @@ export async function yeniSiparisBildirimiOlustur(siparis: {
   return true;
 }
 
+/** Bildirimde gösterilen sipariş kalemi. */
+export type BildirimKalemi = {
+  ad: string;
+  adet: number;
+};
+
 export type BildirimSatiri = {
   id: string;
   orderId: string;
@@ -91,6 +106,22 @@ export type BildirimSatiri = {
   metin: string;
   okundu: boolean;
   createdAt: string;
+
+  /*
+    Aşağıdaki alanlar `Order` tablosundan CANLI okunur; bildirim satırına
+    kopyalanmaz. Sipariş bulunamazsa (teorik olarak silinmiş) null kalır.
+  */
+  orderNumber: string | null;
+  /** Sipariş anında verilen ad-soyad. */
+  musteriAdi: string | null;
+  eposta: string | null;
+  telefon: string | null;
+  totalKurus: number | null;
+  /** Siparişin verildiği an (ödemenin onaylandığı an değil). */
+  siparisTarihi: string | null;
+  /** Ödemenin onaylandığı an. */
+  odemeTarihi: string | null;
+  kalemler: BildirimKalemi[];
 };
 
 export type BildirimListesi = {
@@ -118,16 +149,53 @@ export async function bildirimleriGetir(
     }),
   ]);
 
+  /*
+    Sipariş ayrıntıları TEK sorguda okunur; bildirim başına ayrı sorgu
+    atılmaz (liste her 20 saniyede bir tazeleniyor).
+  */
+  const siparisler = await prisma.order.findMany({
+    where: { id: { in: satirlar.map((satir) => satir.orderId) } },
+    select: {
+      id: true,
+      orderNumber: true,
+      fullName: true,
+      email: true,
+      phone: true,
+      totalKurus: true,
+      createdAt: true,
+      paidAt: true,
+      items: { select: { productAdi: true, quantity: true } },
+    },
+  });
+
+  const siparisHaritasi = new Map(siparisler.map((s) => [s.id, s]));
+
   return {
     okunmamis,
-    bildirimler: satirlar.map((satir) => ({
-      id: satir.id,
-      orderId: satir.orderId,
-      baslik: satir.baslik,
-      metin: satir.metin,
-      okundu: satir.readAt !== null,
-      createdAt: satir.createdAt.toISOString(),
-    })),
+    bildirimler: satirlar.map((satir) => {
+      const siparis = siparisHaritasi.get(satir.orderId);
+
+      return {
+        id: satir.id,
+        orderId: satir.orderId,
+        baslik: satir.baslik,
+        metin: satir.metin,
+        okundu: satir.readAt !== null,
+        createdAt: satir.createdAt.toISOString(),
+
+        orderNumber: siparis?.orderNumber ?? null,
+        musteriAdi: siparis?.fullName ?? null,
+        eposta: siparis?.email ?? null,
+        telefon: siparis?.phone ?? null,
+        totalKurus: siparis?.totalKurus ?? null,
+        siparisTarihi: siparis?.createdAt.toISOString() ?? null,
+        odemeTarihi: siparis?.paidAt?.toISOString() ?? null,
+        kalemler: (siparis?.items ?? []).map((kalem) => ({
+          ad: kalem.productAdi,
+          adet: kalem.quantity,
+        })),
+      };
+    }),
   };
 }
 

@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import SayfaUstBari from "@/components/SayfaUstBari";
 import { sozluk } from "@/lib/i18n";
-import Link from "next/link";
 import { GIZLI_SAYFA_ROBOTS } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import SiparisFormu from "@/components/SiparisFormu";
 import { KARGO_UCRETI_KURUS, SIPARIS_URUNLERI } from "@/lib/siparis";
 import UrunIzleyici from "@/components/analitik/UrunIzleyici";
+import SepettenCikarBaglantisi from "@/components/analitik/SepettenCikarBaglantisi";
 
 /**
  * Sipariş sayfası (herkese açık).
@@ -71,12 +71,18 @@ export default function SiparisPage({
       <SayfaUstBari ton="acik" />
 
       <div className="mx-auto max-w-3xl px-6 py-12 sm:py-16">
-        <Link
+        {/*
+          "Ürünlere dön" ayrıca SEPETTEN ÇIKARMA olayını gönderir:
+          ziyaretçi ürünü almadan bu sayfadan ayrılıyor demektir.
+          Bağlantının adresi ve görünümü değişmez.
+        */}
+        <SepettenCikarBaglantisi
+          urunKodu={urun.kod}
           href="/#urunler"
           className="text-sm text-slate-500 transition hover:text-slate-900"
         >
           {ceviri.kalanlar.urunlereDon}
-        </Link>
+        </SepettenCikarBaglantisi>
 
         <h1 className="mt-4 text-3xl font-bold">{urunAdi}</h1>
 

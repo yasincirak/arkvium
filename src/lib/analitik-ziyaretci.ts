@@ -46,3 +46,32 @@ export const ziyaretciCookieAyarlari = {
   path: "/",
   maxAge: ZIYARETCI_COOKIE_OMRU,
 } as const;
+
+/**
+ * ZİYARET (oturum) çerezi.
+ *
+ * "Tekil ziyaretçi" ile "toplam ziyaret" arasındaki farkı üretir: aynı
+ * kişi bir hafta içinde üç kez gelirse tekil ziyaretçi 1, ziyaret 3 olur.
+ *
+ * Kısa ömürlüdür ve her olayda tazelenir (kayan pencere): ziyaretçi
+ * `ZIYARET_COOKIE_OMRU` kadar hareketsiz kalırsa bir sonraki gelişi YENİ
+ * ziyaret sayılır.
+ *
+ * Ziyaretçi kimliği gibi tamamen rastgeledir; kişisel veriden türetilmez.
+ */
+export const ZIYARET_COOKIE = "arkvium_vo";
+
+/** Ziyaretin hareketsizlik sonrası sonlanma süresi (saniye). */
+export const ZIYARET_COOKIE_OMRU = 30 * 60;
+
+export function ziyaretKimligiUret(): string {
+  return randomBytes(16).toString("hex");
+}
+
+export const ziyaretCookieAyarlari = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax",
+  path: "/",
+  maxAge: ZIYARET_COOKIE_OMRU,
+} as const;

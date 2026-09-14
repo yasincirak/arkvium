@@ -16,6 +16,8 @@ import { useRouter } from "next/navigation";
  * Sekme arka plandayken sorgu YAPILMAZ: gereksiz istek üretmez.
  */
 
+type Kalem = { ad: string; adet: number };
+
 type Bildirim = {
   id: string;
   orderId: string;
@@ -23,7 +25,31 @@ type Bildirim = {
   metin: string;
   okundu: boolean;
   createdAt: string;
+  orderNumber: string | null;
+  musteriAdi: string | null;
+  eposta: string | null;
+  telefon: string | null;
+  totalKurus: number | null;
+  siparisTarihi: string | null;
+  odemeTarihi: string | null;
+  kalemler: Kalem[];
 };
+
+/** Kuruş tutarını görünen metne çevirir (fiyatBicimle ile aynı biçim). */
+function tutarBicimle(kurus: number): string {
+  return `${Math.trunc(kurus / 100)},${String(Math.abs(kurus % 100)).padStart(
+    2,
+    "0"
+  )} TL`;
+}
+
+function tarihBicimle(iso: string | null): string {
+  if (!iso) {
+    return "—";
+  }
+
+  return new Date(iso).toLocaleString("tr-TR");
+}
 
 const TAZELEME_ARALIGI_MS = 20000;
 
@@ -117,7 +143,7 @@ export default function BildirimZili() {
       </button>
 
       {acik && (
-        <div className="absolute right-0 z-30 mt-2 w-80 overflow-hidden rounded-xl border border-white/10 bg-[#12121a] shadow-xl">
+        <div className="absolute right-0 z-30 mt-2 w-96 overflow-hidden rounded-xl border border-white/10 bg-[#12121a] shadow-xl">
           <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
             <span className="text-sm font-semibold text-white">
               Satış bildirimleri
@@ -154,6 +180,11 @@ export default function BildirimZili() {
                   <span className="flex w-full items-center justify-between gap-2">
                     <span className="text-sm font-medium text-white">
                       {bildirim.baslik}
+                      {bildirim.orderNumber ? (
+                        <span className="ml-2 font-mono text-xs text-white/60">
+                          {bildirim.orderNumber}
+                        </span>
+                      ) : null}
                     </span>
 
                     {!bildirim.okundu && (
@@ -161,10 +192,42 @@ export default function BildirimZili() {
                     )}
                   </span>
 
-                  <span className="text-sm text-white/70">{bildirim.metin}</span>
+                  {/* Satın alınan ürünler */}
+                  {bildirim.kalemler.length > 0 && (
+                    <span className="text-sm text-white/70">
+                      {bildirim.kalemler
+                        .map((kalem) => `${kalem.ad} ×${kalem.adet}`)
+                        .join(", ")}
+                    </span>
+                  )}
+
+                  {/* Toplam tutar */}
+                  <span className="text-sm font-semibold text-emerald-300">
+                    {bildirim.totalKurus === null
+                      ? bildirim.metin
+                      : tutarBicimle(bildirim.totalKurus)}
+                  </span>
+
+                  {/*
+                    Müşteri bilgileri siparişten CANLI okunur; bildirim
+                    satırına kopyalanmaz (bkz. src/lib/bildirim.ts).
+                  */}
+                  {bildirim.musteriAdi && (
+                    <span className="text-xs text-white/60">
+                      {bildirim.musteriAdi}
+                    </span>
+                  )}
+
+                  {(bildirim.telefon || bildirim.eposta) && (
+                    <span className="text-xs text-white/50">
+                      {[bildirim.telefon, bildirim.eposta]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                  )}
 
                   <span className="text-xs text-white/40">
-                    {new Date(bildirim.createdAt).toLocaleString("tr-TR")}
+                    Ödeme: {tarihBicimle(bildirim.odemeTarihi ?? bildirim.createdAt)}
                   </span>
                 </button>
               ))
