@@ -8,6 +8,7 @@ import {
   ONAY_COOKIE_OMRU,
   CEREZ_ONAY_COOKIE,
 } from "@/lib/cerez-onayi";
+import { HUKUKI_BELGE_LISTESI } from "@/lib/hukuki-belgeler";
 import {
   ZIYARET_COOKIE,
   ZIYARETCI_COOKIE,
@@ -196,6 +197,16 @@ export default function CerezPolitikasiPage() {
 
         {/* Mevcut gizlilik ve hukuki metinlere bağlantılar. */}
         <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          {HUKUKI_BELGE_LISTESI.map((belge) => (
+            <Link
+              key={belge.yol}
+              href={belge.yol}
+              className="text-indigo-600 underline underline-offset-2 hover:text-indigo-700"
+            >
+              {belge.baslik}
+            </Link>
+          ))}
+
           <a
             href="/#guvenlik"
             className="text-indigo-600 underline underline-offset-2 hover:text-indigo-700"
