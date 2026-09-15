@@ -80,10 +80,19 @@ export default function AkisBolumu() {
                   <BolumGecisi
                     className={gorselSolda ? "md:order-2" : undefined}
                   >
-                    <div className="flex items-baseline gap-4">
+                    {/*
+                      ADIM NUMARASI DOLU ROZETTE.
+
+                      Önceden %25 opaklıkta dev bir rakamdı; dekoratif
+                      duruyor, "kaçıncı adımdayım" sorusunu net
+                      cevaplamıyordu. Dolu turkuaz rozet üç adımı
+                      birbirinden kesin ayırır. Beyaz metin turkuaz
+                      zeminde 5.47:1 — AA.
+                    */}
+                    <div className="flex items-center gap-4">
                       <span
                         aria-hidden="true"
-                        className="text-5xl font-bold tracking-tight text-ark-accent/25 sm:text-6xl"
+                        className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-ark-accent text-lg font-bold tracking-tight text-white shadow-ark-1"
                       >
                         {adim.numara}
                       </span>
@@ -104,7 +113,7 @@ export default function AkisBolumu() {
                     gecikme={100}
                     className={gorselSolda ? "md:order-1" : undefined}
                   >
-                    <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-ark-line bg-ark-surface-3 shadow-ark-2">
+                    <div className="group relative aspect-[4/3] overflow-hidden rounded-3xl border border-ark-line bg-ark-surface-3 shadow-ark-2 transition-colors duration-200 hover:border-ark-accent">
                       <Gorsel
                         anahtar={adim.gorsel}
                         sizes="(min-width: 768px) 48vw, 90vw"
@@ -127,7 +136,11 @@ export default function AkisBolumu() {
           <dl className="grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
             {FAYDALAR.map((oge) => (
               <div key={oge.baslik}>
-                <span aria-hidden="true" className="text-ark-accent">
+                {/* İkon yumuşak turkuaz kutuda: şerit boyunca ortak ritim. */}
+                <span
+                  aria-hidden="true"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-ark-accent-soft text-ark-accent"
+                >
                   <oge.Ikon />
                 </span>
 

@@ -75,8 +75,8 @@ export default function KullanimVitrini() {
               gecikme={Math.min(sira * 70, 300)}
               className={
                 senaryo.genis
-                  ? "group relative overflow-hidden rounded-3xl border border-ark-line bg-ark-ink-deep shadow-ark-2 sm:col-span-2 lg:row-span-2"
-                  : "group relative overflow-hidden rounded-3xl border border-ark-line bg-ark-ink-deep shadow-ark-1"
+                  ? "group relative overflow-hidden rounded-3xl border border-ark-line bg-ark-ink-deep shadow-ark-2 transition-colors duration-200 hover:border-ark-accent sm:col-span-2 lg:row-span-2"
+                  : "group relative overflow-hidden rounded-3xl border border-ark-line bg-ark-ink-deep shadow-ark-1 transition-colors duration-200 hover:border-ark-accent"
               }
             >
               <div
@@ -96,13 +96,26 @@ export default function KullanimVitrini() {
                   className="transition duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transform-none"
                 />
 
-                {/* Metnin okunabilirliğini güvenceye alan maske */}
+                {/*
+                  Metnin okunabilirliğini güvenceye alan maske.
+
+                  `.ark-perde` üstüne alttan yükselen ikinci bir koyu
+                  lacivert geçiş eklendi: senaryo fotoğrafları açık
+                  tonlu olduğunda (valiz, anahtarlık) başlık ve metin
+                  fotoğrafın içinde kayboluyordu. Fotoğrafın üst kısmı
+                  açık kalır, yalnızca metnin oturduğu alan koyulaşır.
+                */}
                 <div
                   aria-hidden="true"
                   className="ark-perde pointer-events-none absolute inset-0"
                 />
 
-                <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6">
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-ark-ink-deep via-ark-ink-deep/70 to-transparent"
+                />
+
+                <div className="absolute inset-x-0 bottom-0 z-10 p-5 sm:p-6">
                   <h3
                     className={
                       senaryo.genis
