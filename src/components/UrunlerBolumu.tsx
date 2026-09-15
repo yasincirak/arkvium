@@ -132,19 +132,27 @@ export default function UrunlerBolumu() {
                 key={urun.kod}
                 // Toplam gecikme 300ms'i aşmaz (DESIGN.md § 8).
                 gecikme={Math.min(sira * 70, 300)}
-                className={`ark-kart-hover flex flex-col rounded-3xl border border-ark-line bg-ark-surface p-5 shadow-ark-1 sm:col-span-2 sm:p-6 ${SON_SATIR_YERLESIMI[sira] ?? ""}`}
+                className={`ark-kart-hover group flex flex-col overflow-hidden rounded-3xl border border-ark-line bg-ark-surface shadow-ark-1 transition-colors duration-200 hover:border-ark-accent sm:col-span-2 ${SON_SATIR_YERLESIMI[sira] ?? ""}`}
               >
+                {/*
+                  Görsel kartın TEPESİNE tam genişlikte oturur; yuvarlak
+                  köşeler kart kabuğundan gelir (`overflow-hidden`).
+                  16/9 oran, eski 3/2'ye göre kartı kısaltır ve ürün
+                  fotoğrafının kadrajını bozmaz.
+                */}
                 {gorselAnahtari && (
-                  <div className="relative mb-6 aspect-[3/2] overflow-hidden rounded-2xl bg-ark-surface-3">
+                  <div className="relative aspect-[16/9] overflow-hidden bg-ark-surface-3">
                     <Gorsel
                       anahtar={gorselAnahtari}
                       sizes="(min-width: 1024px) 352px, (min-width: 640px) 45vw, 90vw"
-                      className="transition duration-300 ease-out hover:scale-[1.04] motion-reduce:transform-none"
+                      className="transition duration-300 ease-out group-hover:scale-[1.04] motion-reduce:transform-none"
                     />
                     <TemsiliRozet metin={s.gorsel.temsili} />
                   </div>
                 )}
 
+                {/* Metin bloğu: görsel tam genişlikte olduğu için iç dolgu burada. */}
+                <div className="flex flex-1 flex-col p-5 sm:p-6">
                 {pazarlama && (
                   <p className="ark-etiket inline-flex self-start rounded-full bg-ark-accent-soft px-3 py-1 text-ark-accent">
                     {pazarlama.kategori}
@@ -160,7 +168,7 @@ export default function UrunlerBolumu() {
                 </p>
 
                 {pazarlama && (
-                  <div className="mt-5 rounded-xl bg-ark-surface-2 p-4">
+                  <div className="mt-4 rounded-xl bg-ark-surface-2 px-4 py-3">
                     <p className="ark-etiket text-ark-ink-3">
                       {s.urunler.neZamanIseYarar}
                     </p>
@@ -170,35 +178,55 @@ export default function UrunlerBolumu() {
                   </div>
                 )}
 
-                <p className="mt-4 text-sm text-ark-ink-3">
+                <p className="mt-3 text-sm text-ark-ink-3">
                   {urun.qrAdedi > 1
                     ? `${urun.qrAdedi} ${s.urunler.qrAdediCogul}`
                     : s.urunler.qrAdediTekil}
                 </p>
 
                 {/* Esnek boşluk: fiyat ve düğmeyi tüm kartlarda aynı hizaya iter. */}
-                <div className="mt-6 flex-1" aria-hidden="true" />
-
-                <div className="border-t border-ark-line pt-5">
-                  <div className="text-3xl font-bold tracking-tight text-ark-ink">
-                    {fiyatBicimle(urun.fiyatKurus)}
-                  </div>
-                  <div className="mt-1 text-sm text-ark-ink-3">
-                    {s.kalanlar.kargoNotuTam}
-                  </div>
-                </div>
+                <div className="mt-5 flex-1" aria-hidden="true" />
 
                 {/*
-                  Görünüm ve adres AYNI: yalnızca tıklamada "sepete ekleme"
-                  analitik olayı gönderilir (bkz. SepeteEkleBaglantisi).
+                  FİYAT VE EYLEM AYNI BLOKTA.
+
+                  Fiyat solda, kargo notu altında; düğme sağda. Dar
+                  ekranda alt alta geçerler (`flex-wrap`) ve düğme tam
+                  genişliğe yayılır — hiçbir ölçüde taşma olmaz.
                 */}
-                <SepeteEkleBaglantisi
-                  urunKodu={urun.kod}
-                  className="mt-6 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-ark-commerce px-6 py-3 font-semibold text-white transition duration-200 hover:bg-ark-commerce-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent active:scale-[0.98] motion-reduce:active:scale-100"
-                >
-                  <span>{s.urunler.satinAl}</span>
-                  <span className="sr-only"> — {pazarlama?.ad ?? urun.ad}</span>
-                </SepeteEkleBaglantisi>
+                <div className="mt-5 border-t border-ark-line pt-5">
+                  {/*
+                    Fiyat ve kargo notu yan yana: kart genişliği ikisini
+                    alt alta koymayı gerektirmiyor ve dikey yer kazanır.
+                  */}
+                  <div className="flex items-baseline justify-between gap-3">
+                    {/*
+                      `whitespace-nowrap`: tutar ile "TL" AYRILMAZ.
+                      Yanındaki kargo notu fiyatı sıkıştırdığında
+                      "199,00" ve "TL" alt alta düşüyordu.
+                    */}
+                    <span className="whitespace-nowrap text-2xl font-bold tracking-tight text-ark-ink">
+                      {fiyatBicimle(urun.fiyatKurus)}
+                    </span>
+                    <span className="text-right text-sm text-ark-ink-3">
+                      {s.kalanlar.kargoNotuTam}
+                    </span>
+                  </div>
+
+                  {/*
+                    Görünüm ve adres AYNI: yalnızca tıklamada "sepete
+                    ekleme" analitik olayı gönderilir (bkz.
+                    SepeteEkleBaglantisi).
+                  */}
+                  <SepeteEkleBaglantisi
+                    urunKodu={urun.kod}
+                    className="mt-4 inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-ark-commerce px-5 py-3 font-semibold text-white transition duration-200 hover:bg-ark-commerce-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent active:scale-[0.98] motion-reduce:active:scale-100"
+                  >
+                    <span>{s.urunler.satinAl}</span>
+                    <span className="sr-only"> — {pazarlama?.ad ?? urun.ad}</span>
+                  </SepeteEkleBaglantisi>
+                </div>
+                </div>
               </BolumGecisi>
             );
           })}
