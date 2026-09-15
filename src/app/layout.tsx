@@ -7,6 +7,7 @@ import { DilSaglayici } from "@/lib/i18n/istemci";
 import { CANLI_ADRES, PAYLASIM_GORSELI } from "@/lib/seo";
 import SayfaIzleyici from "@/components/analitik/SayfaIzleyici";
 import CerezOnayi from "@/components/CerezOnayi";
+import YukariCikButonu from "@/components/YukariCikButonu";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -71,6 +72,13 @@ export default function RootLayout({
             Yönetim paneli bileşenin kendi içinde rota ile dışlanır.
           */}
           <WhatsAppDestekButonu />
+
+          {/*
+            "Sayfanın başına dön" düğmesi. WhatsApp düğmesinin tam
+            üstünde durur ve çerez bildiriminin ALTINDA kalır; sabit
+            öğelerle çakışmaz (bkz. bileşen başındaki konum notu).
+          */}
+          <YukariCikButonu />
 
           {/*
             Sayfa görüntüleme izleyicisi. Görünür çıktı üretmez; yönetim
