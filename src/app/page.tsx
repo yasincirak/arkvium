@@ -300,17 +300,30 @@ export default function Home() {
               {s.gizlilik.giris}
             </p>
 
-            <ol className="mt-10 space-y-6">
+            {/*
+              GÜVEN KARTLARI.
+
+              Önceden ince bir dikey çizgiyle ayrılmış düz listeydi;
+              maddeler birbirine akıyor, göz "kaç madde var" sorusunu
+              hızlı cevaplayamıyordu. Her madde kendi kutusuna alındı:
+              numara dolu turkuaz rozette, metin altında. Koyu lacivert
+              zeminde beyaz metin 16.97:1 (AAA), turkuaz rozet üzerinde
+              beyaz 5.47:1 (AA).
+            */}
+            <ol className="mt-10 space-y-4">
               {GIZLILIK_MADDELERI.map((madde) => (
-                <li key={madde.numara} className="flex gap-5">
+                <li
+                  key={madde.numara}
+                  className="flex gap-4 rounded-2xl border border-ark-line-dark bg-white/5 p-5 transition-colors duration-200 hover:border-ark-accent-on-dark sm:gap-5 sm:p-6"
+                >
                   <span
                     aria-hidden="true"
-                    className="shrink-0 pt-1 text-sm font-bold tracking-wider text-ark-accent-on-dark"
+                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ark-accent text-sm font-bold tracking-wider text-white"
                   >
                     {madde.numara}
                   </span>
 
-                  <span className="border-l border-ark-line-dark pl-5 text-lg leading-relaxed text-ark-on-dark">
+                  <span className="self-center text-base leading-relaxed text-ark-on-dark sm:text-lg">
                     {madde.metin}
                   </span>
                 </li>
@@ -345,23 +358,40 @@ export default function Home() {
             </h2>
           </BolumGecisi>
 
-          <div className="mt-10 divide-y divide-ark-line border-y border-ark-line">
+          {/*
+            SSS AÇILIR KARTLARI.
+
+            Önceden tek bir çizgili liste blokuydu; sorular birbirinden
+            ayrılmıyordu. Her soru kendi kartına alındı ve açıkken
+            yumuşak turkuaz zemine geçerek hangi sorunun açık olduğunu
+            belli ediyor.
+
+            ERİŞİLEBİLİRLİK: `<details>/<summary>` korunuyor — klavyeyle
+            Tab ile gezilir, Enter/Space ile açılıp kapanır ve ekran
+            okuyucuya açık/kapalı durumu tarayıcı tarafından bildirilir.
+            Ek ARIA gerekmez. Dokunma hedefi 44px'in altına düşmez.
+          */}
+          <div className="mt-10 space-y-3">
             {SORULAR.map((oge, sira) => (
               <BolumGecisi key={oge.soru} gecikme={Math.min(sira * 60, 300)}>
-                <details className="group">
-                  <summary className="cursor-pointer list-none py-5 font-semibold text-ark-ink outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent">
-                    <span className="flex items-center justify-between gap-4">
-                      {oge.soru}
-                      <span
-                        aria-hidden="true"
-                        className="shrink-0 text-xl leading-none text-ark-accent transition duration-200 group-open:rotate-45"
-                      >
-                        +
-                      </span>
+                <details className="group overflow-hidden rounded-2xl border border-ark-line bg-ark-surface transition-colors duration-200 hover:border-ark-accent">
+                  {/*
+                    Açık durum `group-open:` ile boyanır: aynı varyant
+                    hem başlığı hem rozeti hem de cevabı kapsadığı için
+                    kart tek parça görünür.
+                  */}
+                  <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-4 p-5 font-semibold text-ark-ink outline-none transition-colors duration-200 group-open:bg-ark-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent">
+                    {oge.soru}
+
+                    <span
+                      aria-hidden="true"
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ark-accent-soft text-xl leading-none text-ark-accent transition duration-200 group-open:rotate-45 group-open:bg-ark-accent group-open:text-white motion-reduce:transition-none"
+                    >
+                      +
                     </span>
                   </summary>
 
-                  <p className="pb-5 leading-relaxed text-ark-ink-2">
+                  <p className="bg-ark-accent-soft px-5 pb-5 leading-relaxed text-ark-ink-2">
                     {oge.cevap}
                   </p>
                 </details>
