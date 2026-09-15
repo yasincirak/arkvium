@@ -140,7 +140,7 @@ export default function Home() {
 
             <a
               href="/register"
-              className="inline-flex min-h-[44px] items-center whitespace-nowrap rounded-xl bg-ark-ink px-4 py-2.5 text-sm font-semibold text-white transition duration-200 hover:bg-ark-ink-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent sm:px-5 md:min-h-0"
+              className="inline-flex min-h-[44px] items-center whitespace-nowrap rounded-xl bg-ark-accent px-4 py-2.5 text-sm font-semibold text-white transition duration-200 hover:bg-ark-accent-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent sm:px-5 md:min-h-0"
             >
               {s.header.hemenBasla}
             </a>
@@ -407,7 +407,12 @@ export default function Home() {
         veya hukuki metin bağlantısı eklenmez: bu hesaplar/sayfalar projede
         tanımlı değildir ve kırık bağlantı üretmemek için uydurulmaz.
       */}
-      <footer className="border-t border-ark-line bg-ark-surface">
+      {/*
+        Footer, beyaz gövdeden ayrılsın diye bir ton koyu yüzeye oturur.
+        KOYU LACİVERT YAPILMADI: `ArkviumTamLogo` siyah-beyaz bir
+        dosyadır ve koyu zeminde okunmaz (bkz. HeroKaydirici'deki not).
+      */}
+      <footer className="border-t border-ark-line bg-ark-surface-2">
         <div className="mx-auto max-w-6xl px-6 py-14 sm:px-8">
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
             <div>
@@ -419,7 +424,7 @@ export default function Home() {
             </div>
 
             <div>
-              <h2 className="text-sm font-semibold text-ark-ink">
+              <h2 className="ark-etiket text-ark-accent">
                 {s.footer.urunler}
               </h2>
               <ul className="mt-4 space-y-1 text-sm text-ark-ink-3">
@@ -451,7 +456,7 @@ export default function Home() {
             </div>
 
             <div>
-              <h2 className="text-sm font-semibold text-ark-ink">
+              <h2 className="ark-etiket text-ark-accent">
                 {s.footer.nasilCalisir}
               </h2>
               <ul className="mt-4 space-y-1 text-sm text-ark-ink-3">
@@ -517,7 +522,7 @@ export default function Home() {
             </div>
 
             <div>
-              <h2 className="text-sm font-semibold text-ark-ink">
+              <h2 className="ark-etiket text-ark-accent">
                 {s.footer.hesap}
               </h2>
               <ul className="mt-4 space-y-1 text-sm text-ark-ink-3">

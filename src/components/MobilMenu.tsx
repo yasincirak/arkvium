@@ -58,7 +58,7 @@ export default function MobilMenu({
         aria-label={acik ? (etiketler?.kapat ?? "Menüyü kapat") : (etiketler?.ac ?? "Menüyü aç")}
         aria-expanded={acik}
         aria-controls={panelId}
-        className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-[#101a3d] transition hover:bg-slate-100"
+        className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-ark-ink transition duration-200 hover:bg-ark-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent"
       >
         {/* Basit çizgi ikon; ek ikon paketi kullanılmaz. */}
         <svg
@@ -81,7 +81,7 @@ export default function MobilMenu({
       {acik && (
         <div
           id={panelId}
-          className="absolute left-0 right-0 top-full border-b border-slate-200 bg-white shadow-sm"
+          className="absolute left-0 right-0 top-full border-b border-ark-line bg-ark-surface shadow-ark-2"
         >
           <nav className="mx-auto flex max-w-6xl flex-col px-4 py-2 sm:px-6">
             {baglantilar.map((baglanti) => (
@@ -89,14 +89,14 @@ export default function MobilMenu({
                 key={baglanti.href}
                 href={baglanti.href}
                 onClick={() => setAcik(false)}
-                className="flex min-h-[44px] items-center rounded-lg px-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-indigo-600"
+                className="flex min-h-[44px] items-center rounded-xl px-3 text-sm font-medium text-ark-ink-2 transition duration-200 hover:bg-ark-accent-soft hover:text-ark-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent"
               >
                 {baglanti.metin}
               </a>
             ))}
 
             {altIcerik && (
-              <div className="border-t border-slate-200 px-2 py-3">
+              <div className="border-t border-ark-line px-2 py-3">
                 {altIcerik}
               </div>
             )}
