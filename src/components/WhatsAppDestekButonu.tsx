@@ -76,7 +76,7 @@ export default function WhatsAppDestekButonu() {
         menünün ALTINDA kalır; menüyü kapatmaz, modal/uyarıların üzerine
         çıkmaz.
       */
-      className="fixed bottom-[calc(16px+env(safe-area-inset-bottom))] right-4 z-10 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_4px_16px_rgb(16_26_61_/_0.18)] transition duration-200 hover:scale-105 hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent motion-reduce:transform-none sm:bottom-6 sm:right-6 sm:h-14 sm:w-14"
+      className="fixed bottom-[calc(16px+env(safe-area-inset-bottom))] right-4 z-10 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_4px_16px_rgb(16_26_61_/_0.18)] transition duration-200 hover:scale-105 hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4338ca] motion-reduce:transform-none sm:bottom-6 sm:right-6 sm:h-14 sm:w-14"
     >
       <WhatsAppSimgesi />
     </a>

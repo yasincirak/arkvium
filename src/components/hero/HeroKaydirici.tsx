@@ -76,6 +76,19 @@ export default function HeroKaydirici({
   const [etkin, setEtkin] = useState(0);
   const [duraklat, setDuraklat] = useState(false);
   const [azaltilmisHareket, setAzaltilmisHareket] = useState(false);
+  /*
+    MOBİLDE KAYDIRICI YOKTUR.
+
+    Dar ekranda yalnızca İLK slayt statik olarak gösterilir: otomatik
+    geçiş çalışmaz, oklar ve noktalar render edilmez, dokunma ve klavye
+    gezinmesi bağlanmaz. Böylece dar ekranda taşma ve yanlışlıkla
+    kaydırma olmaz.
+
+    Başlangıç değeri `false`: sunucu çıktısı ve ilk boyama MOBİL
+    varsayar. Mobilde tek slayt hemen doğru çizilir; masaüstünde
+    bağlanma anında kaydırıcıya yükseltilir.
+  */
+  const [masaustu, setMasaustu] = useState(false);
   const dokunusBaslangici = useRef<number | null>(null);
 
   const git = useCallback(
@@ -84,6 +97,26 @@ export default function HeroKaydirici({
     },
     [slaytSayisi]
   );
+
+  // Kaydırıcı yalnızca `lg` ve üzerinde çalışır (Tailwind: 1024px).
+  useEffect(() => {
+    const sorgu = window.matchMedia("(min-width: 1024px)");
+
+    setMasaustu(sorgu.matches);
+
+    const dinleyici = (olay: MediaQueryListEvent) => {
+      setMasaustu(olay.matches);
+
+      // Masaüstünden mobile geçişte ilk slayta dönülür.
+      if (!olay.matches) {
+        setEtkin(0);
+      }
+    };
+
+    sorgu.addEventListener("change", dinleyici);
+
+    return () => sorgu.removeEventListener("change", dinleyici);
+  }, []);
 
   // Hareket azaltma tercihi: otomatik geçiş hiç başlamaz.
   useEffect(() => {
@@ -106,7 +139,7 @@ export default function HeroKaydirici({
    * slaytı değiştirdiğinde efekt yeniden kurulur — yani SAYAÇ SIFIRLANIR.
    */
   useEffect(() => {
-    if (azaltilmisHareket || duraklat) {
+    if (!masaustu || azaltilmisHareket || duraklat) {
       return;
     }
 
@@ -115,20 +148,20 @@ export default function HeroKaydirici({
     }, GECIS_SURESI);
 
     return () => window.clearTimeout(zamanlayici);
-  }, [etkin, duraklat, azaltilmisHareket, slaytSayisi]);
+  }, [etkin, duraklat, azaltilmisHareket, masaustu, slaytSayisi]);
 
   return (
     <section
       aria-labelledby="hero-basligi"
-      aria-roledescription="karusel"
+      aria-roledescription={masaustu ? "karusel" : undefined}
       className="relative overflow-hidden bg-ark-surface-dark"
-      onMouseEnter={() => setDuraklat(true)}
-      onMouseLeave={() => setDuraklat(false)}
-      onTouchStart={(olay) => {
+      onMouseEnter={masaustu ? () => setDuraklat(true) : undefined}
+      onMouseLeave={masaustu ? () => setDuraklat(false) : undefined}
+      onTouchStart={!masaustu ? undefined : (olay) => {
         setDuraklat(true);
         dokunusBaslangici.current = olay.touches[0].clientX;
       }}
-      onTouchEnd={(olay) => {
+      onTouchEnd={!masaustu ? undefined : (olay) => {
         const baslangic = dokunusBaslangici.current;
 
         dokunusBaslangici.current = null;
@@ -147,7 +180,7 @@ export default function HeroKaydirici({
         // Sola kaydırma sonraki slaydı getirir.
         git(fark < 0 ? etkin + 1 : etkin - 1);
       }}
-      onKeyDown={(olay) => {
+      onKeyDown={!masaustu ? undefined : (olay) => {
         if (olay.key === "ArrowLeft") {
           olay.preventDefault();
           git(etkin - 1);
@@ -167,10 +200,14 @@ export default function HeroKaydirici({
       <div className="relative mx-auto max-w-6xl px-6 pb-8 pt-10 sm:px-8 sm:pb-10 sm:pt-12 lg:pt-14">
         <div className="overflow-hidden">
           <div
-            className="flex transition-transform duration-500 ease-out"
-            style={{ transform: `translateX(-${etkin * 100}%)` }}
+            className={
+              masaustu ? "flex transition-transform duration-500 ease-out" : ""
+            }
+            style={
+              masaustu ? { transform: `translateX(-${etkin * 100}%)` } : undefined
+            }
           >
-            {SLAYTLAR.map((slayt, sira) => {
+            {(masaustu ? SLAYTLAR : SLAYTLAR.slice(0, 1)).map((slayt, sira) => {
               const gizli = sira !== etkin;
 
               return (
@@ -304,7 +341,11 @@ export default function HeroKaydirici({
           </div>
         </div>
 
-        {/* Kontroller: oklar solda, noktalar ortada — hepsi 44px hedefli. */}
+        {/*
+          Kontroller: oklar solda, noktalar ortada — hepsi 44px hedefli.
+          Mobilde kaydırıcı olmadığı için HİÇ render edilmezler.
+        */}
+        {masaustu && (
         <div className="mt-10 flex items-center justify-between gap-4 border-t border-ark-line-dark pt-6">
           <div className="flex gap-2">
             <button
@@ -352,6 +393,7 @@ export default function HeroKaydirici({
             ))}
           </div>
         </div>
+        )}
       </div>
     </section>
   );

@@ -51,11 +51,11 @@ yazılmaz.**
 | Mürekkep (birincil metin, marka) | `--ark-ink` | `#101a3d` | Başlıklar, gövde metni, koyu düğme zemini |
 | Mürekkep 2 (ikincil metin) | `--ark-ink-2` | `#414e78` | Alt başlık, açıklama paragrafı |
 | Mürekkep 3 (yardımcı metin) | `--ark-ink-3` | `#5b6785` | Etiket, dipnot, meta bilgi — **en açık izinli metin rengi** |
-| Vurgu (etkileşim) | `--ark-accent` | `#4f46e5` | Bağlantı, aktif durum, odak halkası |
-| Vurgu koyu (hover) | `--ark-accent-strong` | `#4338ca` | Bağlantı hover, vurgulu düğme hover |
-| Vurgu zemin | `--ark-accent-soft` | `#eef0ff` | Rozet, ikon kutusu zemini |
-| Ticaret (satın alma) | `--ark-commerce` | `#4f46e5` | Yalnızca "Satın Al" eylemi |
-| Ticaret hover | `--ark-commerce-strong` | `#4338ca` | Satın alma hover |
+| Vurgu (etkileşim) | `--ark-accent` | `#0f766e` | Bağlantı, aktif durum, odak halkası |
+| Vurgu koyu (hover) | `--ark-accent-strong` | `#115e59` | Bağlantı hover, vurgulu düğme hover |
+| Vurgu zemin | `--ark-accent-soft` | `#e6faf6` | Rozet, ikon kutusu zemini |
+| Ticaret (satın alma) | `--ark-commerce` | `#0f766e` | Yalnızca "Satın Al" eylemi |
+| Ticaret hover | `--ark-commerce-strong` | `#115e59` | Satın alma hover |
 | Yüzey | `--ark-surface` | `#ffffff` | Ana zemin, kart zemini |
 | Yüzey 2 | `--ark-surface-2` | `#f7f8fc` | Alternatif bölüm bandı |
 | Yüzey 3 | `--ark-surface-3` | `#eef1f9` | Vurgulu kutu, görsel placeholder |
@@ -70,7 +70,7 @@ yazılmaz.**
 | En koyu | `--ark-ink-deep` | `#0b1330` | Derinlik katmanı, görsel maskesi |
 | Koyu üstü metin | `--ark-on-dark` | `#ffffff` | Başlık, birincil metin |
 | Koyu üstü ikincil | `--ark-on-dark-2` | `#b6c0dc` | Paragraf, yardımcı metin |
-| Koyu üstü vurgu | `--ark-accent-on-dark` | `#a5b4fc` | Etiket, işaret |
+| Koyu üstü vurgu | `--ark-accent-on-dark` | `#5eead4` | Etiket, işaret |
 | Koyu üstü çizgi | `--ark-line-dark` | `rgb(255 255 255 / .12)` | Ayırıcı, kenarlık |
 
 Bu **koyu tema DEĞİLDİR**: yalnızca iki bölümün kendi zeminidir ve
@@ -85,14 +85,14 @@ Beyaz zemin üzerinde:
 | `#101a3d` | **16.97:1** | AAA |
 | `#414e78` | **8.12:1** | AAA |
 | `#5b6785` | **5.64:1** | AA |
-| `#4f46e5` | **6.29:1** | AA |
+| `#0f766e` | **5.47:1** | AA |
 
 Renkli zemin üzerinde beyaz metin:
 
 | Zemin | Oran | Sonuç |
 |---|---|---|
 | `#101a3d` | **16.97:1** | AAA |
-| `#4f46e5` | **6.29:1** | AA |
+| `#0f766e` | **5.47:1** | AA |
 
 Koyu lacivert zemin (`#101a3d`) üzerinde:
 
@@ -100,14 +100,14 @@ Koyu lacivert zemin (`#101a3d`) üzerinde:
 |---|---|---|
 | `#ffffff` | **16.97:1** | AAA |
 | `#b6c0dc` | **9.35:1** | AAA |
-| `#a5b4fc` | **8.51:1** | AAA |
+| `#5eead4` | **11.47:1** | AAA |
 
-**Yasak:** `--ark-accent` (`#4f46e5`) koyu zeminde **2.70:1** verir ve orada
+**Yasak:** `--ark-accent` (`#0f766e`) koyu zeminde **3.10:1** verir ve orada
 METİN olarak kullanılamaz; yerine `--ark-accent-on-dark` kullanılır.
 
 **Yasak:** `#6f7a99` ve daha açık griler metin için kullanılmaz (4.27:1, AA
-altında). `#059669` (emerald-600) beyaz metinle **3.77:1** verir ve düğme
-zemini olarak KULLANILMAZ; ticaret rengi `#047857`'dir.
+altında). Ayrı bir "satın al yeşili" KULLANILMAZ; ticaret rengi marka
+rengiyle aynıdır (`#0f766e`).
 
 ### 3.3 Renk kuralları
 

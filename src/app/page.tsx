@@ -163,70 +163,47 @@ export default function Home() {
           sonrakiSlayt: s.hero.sonrakiSlayt,
           slaydiGoster: s.hero.slaydiGoster,
           temsiliGorsel: s.gorsel.temsili,
+          /*
+            ÜÇ SLAYT. Her slaytta TEK düğme vardır ve hepsi aynı metni
+            (`sonCagri.urunleriIncele`) ile ürünler bölümüne götürür;
+            ziyaretçiye tek ve net bir sonraki adım sunulur.
+
+            Görseller mevcut dosyalardan içerikle eşleştirildi:
+            eşya → hero, gizli iletişim → arac, tek sistem → valiz.
+          */
           slaytlar: [
             {
-              kod: "acil-durum",
-              ...s.hero.acilDurum,
-              bilgiEtiketleri: [
-                s.hero.acilDurum.bilgiler.kanGrubu,
-                s.hero.acilDurum.bilgiler.alerjiler,
-                s.hero.acilDurum.bilgiler.ilaclar,
-                s.hero.acilDurum.bilgiler.kisiler,
-              ],
-              gorsel: "acil-durum",
-              dugmeler: [
-                {
-                  metin: s.hero.acilDurum.dugmeBirincil,
-                  href: "#acil-durum",
-                  tur: "birincil",
-                },
-                {
-                  metin: s.hero.acilDurum.dugmeIkincil,
-                  href: "#nasil",
-                  tur: "ikincil",
-                },
-              ],
-            },
-            {
-              kod: "kayip-esya",
-              ...s.hero.kayipEsya,
+              kod: "esyalar",
+              ...s.hero.esyalar,
               gorsel: "hero",
               dugmeler: [
                 {
-                  metin: s.hero.kayipEsya.dugme,
+                  metin: s.sonCagri.urunleriIncele,
                   href: "#urunler",
                   tur: "birincil",
                 },
               ],
             },
             {
-              kod: "evcil-hayvan",
-              ...s.hero.evcilHayvan,
-              gorsel: "evcil-hayvan",
-              dugmeler: [
-                {
-                  metin: s.hero.evcilHayvan.dugme,
-                  href: "#urunler",
-                  tur: "birincil",
-                },
-              ],
-            },
-            {
-              kod: "valiz",
-              ...s.hero.valiz,
-              gorsel: "valiz",
-              dugmeler: [
-                { metin: s.hero.valiz.dugme, href: "#urunler", tur: "birincil" },
-              ],
-            },
-            {
-              kod: "arac",
-              ...s.hero.arac,
+              kod: "gizli-iletisim",
+              ...s.hero.gizliIletisim,
               gorsel: "arac",
               dugmeler: [
                 {
-                  metin: s.hero.arac.dugme,
-                  href: "/urun/arac-stickeri",
+                  metin: s.sonCagri.urunleriIncele,
+                  href: "#urunler",
+                  tur: "birincil",
+                },
+              ],
+            },
+            {
+              kod: "tek-qr",
+              ...s.hero.tekQr,
+              gorsel: "valiz",
+              dugmeler: [
+                {
+                  metin: s.sonCagri.urunleriIncele,
+                  href: "#urunler",
                   tur: "birincil",
                 },
               ],

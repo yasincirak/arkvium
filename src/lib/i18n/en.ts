@@ -63,49 +63,26 @@ export const EN: DerinKismi<Sozluk> = {
     oncekiSlayt: "Previous slide",
     sonrakiSlayt: "Next slide",
     slaydiGoster: "slide",
-    acilDurum: {
-      etiket: "Emergency Profile",
-      baslik: "In an emergency, seconds matter",
-      metin:
-        "Paramedics or anyone helping can scan the QR code to see the health details the owner chose to share, and reach their emergency contacts with one tap.",
-      bilgiler: {
-        kanGrubu: "Blood type",
-        alerjiler: "Allergies",
-        ilaclar: "Medications",
-        kisiler: "Emergency contacts",
-      },
-      dugmeBirincil: "See the Emergency Profile",
-      dugmeIkincil: "How It Works",
-      beyan:
-        "This information is provided by the user and is not a verified medical record.",
-    },
-    kayipEsya: {
+    // Three hero slides. Meaning follows the Turkish source exactly; no
+    // new claims are introduced. The shared button label comes from
+    // `sonCagri.urunleriIncele`.
+    esyalar: {
       etiket: "Lost items",
-      baslik: "Get your things back when they go missing",
+      baslik: "Get your things back when they go missing.",
       metin:
-        "Pair an ARKVIUM tag with your belongings. Whoever finds them scans the QR code and reaches you safely — no app needed.",
-      dugme: "Browse QR Tags",
+        "With ARKVIUM QR tags, make sure people can reach you safely when your belongings are found.",
     },
-    evcilHayvan: {
-      etiket: "Pets",
-      baslik: "Give them a way home",
+    gizliIletisim: {
+      etiket: "Private contact",
+      baslik: "Let people reach you without seeing your number.",
       metin:
-        "When the QR tag on the collar is scanned, the finder can reach you through the details you chose to share.",
-      dugme: "See the Pet Tag",
+        "Stay reachable on your vehicle and personal belongings without sharing your contact details.",
     },
-    valiz: {
-      etiket: "Luggage & travel",
-      baslik: "Be reachable without putting your number on your bag",
+    tekQr: {
+      etiket: "One system",
+      baslik: "One QR code, many uses.",
       metin:
-        "With a QR luggage tag, whoever finds your suitcase can contact you without seeing your phone number.",
-      dugme: "See the Luggage Tag",
-    },
-    arac: {
-      etiket: "Cars & motorcycles",
-      baslik: "Private contact and an emergency link for your vehicle",
-      metin:
-        "The QR tag lets drivers reach the owner privately when needed, and shows the emergency details the owner has allowed.",
-      dugme: "See the Vehicle Tag",
+        "From keyrings to luggage, pet tags to vehicle stickers — a single system.",
     },
   },
 

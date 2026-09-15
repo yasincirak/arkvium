@@ -68,49 +68,28 @@ export const TR = {
     sonrakiSlayt: "Sonraki slayt",
     slaydiGoster: "slaydını göster",
     marka: { etiket: "ARKVIUM" },
-    acilDurum: {
-      etiket: "Acil Durum Profili",
-      baslik: "Acil durumda saniyeler önemlidir",
-      metin:
-        "Sağlık personeli veya yardım eden kişi QR'ı okutarak kullanıcının paylaşmayı seçtiği sağlık bilgilerini görebilir ve acil durumda aranacak yakınlarına tek dokunuşla ulaşabilir.",
-      bilgiler: {
-        kanGrubu: "Kan grubu",
-        alerjiler: "Alerjiler",
-        ilaclar: "Kullanılan ilaçlar",
-        kisiler: "Acil durum kişileri",
-      },
-      dugmeBirincil: "Acil Durum Profilini İncele",
-      dugmeIkincil: "Nasıl Çalışır?",
-      beyan:
-        "Gösterilen bilgiler kullanıcının kendi beyanıdır; doğrulanmış tıbbi kayıt değildir.",
-    },
-    kayipEsya: {
+    /*
+      Hero üç slayttan oluşur. Metinler işletme tarafından verilmiştir;
+      değiştirilmeden kullanılır. Düğme metni her slaytta ortaktır ve
+      `sonCagri.urunleriIncele` anahtarından gelir — burada tekrarlanmaz.
+    */
+    esyalar: {
       etiket: "Kayıp eşya",
-      baslik: "Eşyaların kaybolsa bile sana geri dönsün",
+      baslik: "Eşyaların kaybolsa bile sana geri dönsün.",
       metin:
-        "ARKVIUM etiketini eşyanla eşleştir. Bulan kişi QR'ı okutarak uygulama indirmeden sana güvenli şekilde ulaşsın.",
-      dugme: "QR Etiketleri İncele",
+        "ARKVIUM QR etiketleriyle eşyaların bulunduğunda sana güvenli şekilde ulaşılmasını sağla.",
     },
-    evcilHayvan: {
-      etiket: "Evcil hayvan",
-      baslik: "Kaybolduğunda ona ulaşmanın bir yolu olsun",
+    gizliIletisim: {
+      etiket: "Gizli iletişim",
+      baslik: "Numaran görünmeden sana ulaşsınlar.",
       metin:
-        "Künyedeki QR kod okutulduğunda bulan kişi, paylaşmayı seçtiğin bilgiler üzerinden sana ulaşabilsin.",
-      dugme: "Evcil Hayvan Künyesini İncele",
+        "Araç ve kişisel eşyalarında iletişim bilgilerini paylaşmadan ulaşılabilir ol.",
     },
-    valiz: {
-      etiket: "Valiz ve seyahat",
-      baslik: "Valizin kaybolduğunda iletişim bilgilerin açıkta kalmasın",
+    tekQr: {
+      etiket: "Tek sistem",
+      baslik: "Tek QR, farklı kullanım alanları.",
       metin:
-        "QR valiz etiketi sayesinde valizi bulan kişi, telefon numaranı doğrudan görmeden sana ulaşabilsin.",
-      dugme: "Valiz Etiketini İncele",
-    },
-    arac: {
-      etiket: "Araç ve motosiklet",
-      baslik: "Aracın için güvenli iletişim ve acil durum bağlantısı",
-      metin:
-        "QR etiketi; gerektiğinde araç sahibiyle gizli iletişim kurulmasını ve izin verilen acil durum bilgilerinin görüntülenmesini sağlar.",
-      dugme: "Araç Etiketini İncele",
+        "Anahtarlıktan valize, evcil hayvan künyesinden araç etiketine kadar tek sistem.",
     },
   },
 
