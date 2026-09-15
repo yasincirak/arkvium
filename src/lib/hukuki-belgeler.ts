@@ -38,14 +38,16 @@ export const HUKUKI_BELGELER = {
   kvkkAydinlatma: {
     yol: "/kvkk-aydinlatma",
     baslik: "KVKK Aydınlatma Metni",
-    surum: "1.0",
+    // 2.0: metin koddaki gerçek veri akışlarına göre yeniden yazıldı.
+    surum: "2.0",
     onayBelgeKodu: "kvkk_aydinlatma",
     siparisOnayinaDahil: true,
   },
   gizlilikPolitikasi: {
     yol: "/gizlilik-politikasi",
     baslik: "Gizlilik Politikası",
-    surum: "1.0",
+    // 2.0: metin koddaki gerçek davranışlara göre yeniden yazıldı.
+    surum: "2.0",
     // Sipariş onayına konu değildir; bilgilendirme belgesidir.
     onayBelgeKodu: null,
     siparisOnayinaDahil: false,
@@ -60,14 +62,18 @@ export const HUKUKI_BELGELER = {
   mesafeliSatis: {
     yol: "/mesafeli-satis-sozlesmesi",
     baslik: "Mesafeli Satış Sözleşmesi",
-    surum: "1.0",
+    // 2.0: metin koddaki gerçek ürün ve işlemlere göre yeniden yazıldı.
+    // OrderConsent bu sürümü kaydeder; geçmiş onaylar 1.0 olarak kalır.
+    surum: "2.0",
     onayBelgeKodu: "mesafeli_satis",
     siparisOnayinaDahil: true,
   },
   teslimatIade: {
     yol: "/teslimat-iade-kosullari",
     baslik: "Teslimat, İptal ve İade Koşulları",
-    surum: "1.0",
+    // 2.0: metin uygulamanın bugünkü gerçek yeteneklerine göre
+    // yeniden yazıldı. OrderConsent bu sürümü kaydeder.
+    surum: "2.0",
     onayBelgeKodu: "iade_kosullari",
     siparisOnayinaDahil: true,
   },

@@ -118,6 +118,349 @@ describe("taslak uyarısı ve eksik alanlar", () => {
       );
     }
   });
+
+  test("Gizlilik Politikası kendi işaretlerini kullanır", async (t) => {
+    /*
+      Bu test hukuki sayfanın METNİNİ okur. Taslak kilidi kapalıyken
+      sayfa 404 döner ve metin yoktur; kilit açıldığında test
+      kendiliğinden devreye girer.
+    */
+    if (!HUKUKI_BELGELER_YAYINDA) {
+      t.skip("taslak kilidi kapalı — sayfalar yayında değil");
+
+      return;
+    }
+
+    const { icerik } = await sayfa(HUKUKI_BELGELER.gizlilikPolitikasi.yol);
+
+    assert.ok(
+      icerik.includes("YASİN TARAFINDAN DOLDURULACAK"),
+      "işletme bilgisi işareti bulunmalı"
+    );
+
+    assert.ok(
+      icerik.includes("HUKUK DANIŞMANI ONAYI GEREKİYOR"),
+      "hukuki değerlendirme işareti bulunmalı"
+    );
+  });
+
+  test("Gizlilik Politikası kanıtlanmamış güvenlik iddiası içermez", async (t) => {
+    /*
+      Bu test hukuki sayfanın METNİNİ okur. Taslak kilidi kapalıyken
+      sayfa 404 döner ve metin yoktur; kilit açıldığında test
+      kendiliğinden devreye girer.
+    */
+    if (!HUKUKI_BELGELER_YAYINDA) {
+      t.skip("taslak kilidi kapalı — sayfalar yayında değil");
+
+      return;
+    }
+
+    /*
+      Doğrulanamayan güvenlik iddialari hem yaniltici hem de hukuken
+      risklidir; metinde bulunmamalidir.
+    */
+    const { icerik } = await sayfa(HUKUKI_BELGELER.gizlilikPolitikasi.yol);
+
+    for (const yasak of [
+      "en üst düzey güvenlik",
+      "tamamen güvenli",
+      "sızma testi",
+      "Tüm veriler SSL",
+      "kabul etmiş sayılırsınız",
+      "Google Analytics",
+      "0850",
+    ]) {
+      assert.ok(
+        !icerik.includes(yasak),
+        `metinde bulunmamalı: ${yasak}`
+      );
+    }
+  });
+
+  test("Gizlilik Politikası KVKK metninin yerine geçmediğini söyler", async (t) => {
+    /*
+      Bu test hukuki sayfanın METNİNİ okur. Taslak kilidi kapalıyken
+      sayfa 404 döner ve metin yoktur; kilit açıldığında test
+      kendiliğinden devreye girer.
+    */
+    if (!HUKUKI_BELGELER_YAYINDA) {
+      t.skip("taslak kilidi kapalı — sayfalar yayında değil");
+
+      return;
+    }
+
+    const { icerik } = await sayfa(HUKUKI_BELGELER.gizlilikPolitikasi.yol);
+
+    assert.ok(
+      icerik.includes("aynı belge değildir"),
+      "iki belgenin ayrı olduğu açıkça yazılmalı"
+    );
+
+    assert.ok(
+      icerik.includes(`href="${HUKUKI_BELGELER.kvkkAydinlatma.yol}"`),
+      "KVKK metnine bağlantı bulunmalı"
+    );
+  });
+
+  test("Mesafeli Satış Sözleşmesi kendi işaretlerini kullanır", async (t) => {
+    /*
+      Bu test hukuki sayfanın METNİNİ okur. Taslak kilidi kapalıyken
+      sayfa 404 döner ve metin yoktur; kilit açıldığında test
+      kendiliğinden devreye girer.
+    */
+    if (!HUKUKI_BELGELER_YAYINDA) {
+      t.skip("taslak kilidi kapalı — sayfalar yayında değil");
+
+      return;
+    }
+
+    const { icerik } = await sayfa(HUKUKI_BELGELER.mesafeliSatis.yol);
+
+    assert.ok(icerik.includes("YASİN TARAFINDAN DOLDURULACAK"));
+    assert.ok(icerik.includes("HUKUK DANIŞMANI ONAYI GEREKİYOR"));
+  });
+
+  test("Sözleşme cayma istisnalarını KESİNLEŞTİRMEZ", async (t) => {
+    /*
+      Bu test hukuki sayfanın METNİNİ okur. Taslak kilidi kapalıyken
+      sayfa 404 döner ve metin yoktur; kilit açıldığında test
+      kendiliğinden devreye girer.
+    */
+    if (!HUKUKI_BELGELER_YAYINDA) {
+      t.skip("taslak kilidi kapalı — sayfalar yayında değil");
+
+      return;
+    }
+
+    /*
+      Aktivasyonun, ambalaj açılmasının veya etiketin yapıştırılmasının
+      cayma hakkını kaldırdığı bir hüküm olarak yazılmamalidir; bunlar
+      hukuki degerlendirme gerektirir.
+    */
+    const { icerik } = await sayfa(HUKUKI_BELGELER.mesafeliSatis.yol);
+
+    assert.ok(
+      icerik.includes("kesinleştirilmemiştir"),
+      "istisnaların kesinleştirilmediği yazılmalı"
+    );
+
+    assert.ok(
+      icerik.includes("ayıplı mala ilişkin kanuni haklarını etkilemez"),
+      "cayma ile ayıplı mal hakları ayrıldığı belirtilmeli"
+    );
+  });
+
+  test("Sözleşme başvuru hakkını satıcının yeriyle sınırlamaz", async (t) => {
+    /*
+      Bu test hukuki sayfanın METNİNİ okur. Taslak kilidi kapalıyken
+      sayfa 404 döner ve metin yoktur; kilit açıldığında test
+      kendiliğinden devreye girer.
+    */
+    if (!HUKUKI_BELGELER_YAYINDA) {
+      t.skip("taslak kilidi kapalı — sayfalar yayında değil");
+
+      return;
+    }
+
+    const { icerik } = await sayfa(HUKUKI_BELGELER.mesafeliSatis.yol);
+
+    assert.ok(
+      icerik.includes("kendi yerleşim yerindeki"),
+      "alıcının kendi yerleşim yerine başvurabileceği yazılmalı"
+    );
+  });
+
+  test("Sözleşme bulunmayan özellikleri saymaz", async (t) => {
+    /*
+      Bu test hukuki sayfanın METNİNİ okur. Taslak kilidi kapalıyken
+      sayfa 404 döner ve metin yoktur; kilit açıldığında test
+      kendiliğinden devreye girer.
+    */
+    if (!HUKUKI_BELGELER_YAYINDA) {
+      t.skip("taslak kilidi kapalı — sayfalar yayında değil");
+
+      return;
+    }
+
+    const { icerik } = await sayfa(HUKUKI_BELGELER.mesafeliSatis.yol);
+
+    for (const yasak of [
+      "0850",
+      "maskeleme",
+      "SMS paketi",
+      "dakika paketi",
+      "abonelik",
+      "kontör",
+      "Hayat Kartım",
+    ]) {
+      assert.ok(!icerik.includes(yasak), `metinde bulunmamalı: ${yasak}`);
+    }
+  });
+
+  test("Teslimat–İade politikası kendi işaretlerini kullanır", async (t) => {
+    /*
+      Bu test hukuki sayfanın METNİNİ okur. Taslak kilidi kapalıyken
+      sayfa 404 döner ve metin yoktur; kilit açıldığında test
+      kendiliğinden devreye girer.
+    */
+    if (!HUKUKI_BELGELER_YAYINDA) {
+      t.skip("taslak kilidi kapalı — sayfalar yayında değil");
+
+      return;
+    }
+
+    const { icerik } = await sayfa(HUKUKI_BELGELER.teslimatIade.yol);
+
+    assert.ok(icerik.includes("YASİN TARAFINDAN DOLDURULACAK"));
+    assert.ok(icerik.includes("HUKUK DANIŞMANI ONAYI GEREKİYOR"));
+  });
+
+  test("Teslimat politikası olmayan özellikleri varmış gibi anlatmaz", async (t) => {
+    /*
+      Bu test hukuki sayfanın METNİNİ okur. Taslak kilidi kapalıyken
+      sayfa 404 döner ve metin yoktur; kilit açıldığında test
+      kendiliğinden devreye girer.
+    */
+    if (!HUKUKI_BELGELER_YAYINDA) {
+      t.skip("taslak kilidi kapalı — sayfalar yayında değil");
+
+      return;
+    }
+
+    /*
+      Uygulamada siparis iptal islevi ve otomatik geri odeme YOK.
+      Metin bunu gizlemek yerine acikca yaziyor.
+    */
+    const { icerik } = await sayfa(HUKUKI_BELGELER.teslimatIade.yol);
+
+    assert.ok(
+      icerik.includes("otomatik geri ödeme işlevi bulunmamaktadır"),
+      "otomatik geri ödeme olmadığı yazılmalı"
+    );
+
+    assert.ok(
+      icerik.includes("iptal edebileceğiniz bir ekran"),
+      "kullanıcı iptal ekranı olmadığı yazılmalı"
+    );
+
+    assert.ok(
+      icerik.includes("kargo takip numarası alanı bulunmamaktadır"),
+      "takip numarası alanı olmadığı yazılmalı"
+    );
+  });
+
+  test("Teslimat politikası yasaklı hükümleri içermez", async (t) => {
+    /*
+      Bu test hukuki sayfanın METNİNİ okur. Taslak kilidi kapalıyken
+      sayfa 404 döner ve metin yoktur; kilit açıldığında test
+      kendiliğinden devreye girer.
+    */
+    if (!HUKUKI_BELGELER_YAYINDA) {
+      t.skip("taslak kilidi kapalı — sayfalar yayında değil");
+
+      return;
+    }
+
+    const { icerik } = await sayfa(HUKUKI_BELGELER.teslimatIade.yol);
+
+    for (const yasak of [
+      "hiçbir hak ileri süremez",
+      "sorumluluğu tamamen sona erer",
+      "Yasal ekiplerimiz",
+      "bütün tüketici haklarını",
+      "0850",
+    ]) {
+      assert.ok(!icerik.includes(yasak), `metinde bulunmamalı: ${yasak}`);
+    }
+
+    // Tutanak tutulmamasinin hak kaybina yol acmadigi acikca yazilmali.
+    assert.ok(
+      icerik.includes("haklarınızı kullanmanıza engel değildir"),
+      "tutanak yokluğunun hak kaybı olmadığı belirtilmeli"
+    );
+  });
+
+  test("KVKK metni kendi işaretlerini kullanır", async (t) => {
+    /*
+      Bu test hukuki sayfanın METNİNİ okur. Taslak kilidi kapalıyken
+      sayfa 404 döner ve metin yoktur; kilit açıldığında test
+      kendiliğinden devreye girer.
+    */
+    if (!HUKUKI_BELGELER_YAYINDA) {
+      t.skip("taslak kilidi kapalı — sayfalar yayında değil");
+
+      return;
+    }
+
+    /*
+      KVKK Aydınlatma Metni iki ayrı işaret kullanır: işletme bilgisi
+      ("YASİN TARAFINDAN DOLDURULACAK") ile hukuki değerlendirme
+      gerektiren maddeler ("HUKUK DANIŞMANI ONAYI GEREKİYOR") aynı şey
+      değildir ve karıştırılmamalıdır.
+    */
+    const { icerik } = await sayfa(HUKUKI_BELGELER.kvkkAydinlatma.yol);
+
+    assert.ok(
+      icerik.includes("YASİN TARAFINDAN DOLDURULACAK"),
+      "işletme bilgisi işareti bulunmalı"
+    );
+
+    assert.ok(
+      icerik.includes("HUKUK DANIŞMANI ONAYI GEREKİYOR"),
+      "hukuki değerlendirme işareti bulunmalı"
+    );
+  });
+
+  test("KVKK metninde rakip marka veya yabancı iletişim bilgisi yoktur", async (t) => {
+    /*
+      Bu test hukuki sayfanın METNİNİ okur. Taslak kilidi kapalıyken
+      sayfa 404 döner ve metin yoktur; kilit açıldığında test
+      kendiliğinden devreye girer.
+    */
+    if (!HUKUKI_BELGELER_YAYINDA) {
+      t.skip("taslak kilidi kapalı — sayfalar yayında değil");
+
+      return;
+    }
+
+    const { icerik } = await sayfa(HUKUKI_BELGELER.kvkkAydinlatma.yol);
+
+    for (const yasak of [
+      "Hayat Kartım",
+      "hayatkartim",
+      "Funda Akın",
+      "0850",
+      "Google Analytics",
+      "SGK",
+      "numara maskeleme",
+    ]) {
+      assert.ok(
+        !icerik.includes(yasak),
+        `metinde bulunmamalı: ${yasak}`
+      );
+    }
+  });
+
+  test("KVKK metni aydınlatma ile rızayı karıştırmaz", async (t) => {
+    /*
+      Bu test hukuki sayfanın METNİNİ okur. Taslak kilidi kapalıyken
+      sayfa 404 döner ve metin yoktur; kilit açıldığında test
+      kendiliğinden devreye girer.
+    */
+    if (!HUKUKI_BELGELER_YAYINDA) {
+      t.skip("taslak kilidi kapalı — sayfalar yayında değil");
+
+      return;
+    }
+
+    const { icerik } = await sayfa(HUKUKI_BELGELER.kvkkAydinlatma.yol);
+
+    assert.ok(
+      icerik.includes("onay veya rıza belgesi"),
+      "belgenin rıza metni olmadığı açıkça yazılmalı"
+    );
+  });
 });
 
 describe("belgeler arası bağlantılar", () => {
