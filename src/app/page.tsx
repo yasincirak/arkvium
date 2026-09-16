@@ -164,47 +164,75 @@ export default function Home() {
           slaydiGoster: s.hero.slaydiGoster,
           temsiliGorsel: s.gorsel.temsili,
           /*
-            ÜÇ SLAYT. Her slaytta TEK düğme vardır ve hepsi aynı metni
-            (`sonCagri.urunleriIncele`) ile ürünler bölümüne götürür;
-            ziyaretçiye tek ve net bir sonraki adım sunulur.
+            DÖRT SLAYT.
 
-            Görseller mevcut dosyalardan içerikle eşleştirildi:
-            eşya → hero, gizli iletişim → arac, tek sistem → valiz.
+            1-3: ürün slaytları — her biri kendi sipariş adresine gider.
+            Ürün detay sayfası yalnızca araç sticker'ında bulunduğu için
+            diğerleri mevcut ve çalışan `/siparis?urun=<kod>` adresini
+            kullanır (kodlar src/lib/siparis.ts kaynağındandır).
+
+            4: acil durum — `a5a59c8^` sürümünden geri getirildi; yapı,
+            bilgi etiketleri, iki düğmesi ve beyan uyarısı aynen korundu.
           */
           slaytlar: [
             {
-              kod: "esyalar",
+              kod: "valiz-etiketi",
               ...s.hero.esyalar,
-              gorsel: "hero",
+              gorsel: "hero-valiz",
               dugmeler: [
                 {
-                  metin: s.sonCagri.urunleriIncele,
-                  href: "#urunler",
+                  metin: s.hero.esyalar.dugme,
+                  href: "/siparis?urun=valiz-etiketi",
                   tur: "birincil",
                 },
               ],
             },
             {
-              kod: "gizli-iletisim",
-              ...s.hero.gizliIletisim,
-              gorsel: "arac",
+              kod: "metal-anahtarlik",
+              ...s.hero.anahtarlik,
+              gorsel: "hero-anahtarlik",
               dugmeler: [
                 {
-                  metin: s.sonCagri.urunleriIncele,
-                  href: "#urunler",
+                  metin: s.hero.anahtarlik.dugme,
+                  href: "/siparis?urun=metal-anahtarlik",
                   tur: "birincil",
                 },
               ],
             },
             {
-              kod: "tek-qr",
-              ...s.hero.tekQr,
-              gorsel: "valiz",
+              kod: "evcil-hayvan-kunyesi",
+              ...s.hero.kunye,
+              gorsel: "hero-kunye",
               dugmeler: [
                 {
-                  metin: s.sonCagri.urunleriIncele,
-                  href: "#urunler",
+                  metin: s.hero.kunye.dugme,
+                  href: "/siparis?urun=evcil-hayvan-kunyesi",
                   tur: "birincil",
+                },
+              ],
+            },
+            {
+              kod: "acil-durum",
+              ...s.hero.acilDurum,
+              acilDurum: true,
+              bilgiEtiketleri: [
+                s.hero.acilDurum.bilgiler.kanGrubu,
+                s.hero.acilDurum.bilgiler.alerjiler,
+                s.hero.acilDurum.bilgiler.ilaclar,
+                s.hero.acilDurum.bilgiler.kisiler,
+              ],
+              gorsel: "acil-durum",
+              beyanUyarisi: s.hero.acilDurum.beyan,
+              dugmeler: [
+                {
+                  metin: s.hero.acilDurum.dugmeBirincil,
+                  href: "#acil-durum",
+                  tur: "birincil",
+                },
+                {
+                  metin: s.hero.acilDurum.dugmeIkincil,
+                  href: "#nasil",
+                  tur: "ikincil",
                 },
               ],
             },

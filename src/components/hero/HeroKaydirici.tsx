@@ -48,6 +48,11 @@ type Slayt = {
   dugmeler?: Dugme[];
   /** Sağlık verisi taşıyan slaytta zorunlu hukuki açıklama. */
   beyanUyarisi?: string;
+  /**
+   * Acil durum slaytı: etiket, vurgu ve birincil düğme KIRMIZI olur.
+   * Kırmızı YALNIZCA bu slaytta kullanılır; turuncu hiç kullanılmaz.
+   */
+  acilDurum?: true;
 };
 
 const GECIS_SURESI = 6000;
@@ -77,18 +82,11 @@ export default function HeroKaydirici({
   const [duraklat, setDuraklat] = useState(false);
   const [azaltilmisHareket, setAzaltilmisHareket] = useState(false);
   /*
-    MOBİLDE KAYDIRICI YOKTUR.
-
-    Dar ekranda yalnızca İLK slayt statik olarak gösterilir: otomatik
-    geçiş çalışmaz, oklar ve noktalar render edilmez, dokunma ve klavye
-    gezinmesi bağlanmaz. Böylece dar ekranda taşma ve yanlışlıkla
-    kaydırma olmaz.
-
-    Başlangıç değeri `false`: sunucu çıktısı ve ilk boyama MOBİL
-    varsayar. Mobilde tek slayt hemen doğru çizilir; masaüstünde
-    bağlanma anında kaydırıcıya yükseltilir.
+    Sekme görünür değilken zamanlayıcı KURULMAZ. Arka plandaki sekmede
+    slayt ilerletmenin bir faydası yok; kullanıcı geri döndüğünde
+    sayaç baştan başlar.
   */
-  const [masaustu, setMasaustu] = useState(false);
+  const [gizliSekme, setGizliSekme] = useState(false);
   const dokunusBaslangici = useRef<number | null>(null);
 
   const git = useCallback(
@@ -98,24 +96,13 @@ export default function HeroKaydirici({
     [slaytSayisi]
   );
 
-  // Kaydırıcı yalnızca `lg` ve üzerinde çalışır (Tailwind: 1024px).
   useEffect(() => {
-    const sorgu = window.matchMedia("(min-width: 1024px)");
+    const olcum = () => setGizliSekme(document.visibilityState === "hidden");
 
-    setMasaustu(sorgu.matches);
+    olcum();
+    document.addEventListener("visibilitychange", olcum);
 
-    const dinleyici = (olay: MediaQueryListEvent) => {
-      setMasaustu(olay.matches);
-
-      // Masaüstünden mobile geçişte ilk slayta dönülür.
-      if (!olay.matches) {
-        setEtkin(0);
-      }
-    };
-
-    sorgu.addEventListener("change", dinleyici);
-
-    return () => sorgu.removeEventListener("change", dinleyici);
+    return () => document.removeEventListener("visibilitychange", olcum);
   }, []);
 
   // Hareket azaltma tercihi: otomatik geçiş hiç başlamaz.
@@ -139,7 +126,7 @@ export default function HeroKaydirici({
    * slaytı değiştirdiğinde efekt yeniden kurulur — yani SAYAÇ SIFIRLANIR.
    */
   useEffect(() => {
-    if (!masaustu || azaltilmisHareket || duraklat) {
+    if (azaltilmisHareket || duraklat || gizliSekme) {
       return;
     }
 
@@ -148,20 +135,22 @@ export default function HeroKaydirici({
     }, GECIS_SURESI);
 
     return () => window.clearTimeout(zamanlayici);
-  }, [etkin, duraklat, azaltilmisHareket, masaustu, slaytSayisi]);
+  }, [etkin, duraklat, azaltilmisHareket, gizliSekme, slaytSayisi]);
 
   return (
     <section
       aria-labelledby="hero-basligi"
-      aria-roledescription={masaustu ? "karusel" : undefined}
+      aria-roledescription="karusel"
       className="relative overflow-hidden bg-ark-surface-dark"
-      onMouseEnter={masaustu ? () => setDuraklat(true) : undefined}
-      onMouseLeave={masaustu ? () => setDuraklat(false) : undefined}
-      onTouchStart={!masaustu ? undefined : (olay) => {
+      onMouseEnter={() => setDuraklat(true)}
+      onMouseLeave={() => setDuraklat(false)}
+      onFocusCapture={() => setDuraklat(true)}
+      onBlurCapture={() => setDuraklat(false)}
+      onTouchStart={(olay) => {
         setDuraklat(true);
         dokunusBaslangici.current = olay.touches[0].clientX;
       }}
-      onTouchEnd={!masaustu ? undefined : (olay) => {
+      onTouchEnd={(olay) => {
         const baslangic = dokunusBaslangici.current;
 
         dokunusBaslangici.current = null;
@@ -180,7 +169,7 @@ export default function HeroKaydirici({
         // Sola kaydırma sonraki slaydı getirir.
         git(fark < 0 ? etkin + 1 : etkin - 1);
       }}
-      onKeyDown={!masaustu ? undefined : (olay) => {
+      onKeyDown={(olay) => {
         if (olay.key === "ArrowLeft") {
           olay.preventDefault();
           git(etkin - 1);
@@ -197,17 +186,25 @@ export default function HeroKaydirici({
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_100%_at_85%_0%,transparent_35%,var(--ark-ink-deep)_100%)]"
       />
 
-      <div className="relative mx-auto max-w-6xl px-6 pb-8 pt-10 sm:px-8 sm:pb-10 sm:pt-12 lg:pt-14">
+      {/*
+        TAM GENİŞLİK HERO.
+
+        Önceden `max-w-6xl` ile ~1152px'e sıkışıyor ve kenarlarda boşluk
+        bırakarak KART gibi duruyordu. Artık bölüm ekranın kullanılabilir
+        genişliğini kaplar; içerik yalnızca çok geniş ekranlarda
+        okunabilirlik için `2xl:max-w-[1600px]` ile sınırlanır.
+      */}
+      <div className="relative mx-auto w-full px-5 pb-10 pt-8 sm:px-8 sm:pb-14 sm:pt-12 lg:px-12 lg:pb-16 lg:pt-16 2xl:max-w-[1600px]">
         <div className="overflow-hidden">
           <div
             className={
-              masaustu ? "flex transition-transform duration-500 ease-out" : ""
+              "flex transition-transform duration-500 ease-out motion-reduce:transition-none"
             }
             style={
-              masaustu ? { transform: `translateX(-${etkin * 100}%)` } : undefined
+              { transform: `translateX(-${etkin * 100}%)` }
             }
           >
-            {(masaustu ? SLAYTLAR : SLAYTLAR.slice(0, 1)).map((slayt, sira) => {
+            {SLAYTLAR.map((slayt, sira) => {
               const gizli = sira !== etkin;
 
               return (
@@ -243,7 +240,7 @@ export default function HeroKaydirici({
                       </div>
                     </div>
                   ) : (
-                  <div className="grid items-center gap-10 lg:grid-cols-12 lg:gap-12">
+                  <div className="grid items-center gap-8 sm:gap-10 lg:grid-cols-12 lg:gap-16">
                     {/*
                       Metin KAYNAK sırasında önce gelir (ekran okuyucu ve
                       `h1` sırası için), ama mobilde `order` ile görselin
@@ -252,9 +249,27 @@ export default function HeroKaydirici({
                       solda kalır.
                     */}
                     <div className="order-2 lg:order-1 lg:col-span-6">
-                      <p className="ark-etiket text-ark-accent-on-dark">
-                        {slayt.etiket}
-                      </p>
+                      {/*
+                        ACİL DURUM VURGUSU — KIRMIZI.
+
+                        Kırmızı YALNIZCA acil durum slaytında kullanılır;
+                        turuncu hiç kullanılmaz. Dolu kırmızı rozet
+                        (#dc2626) üzerinde beyaz metin 4.83:1 — AA.
+                        Diğer slaytlar mevcut turkuaz etiketi korur.
+                      */}
+                      {slayt.acilDurum ? (
+                        <p className="ark-etiket inline-flex items-center gap-2 rounded-full bg-[#dc2626] px-3.5 py-1.5 text-white">
+                          <span
+                            aria-hidden="true"
+                            className="inline-block h-2 w-2 rounded-full bg-white"
+                          />
+                          {slayt.etiket}
+                        </p>
+                      ) : (
+                        <p className="ark-etiket text-ark-accent-on-dark">
+                          {slayt.etiket}
+                        </p>
+                      )}
 
                       {sira === ANA_BASLIK_SIRASI ? (
                         <h1
@@ -278,7 +293,11 @@ export default function HeroKaydirici({
                           {slayt.bilgiEtiketleri.map((bilgi) => (
                             <li
                               key={bilgi}
-                              className="rounded-full border border-ark-line-dark bg-white/5 px-3.5 py-1.5 text-sm text-ark-on-dark"
+                              className={`rounded-full px-3.5 py-1.5 text-sm text-ark-on-dark ${
+                                slayt.acilDurum
+                                  ? "border border-[#f87171]/60 bg-[#dc2626]/15"
+                                  : "border border-ark-line-dark bg-white/5"
+                              }`}
                             >
                               {bilgi}
                             </li>
@@ -295,7 +314,10 @@ export default function HeroKaydirici({
                             onClick={() => setDuraklat(false)}
                             className={
                               dugme.tur === "birincil"
-                                ? "inline-flex min-h-[44px] items-center rounded-xl bg-white px-6 py-3.5 font-semibold text-ark-ink transition duration-200 hover:bg-ark-on-dark-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent-on-dark active:scale-[0.98] motion-reduce:active:scale-100"
+                                ? slayt.acilDurum
+                                  ? // Acil durum birincil düğmesi: dolu kırmızı, beyaz metin (4.83:1, AA).
+                                    "inline-flex min-h-[44px] items-center rounded-xl bg-[#dc2626] px-6 py-3.5 font-semibold text-white transition duration-200 hover:bg-[#b91c1c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.98] motion-reduce:active:scale-100"
+                                  : "inline-flex min-h-[44px] items-center rounded-xl bg-white px-6 py-3.5 font-semibold text-ark-ink transition duration-200 hover:bg-ark-on-dark-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent-on-dark active:scale-[0.98] motion-reduce:active:scale-100"
                                 : "inline-flex min-h-[44px] items-center rounded-xl border border-ark-line-dark px-6 py-3.5 font-semibold text-ark-on-dark transition duration-200 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent-on-dark"
                             }
                           >
@@ -308,7 +330,11 @@ export default function HeroKaydirici({
                         <p className="mt-6 flex items-start gap-2.5 text-sm leading-relaxed text-ark-on-dark-2">
                           <span
                             aria-hidden="true"
-                            className="mt-0.5 shrink-0 text-ark-accent-on-dark"
+                            className={`mt-0.5 shrink-0 ${
+                              slayt.acilDurum
+                                ? "text-[#f87171]"
+                                : "text-ark-accent-on-dark"
+                            }`}
                           >
                             <IkonKalkan />
                           </span>
@@ -324,11 +350,17 @@ export default function HeroKaydirici({
                         4:3 (mobil) hem 5:4 (masaüstü) kırpmada çerçevede
                         kalır. "Temsili görsel" ibaresi sağ altta durur.
                       */}
-                      <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-ark-line-dark shadow-ark-3 sm:aspect-[5/4]">
+                      <div
+                        className={`relative aspect-[4/3] overflow-hidden rounded-3xl shadow-ark-3 sm:aspect-[5/4] ${
+                          slayt.acilDurum
+                            ? "border-2 border-[#dc2626]"
+                            : "border border-ark-line-dark"
+                        }`}
+                      >
                         <Gorsel
                           anahtar={slayt.gorsel!}
                           oncelikli={sira === ANA_BASLIK_SIRASI}
-                          sizes="(min-width: 1024px) 560px, 92vw"
+                          sizes="(min-width: 1024px) 46vw, 92vw"
                         />
                         <TemsiliRozet metin={metinler.temsiliGorsel} />
                       </div>
@@ -345,7 +377,7 @@ export default function HeroKaydirici({
           Kontroller: oklar solda, noktalar ortada — hepsi 44px hedefli.
           Mobilde kaydırıcı olmadığı için HİÇ render edilmezler.
         */}
-        {masaustu && (
+        {(
         <div className="mt-10 flex items-center justify-between gap-4 border-t border-ark-line-dark pt-6">
           <div className="flex gap-2">
             <button

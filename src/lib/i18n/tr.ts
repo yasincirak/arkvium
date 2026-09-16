@@ -69,27 +69,53 @@ export const TR = {
     slaydiGoster: "slaydını göster",
     marka: { etiket: "ARKVIUM" },
     /*
-      Hero üç slayttan oluşur. Metinler işletme tarafından verilmiştir;
-      değiştirilmeden kullanılır. Düğme metni her slaytta ortaktır ve
-      `sonCagri.urunleriIncele` anahtarından gelir — burada tekrarlanmaz.
+      Hero DÖRT slayttan oluşur. Slayt 1-3 işletme tarafından verilen
+      metinlerdir. Slayt 4 (acil durum) `a5a59c8^` sürümünden BİREBİR
+      geri getirildi; yeni sağlık iddiası veya özellik EKLENMEDİ.
+
+      Düğme metinleri her slaytta kendi ürününe özeldir ve sipariş
+      adresine götürür.
     */
     esyalar: {
-      etiket: "Kayıp eşya",
+      etiket: "Valiz etiketi",
       baslik: "Eşyaların kaybolsa bile sana geri dönsün.",
       metin:
-        "ARKVIUM QR etiketleriyle eşyaların bulunduğunda sana güvenli şekilde ulaşılmasını sağla.",
+        "ARKVIUM ile eşyalarını dijital olarak kaydet, bulunmasını kolaylaştır, güvenle sahip çık.",
+      dugme: "Valiz Etiketini İncele",
     },
-    gizliIletisim: {
-      etiket: "Gizli iletişim",
-      baslik: "Numaran görünmeden sana ulaşsınlar.",
+    anahtarlik: {
+      etiket: "Metal anahtarlık",
+      baslik: "Kaybolduğunda sana geri dönsün.",
       metin:
-        "Araç ve kişisel eşyalarında iletişim bilgilerini paylaşmadan ulaşılabilir ol.",
+        "Anahtarlığını bulan kişi, kişisel bilgilerin açıkça gösterilmeden sana güvenli şekilde ulaşabilsin.",
+      dugme: "Anahtarlığı İncele",
     },
-    tekQr: {
-      etiket: "Tek sistem",
-      baslik: "Tek QR, farklı kullanım alanları.",
+    kunye: {
+      etiket: "Evcil hayvan künyesi",
+      baslik: "Onu bulan kişi sana ulaşabilsin.",
       metin:
-        "Anahtarlıktan valize, evcil hayvan künyesinden araç etiketine kadar tek sistem.",
+        "Evcil dostunun künyesi okutulduğunda, iletişim bilgilerin açıkça gösterilmeden sana mesaj gönderilebilsin.",
+      dugme: "Künyeyi İncele",
+    },
+    /*
+      ACİL DURUM — `a5a59c8^` (71a2017) · src/lib/i18n/tr.ts:71-86
+      Metin, bilgi etiketleri, düğmeler ve beyan uyarısı değiştirilmedi.
+    */
+    acilDurum: {
+      etiket: "Acil Durum Profili",
+      baslik: "Acil durumda saniyeler önemlidir",
+      metin:
+        "Sağlık personeli veya yardım eden kişi QR'ı okutarak kullanıcının paylaşmayı seçtiği sağlık bilgilerini görebilir ve acil durumda aranacak yakınlarına tek dokunuşla ulaşabilir.",
+      bilgiler: {
+        kanGrubu: "Kan grubu",
+        alerjiler: "Alerjiler",
+        ilaclar: "Kullanılan ilaçlar",
+        kisiler: "Acil durum kişileri",
+      },
+      dugmeBirincil: "Acil Durum Profilini İncele",
+      dugmeIkincil: "Nasıl Çalışır?",
+      beyan:
+        "Gösterilen bilgiler kullanıcının kendi beyanıdır; doğrulanmış tıbbi kayıt değildir.",
     },
   },
 

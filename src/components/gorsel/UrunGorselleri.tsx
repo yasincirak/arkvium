@@ -18,6 +18,9 @@ type GorselTanimi = {
 export type GorselAnahtari =
   | "acil-durum"
   | "hero"
+  | "hero-valiz"
+  | "hero-anahtarlik"
+  | "hero-kunye"
   | "arac"
   | "sticker-seti"
   | "anahtarlik"
@@ -35,6 +38,29 @@ const GORSELLER: Record<GorselAnahtari, GorselTanimi> = {
      * Kaynak 2:1'e yakın olduğu için 4:3 ve 5:4 kutularda yatay kırpma
      * yapılır; %45 hem masaüstünde hem mobilde bu anı çerçeve içinde tutar.
      */
+    konum: "45% 50%",
+  },
+  /*
+    HERO KAYDIRICI GÖRSELLERİ.
+
+    Kaynak dosyalar tam sayfa tasarım görselleriydi; içlerindeki menü,
+    "SEÇENEK" başlığı ve renk paleti şeridi KIRPILARAK ATILDI, yalnızca
+    temiz ürün fotoğrafı alanı alındı. Metin fotoğrafın içinde değildir;
+    başlık, açıklama ve düğme HTML olarak üretilir.
+  */
+  "hero-valiz": {
+    src: "/gorseller/hero-valiz-etiketi.jpg",
+    alt: "Havalimanında çekilen lacivert valiz ve sapına takılı QR kodlu ARKVIUM valiz etiketi",
+    konum: "50% 50%",
+  },
+  "hero-anahtarlik": {
+    src: "/gorseller/hero-metal-anahtarlik.jpg",
+    alt: "Ahşap masadaki anahtarlar ve anahtarlığa takılı QR kodlu metal ARKVIUM etiketi; etiketi alan bir el",
+    konum: "50% 60%",
+  },
+  "hero-kunye": {
+    src: "/gorseller/hero-evcil-hayvan-kunyesi.jpg",
+    alt: "Yeşil tasmasında QR kodlu yuvarlak ARKVIUM künyesi bulunan golden retriever köpek",
     konum: "45% 50%",
   },
   hero: {

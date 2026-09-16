@@ -63,26 +63,45 @@ export const EN: DerinKismi<Sozluk> = {
     oncekiSlayt: "Previous slide",
     sonrakiSlayt: "Next slide",
     slaydiGoster: "slide",
-    // Three hero slides. Meaning follows the Turkish source exactly; no
-    // new claims are introduced. The shared button label comes from
-    // `sonCagri.urunleriIncele`.
+    // Four hero slides. Meaning follows the Turkish source exactly; no
+    // new claims are introduced. The emergency slide is restored from
+    // a5a59c8^ unchanged.
     esyalar: {
-      etiket: "Lost items",
+      etiket: "Luggage tag",
       baslik: "Get your things back when they go missing.",
       metin:
-        "With ARKVIUM QR tags, make sure people can reach you safely when your belongings are found.",
+        "With ARKVIUM, register your belongings digitally, make them easier to find and keep them safely yours.",
+      dugme: "See the Luggage Tag",
     },
-    gizliIletisim: {
-      etiket: "Private contact",
-      baslik: "Let people reach you without seeing your number.",
+    anahtarlik: {
+      etiket: "Metal keyring",
+      baslik: "Let them find their way back to you.",
       metin:
-        "Stay reachable on your vehicle and personal belongings without sharing your contact details.",
+        "Whoever finds your keyring can reach you safely, without your personal details being shown.",
+      dugme: "See the Keyring",
     },
-    tekQr: {
-      etiket: "One system",
-      baslik: "One QR code, many uses.",
+    kunye: {
+      etiket: "Pet tag",
+      baslik: "Let whoever finds them reach you.",
       metin:
-        "From keyrings to luggage, pet tags to vehicle stickers — a single system.",
+        "When your pet's tag is scanned, someone can message you without your contact details being shown.",
+      dugme: "See the Pet Tag",
+    },
+    acilDurum: {
+      etiket: "Emergency Profile",
+      baslik: "In an emergency, seconds matter",
+      metin:
+        "Paramedics or anyone helping can scan the QR code to see the health details the owner chose to share, and reach their emergency contacts with one tap.",
+      bilgiler: {
+        kanGrubu: "Blood type",
+        alerjiler: "Allergies",
+        ilaclar: "Medications",
+        kisiler: "Emergency contacts",
+      },
+      dugmeBirincil: "See the Emergency Profile",
+      dugmeIkincil: "How It Works",
+      beyan:
+        "This information is provided by the user and is not a verified medical record.",
     },
   },
 
