@@ -18,6 +18,8 @@ type GorselTanimi = {
 export type GorselAnahtari =
   | "acil-durum"
   | "hero"
+  | "hero-arac-kaza"
+  | "hero-canta"
   | "hero-valiz"
   | "hero-anahtarlik"
   | "hero-kunye"
@@ -48,6 +50,23 @@ const GORSELLER: Record<GorselAnahtari, GorselTanimi> = {
     temiz ürün fotoğrafı alanı alındı. Metin fotoğrafın içinde değildir;
     başlık, açıklama ve düğme HTML olarak üretilir.
   */
+  /*
+    Acil durum sahneleri. Mobilde 4:3 kırpma yatayda daralttığı için
+    `konum` her ikisinde de QR etiketini, polisi ve sağlık çalışanını
+    çerçeve içinde tutacak şekilde ayarlandı.
+  */
+  "hero-arac-kaza": {
+    src: "/gorseller/hero-arac-kaza-qr.jpg",
+    alt: "Kaza yapmış aracın camındaki QR etiketini gösteren 112 sağlık görevlisi ve telefonuna bakan polis memuru",
+    // Etiket sağda kaldığı için kadraj sağa alınır; polis ve görevli kalır.
+    konum: "65% 50%",
+  },
+  "hero-canta": {
+    src: "/gorseller/hero-canta-qr-etiketi.jpg",
+    alt: "Taksinin arka koltuğunda unutulmuş deri çantayı tutan taksi şoförü, çantadaki metal QR etiketini telefonuyla okutuyor",
+    // Çanta ve etiket solda-ortada; mobil kırpmada ikisi de çerçevede kalır.
+    konum: "40% 50%",
+  },
   "hero-valiz": {
     src: "/gorseller/hero-valiz-etiketi.jpg",
     alt: "Havalimanında çekilen lacivert valiz ve sapına takılı QR kodlu ARKVIUM valiz etiketi",
@@ -128,12 +147,23 @@ export function Gorsel({
   anahtar,
   sizes,
   oncelikli = false,
+  hemenYukle = false,
   className,
 }: {
   anahtar: GorselAnahtari;
   sizes: string;
   /** Yalnızca ekranın üstündeki görselde true olmalı. */
   oncelikli?: boolean;
+  /**
+   * Tembel yüklemeyi KAPATIR.
+   *
+   * KAYDIRICI İÇİN GEREKLİ: kaydırıcı slaytları `translateX` ile
+   * taşınır. Tarayıcının yerleşik tembel yükleme sezgisi kaydırma
+   * mesafesine bakar; uzaktaki slaytlar görünüre TAŞINSA BİLE yüklenmez
+   * ve görsel alanı boş kalır. Varsayılan `false` olduğu için diğer
+   * çağıranların davranışı değişmez.
+   */
+  hemenYukle?: boolean;
   className?: string;
 }) {
   const gorsel = GORSELLER[anahtar];
@@ -145,7 +175,7 @@ export function Gorsel({
       fill
       sizes={sizes}
       priority={oncelikli}
-      loading={oncelikli ? undefined : "lazy"}
+      loading={oncelikli ? undefined : hemenYukle ? "eager" : "lazy"}
       style={{ objectFit: "cover", objectPosition: gorsel.konum }}
       className={className}
     />

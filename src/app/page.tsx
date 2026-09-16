@@ -6,6 +6,7 @@ import DilSecici from "@/components/DilSecici";
 import KonuKaydirici from "@/components/KonuKaydirici";
 import KullanimVitrini from "@/components/KullanimVitrini";
 import MobilMenu from "@/components/MobilMenu";
+import { IkonInstagram } from "@/components/gorsel/Ikonlar";
 import { Gorsel, TemsiliRozet } from "@/components/gorsel/UrunGorselleri";
 import HeroKaydirici from "@/components/hero/HeroKaydirici";
 import Logo, { ArkviumTamLogo } from "@/components/Logo";
@@ -150,6 +151,11 @@ export default function Home() {
                 ...BOLUMLER,
                 { href: "/login", metin: s.header.girisYap },
               ]}
+              sosyal={{
+                href: "https://www.instagram.com/arkvium/",
+                metin: s.footer.instagramKullanici,
+                erisilebilirAd: s.footer.instagramErisilebilirAd,
+              }}
               etiketler={{ ac: s.header.menuAc, kapat: s.header.menuKapat }}
               altIcerik={<DilSecici aktif={dil} etiketler={s.dil} />}
             />
@@ -164,17 +170,67 @@ export default function Home() {
           slaydiGoster: s.hero.slaydiGoster,
           temsiliGorsel: s.gorsel.temsili,
           /*
-            DÖRT SLAYT.
+            ALTI SLAYT — sıra: acil durum sahneleri önce.
 
-            1-3: ürün slaytları — her biri kendi sipariş adresine gider.
-            Ürün detay sayfası yalnızca araç sticker'ında bulunduğu için
-            diğerleri mevcut ve çalışan `/siparis?urun=<kod>` adresini
-            kullanır (kodlar src/lib/siparis.ts kaynağındandır).
-
-            4: acil durum — `a5a59c8^` sürümünden geri getirildi; yapı,
-            bilgi etiketleri, iki düğmesi ve beyan uyarısı aynen korundu.
+            1-2: motosiklet kaskı ve araç camı QR sahneleri
+            (`acilDurum: true` — rozetlerinde nokta taşırlar).
+            3: takside unutulan çanta.
+            4-6: ürün slaytları; ürün detay sayfası yalnızca araç
+            sticker'ında bulunduğu için diğerleri mevcut ve çalışan
+            `/siparis?urun=<kod>` adresini kullanır (kodlar
+            src/lib/siparis.ts kaynağındandır).
           */
           slaytlar: [
+            {
+              kod: "motor-kask-qr",
+              ...s.hero.motorKask,
+              acilDurum: true,
+              /*
+                GEÇİCİ GÖRSEL.
+
+                Bu slayt için verilen kask fotoğrafındaki etikette marka
+                "ARRVIUM" olarak yanlış yazılmıştı; o dosya depodan
+                ÇIKARILDI ve kullanılmıyor. Yerine, aynı sahneyi
+                (kasktaki QR'ın okutulması) gösteren mevcut ve doğru
+                markalı `acil-durum.jpg` kullanılıyor.
+
+                Düzeltilmiş dosya geldiğinde yalnızca bu satır
+                `"hero-motor-kask"` olarak geri alınır.
+              */
+              gorsel: "acil-durum",
+              dugmeler: [
+                {
+                  metin: s.hero.motorKask.dugme,
+                  href: "#acil-durum",
+                  tur: "birincil",
+                },
+              ],
+            },
+            {
+              kod: "arac-kaza-qr",
+              ...s.hero.aracKaza,
+              acilDurum: true,
+              gorsel: "hero-arac-kaza",
+              dugmeler: [
+                {
+                  metin: s.hero.aracKaza.dugme,
+                  href: "/urun/arac-stickeri",
+                  tur: "birincil",
+                },
+              ],
+            },
+            {
+              kod: "canta-qr-etiketi",
+              ...s.hero.canta,
+              gorsel: "hero-canta",
+              dugmeler: [
+                {
+                  metin: s.hero.canta.dugme,
+                  href: "/siparis?urun=metal-anahtarlik",
+                  tur: "birincil",
+                },
+              ],
+            },
             {
               kod: "valiz-etiketi",
               ...s.hero.esyalar,
@@ -208,31 +264,6 @@ export default function Home() {
                   metin: s.hero.kunye.dugme,
                   href: "/siparis?urun=evcil-hayvan-kunyesi",
                   tur: "birincil",
-                },
-              ],
-            },
-            {
-              kod: "acil-durum",
-              ...s.hero.acilDurum,
-              acilDurum: true,
-              bilgiEtiketleri: [
-                s.hero.acilDurum.bilgiler.kanGrubu,
-                s.hero.acilDurum.bilgiler.alerjiler,
-                s.hero.acilDurum.bilgiler.ilaclar,
-                s.hero.acilDurum.bilgiler.kisiler,
-              ],
-              gorsel: "acil-durum",
-              beyanUyarisi: s.hero.acilDurum.beyan,
-              dugmeler: [
-                {
-                  metin: s.hero.acilDurum.dugmeBirincil,
-                  href: "#acil-durum",
-                  tur: "birincil",
-                },
-                {
-                  metin: s.hero.acilDurum.dugmeIkincil,
-                  href: "#nasil",
-                  tur: "ikincil",
                 },
               ],
             },
@@ -461,9 +492,9 @@ export default function Home() {
       </section>
 
       {/*
-        Footer yalnızca GERÇEKTEN VAR OLAN sayfalara bağlanır. Sosyal medya
-        veya hukuki metin bağlantısı eklenmez: bu hesaplar/sayfalar projede
-        tanımlı değildir ve kırık bağlantı üretmemek için uydurulmaz.
+        Footer yalnızca GERÇEKTEN VAR OLAN sayfalara ve hesaplara bağlanır;
+        adres uydurulmaz. Sosyal medya alanında yalnızca sahibi tarafından
+        bildirilen tek hesap (Instagram @arkvium) yer alır.
       */}
       {/*
         Footer, beyaz gövdeden ayrılsın diye bir ton koyu yüzeye oturur.
@@ -479,6 +510,24 @@ export default function Home() {
               <p className="mt-4 max-w-xs text-sm leading-relaxed text-ark-ink-3">
                 {s.footer.aciklama}
               </p>
+
+              {/*
+                Sosyal medya alanı. Dış bağlantı olduğu için `next/link`
+                yerine sade `<a>` kullanılır; yeni sekmede açılır ve
+                `rel="noopener noreferrer"` ile açılan sayfanın bu sekmeye
+                erişmesi engellenir. Erişilebilir ad `aria-label` ile
+                verilir, simge `aria-hidden`dır.
+              */}
+              <a
+                href="https://www.instagram.com/arkvium/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={s.footer.instagramErisilebilirAd}
+                className={`mt-6 inline-flex min-h-[44px] items-center gap-2 text-sm text-ark-ink-3 ${BAGLANTI}`}
+              >
+                <IkonInstagram className="h-5 w-5" />
+                {s.footer.instagramKullanici}
+              </a>
             </div>
 
             <div>

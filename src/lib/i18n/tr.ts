@@ -76,9 +76,45 @@ export const TR = {
       Düğme metinleri her slaytta kendi ürününe özeldir ve sipariş
       adresine götürür.
     */
+    /*
+      ACİL DURUM SAHNELERİ — ilk iki slayt.
+
+      Metinler KESİN SONUÇ VAAT ETMEZ: "hayat kurtarır" ya da "sağlık
+      bilgisi gösterir" gibi iddialar yoktur. Yalnızca kayıt sahibinin
+      PAYLAŞMAYI SEÇTİĞİ bilgiye erişim ve onun belirlediği iletişim
+      akışı anlatılır.
+
+      Görsellerdeki QR kodlar TEMSİLİDİR; çalışan üretim kodu oldukları
+      iddia edilmez ("Temsili görsel" rozeti görselin üzerindedir).
+    */
+    motorKask: {
+      etiket: "ACİL DURUMDA FARK EDİLİR",
+      baslik: "Kaskındaki QR etiketi bağlantı kursun.",
+      vurgu: "bağlantı kursun.",
+      metin:
+        "ARKVIUM etiketi okutulduğunda, kayıt sahibinin paylaşmayı seçtiği bilgilere erişim sağlanır.",
+      dugme: "Acil Durum Profilini İncele",
+    },
+    aracKaza: {
+      etiket: "İHTİYAÇ ANINDA İLETİŞİM",
+      baslik: "Aracındaki QR etiketi iletişimi kolaylaştırsın.",
+      vurgu: "iletişimi kolaylaştırsın.",
+      metin:
+        "Araç üzerindeki ARKVIUM etiketi, kayıt sahibinin belirlediği iletişim akışına yönlendirir.",
+      dugme: "Araç Etiketini İncele",
+    },
+    canta: {
+      etiket: "BULUNDUĞUNDA GERİ DÖNER",
+      baslik: "Unuttuğun çanta sana geri dönsün.",
+      vurgu: "sana geri dönsün.",
+      metin:
+        "Çantanı bulan kişi etiketi okuttuğunda, kişisel bilgilerin açıkça gösterilmeden sana güvenli şekilde mesaj gönderebilir.",
+      dugme: "Metal Anahtarlığı İncele",
+    },
     esyalar: {
       etiket: "Valiz etiketi",
       baslik: "Eşyaların kaybolsa bile sana geri dönsün.",
+      vurgu: "sana geri dönsün.",
       metin:
         "ARKVIUM ile eşyalarını dijital olarak kaydet, bulunmasını kolaylaştır, güvenle sahip çık.",
       dugme: "Valiz Etiketini İncele",
@@ -86,6 +122,7 @@ export const TR = {
     anahtarlik: {
       etiket: "Metal anahtarlık",
       baslik: "Kaybolduğunda sana geri dönsün.",
+      vurgu: "sana geri dönsün.",
       metin:
         "Anahtarlığını bulan kişi, kişisel bilgilerin açıkça gösterilmeden sana güvenli şekilde ulaşabilsin.",
       dugme: "Anahtarlığı İncele",
@@ -93,6 +130,7 @@ export const TR = {
     kunye: {
       etiket: "Evcil hayvan künyesi",
       baslik: "Onu bulan kişi sana ulaşabilsin.",
+      vurgu: "sana ulaşabilsin.",
       metin:
         "Evcil dostunun künyesi okutulduğunda, iletişim bilgilerin açıkça gösterilmeden sana mesaj gönderilebilsin.",
       dugme: "Künyeyi İncele",
@@ -386,6 +424,8 @@ export const TR = {
   },
 
   footer: {
+    instagramErisilebilirAd: "ARKVIUM Instagram hesabı",
+    instagramKullanici: "@arkvium",
     aciklama:
       "Dijital Sahiplik Platformu. Eşyalarına QR kodlu dijital kimlik ver; kişisel bilgilerin görünmeden sana ulaşılsın.",
     urunler: "Ürünler",

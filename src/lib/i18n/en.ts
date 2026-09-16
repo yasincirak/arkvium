@@ -66,9 +66,37 @@ export const EN: DerinKismi<Sozluk> = {
     // Four hero slides. Meaning follows the Turkish source exactly; no
     // new claims are introduced. The emergency slide is restored from
     // a5a59c8^ unchanged.
+    // Emergency scenes. No outcome is promised: the text describes only
+    // access to what the owner chose to share and the contact flow they
+    // set up. QR codes in the photos are illustrative.
+    motorKask: {
+      etiket: "VISIBLE IN AN EMERGENCY",
+      baslik: "Let the QR tag on your helmet make the connection.",
+      vurgu: "make the connection.",
+      metin:
+        "When an ARKVIUM tag is scanned, it gives access to the details the owner chose to share.",
+      dugme: "See the Emergency Profile",
+    },
+    aracKaza: {
+      etiket: "CONTACT WHEN IT MATTERS",
+      baslik: "Let the QR tag on your vehicle make contact easier.",
+      vurgu: "make contact easier.",
+      metin:
+        "The ARKVIUM tag on the vehicle points to the contact flow the owner set up.",
+      dugme: "See the Vehicle Tag",
+    },
+    canta: {
+      etiket: "FOUND MEANS RETURNED",
+      baslik: "Let the bag you left behind find its way back.",
+      vurgu: "find its way back.",
+      metin:
+        "When whoever finds your bag scans the tag, they can message you safely without your personal details being shown.",
+      dugme: "See the Metal Keyring",
+    },
     esyalar: {
       etiket: "Luggage tag",
       baslik: "Get your things back when they go missing.",
+      vurgu: "when they go missing.",
       metin:
         "With ARKVIUM, register your belongings digitally, make them easier to find and keep them safely yours.",
       dugme: "See the Luggage Tag",
@@ -76,6 +104,7 @@ export const EN: DerinKismi<Sozluk> = {
     anahtarlik: {
       etiket: "Metal keyring",
       baslik: "Let them find their way back to you.",
+      vurgu: "their way back to you.",
       metin:
         "Whoever finds your keyring can reach you safely, without your personal details being shown.",
       dugme: "See the Keyring",
@@ -83,6 +112,7 @@ export const EN: DerinKismi<Sozluk> = {
     kunye: {
       etiket: "Pet tag",
       baslik: "Let whoever finds them reach you.",
+      vurgu: "reach you.",
       metin:
         "When your pet's tag is scanned, someone can message you without your contact details being shown.",
       dugme: "See the Pet Tag",
@@ -372,6 +402,8 @@ export const EN: DerinKismi<Sozluk> = {
   },
 
   footer: {
+    instagramErisilebilirAd: "ARKVIUM on Instagram",
+    instagramKullanici: "@arkvium",
     aciklama:
       "Digital Ownership Platform. Give your belongings a QR-based digital identity and be reachable without your details being shown.",
     urunler: "Products",

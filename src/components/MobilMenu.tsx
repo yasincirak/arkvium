@@ -2,6 +2,8 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
+import { IkonInstagram } from "@/components/gorsel/Ikonlar";
+
 /**
  * Mobil (md altı) gezinme menüsü.
  *
@@ -18,12 +20,22 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 type Baglanti = { href: string; metin: string };
 
+/**
+ * Menünün altındaki sosyal medya bağlantısı. Dış adrese gittiği için
+ * gezinme bağlantılarından AYRI tutulur: yeni sekmede açılır ve kendi
+ * erişilebilir adını taşır.
+ */
+type SosyalBaglanti = { href: string; metin: string; erisilebilirAd: string };
+
 export default function MobilMenu({
   baglantilar,
+  sosyal,
   altIcerik,
   etiketler,
 }: {
   baglantilar: Baglanti[];
+  /** Sosyal medya bağlantısı (isteğe bağlı). */
+  sosyal?: SosyalBaglanti;
   /** Menünün altında gösterilecek ek içerik (dil seçici). */
   altIcerik?: ReactNode;
   etiketler?: { ac: string; kapat: string };
@@ -94,6 +106,20 @@ export default function MobilMenu({
                 {baglanti.metin}
               </a>
             ))}
+
+            {sosyal && (
+              <a
+                href={sosyal.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={sosyal.erisilebilirAd}
+                onClick={() => setAcik(false)}
+                className="flex min-h-[44px] items-center gap-2 rounded-xl px-3 text-sm font-medium text-ark-ink-2 transition duration-200 hover:bg-ark-accent-soft hover:text-ark-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent"
+              >
+                <IkonInstagram className="h-5 w-5" />
+                {sosyal.metin}
+              </a>
+            )}
 
             {altIcerik && (
               <div className="border-t border-ark-line px-2 py-3">

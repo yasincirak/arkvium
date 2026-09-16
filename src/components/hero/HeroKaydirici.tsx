@@ -13,8 +13,10 @@ import {
 /**
  * Ana sayfa hero kaydırıcısı.
  *
- * ARKVIUM'un beş temel kullanım alanını sırayla anlatır; ilk slayt her
- * zaman Acil Durum Profili'dir.
+ * ARKVIUM'un beş kullanım sahnesini sırayla anlatır.
+ *
+ * RENK DÜZENİ: beyaz zemin, koyu başlık, zümrüt vurgu ve düğme.
+ * Beş slayt da AYNI sistemi kullanır; bu renkler yalnızca buradadır.
  *
  * DAVRANIŞ
  * - 6 saniyede bir otomatik ilerler.
@@ -42,6 +44,8 @@ type Slayt = {
    */
   markaSlayti?: true;
   baslik?: string;
+  /** Başlık içinde zümrüt yeşiliyle vurgulanacak alt dize. */
+  vurgu?: string;
   metin?: string;
   gorsel?: GorselAnahtari;
   bilgiEtiketleri?: string[];
@@ -49,11 +53,22 @@ type Slayt = {
   /** Sağlık verisi taşıyan slaytta zorunlu hukuki açıklama. */
   beyanUyarisi?: string;
   /**
-   * Acil durum slaytı: etiket, vurgu ve birincil düğme KIRMIZI olur.
-   * Kırmızı YALNIZCA bu slaytta kullanılır; turuncu hiç kullanılmaz.
+   * Acil durum slaytı: rozetin başına küçük bir nokta konur.
+   * Renk düzeni beş slaytta AYNIDIR (beyaz / koyu / zümrüt).
    */
   acilDurum?: true;
 };
+
+/*
+  SLIDER'A ÖZEL RENK DÜZENİ.
+
+  Bu değerler YALNIZCA kaydırıcıda kullanılır; `globals.css`
+  içindeki genel `--ark-*` paletine dokunulmaz. Bu yüzden Tailwind
+  tokenı değil, doğrudan değer olarak yazılırlar.
+*/
+const BASLIK_RENGI = "#132238";
+const VURGU_RENGI = "#0E8A68";
+const METIN_RENGI = "#263238";
 
 const GECIS_SURESI = 6000;
 const KAYDIRMA_ESIGI = 48;
@@ -66,6 +81,27 @@ export type HeroMetinleri = {
   temsiliGorsel: string;
   slaytlar: Slayt[];
 };
+
+/**
+ * Başlığı, `vurgu` alt dizesini zümrüt yeşiliyle ayırarak basar.
+ *
+ * Vurgu bulunamazsa başlık olduğu gibi yazılır — metin ASLA kaybolmaz.
+ */
+function VurguluBaslik({ baslik, vurgu }: { baslik: string; vurgu?: string }) {
+  const sira = vurgu ? baslik.indexOf(vurgu) : -1;
+
+  if (sira === -1 || !vurgu) {
+    return <>{baslik}</>;
+  }
+
+  return (
+    <>
+      {baslik.slice(0, sira)}
+      <span style={{ color: VURGU_RENGI }}>{vurgu}</span>
+      {baslik.slice(sira + vurgu.length)}
+    </>
+  );
+}
 
 export default function HeroKaydirici({
   metinler,
@@ -141,7 +177,7 @@ export default function HeroKaydirici({
     <section
       aria-labelledby="hero-basligi"
       aria-roledescription="karusel"
-      className="relative overflow-hidden bg-ark-surface-dark"
+      className="relative overflow-hidden bg-white"
       onMouseEnter={() => setDuraklat(true)}
       onMouseLeave={() => setDuraklat(false)}
       onFocusCapture={() => setDuraklat(true)}
@@ -180,12 +216,6 @@ export default function HeroKaydirici({
         }
       }}
     >
-      {/* Zemin derinliği — dekoratif, metin taşımaz, kontrastı düşürmez. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_100%_at_85%_0%,transparent_35%,var(--ark-ink-deep)_100%)]"
-      />
-
       {/*
         TAM GENİŞLİK HERO.
 
@@ -248,43 +278,58 @@ export default function HeroKaydirici({
                       başlık ve düğmeler okunur. Masaüstünde metin yine
                       solda kalır.
                     */}
-                    <div className="order-2 lg:order-1 lg:col-span-6">
+                    <div className="order-2 lg:order-1 lg:col-span-5">
                       {/*
-                        ACİL DURUM VURGUSU — KIRMIZI.
-
-                        Kırmızı YALNIZCA acil durum slaytında kullanılır;
-                        turuncu hiç kullanılmaz. Dolu kırmızı rozet
-                        (#dc2626) üzerinde beyaz metin 4.83:1 — AA.
-                        Diğer slaytlar mevcut turkuaz etiketi korur.
+                        Rozet, beş slaytta da AYNI sistemi kullanır:
+                        açık zümrüt zemin + koyu zümrüt metin. Acil durum
+                        slaytları yalnızca noktayla ayrılır.
                       */}
-                      {slayt.acilDurum ? (
-                        <p className="ark-etiket inline-flex items-center gap-2 rounded-full bg-[#dc2626] px-3.5 py-1.5 text-white">
+                      {/*
+                        Rozet, beş slaytta da AYNI sistemi kullanır:
+                        açık zümrüt zemin + koyu zümrüt metin. Acil durum
+                        slaytları yalnızca noktayla ayrılır.
+                      */}
+                      <p
+                        className="ark-etiket inline-flex items-center gap-2 rounded-full bg-[#0E8A68]/10 px-3.5 py-1.5"
+                        style={{ color: VURGU_RENGI }}
+                      >
+                        {slayt.acilDurum && (
                           <span
                             aria-hidden="true"
-                            className="inline-block h-2 w-2 rounded-full bg-white"
+                            className="inline-block h-2 w-2 rounded-full"
+                            style={{ backgroundColor: VURGU_RENGI }}
                           />
-                          {slayt.etiket}
-                        </p>
-                      ) : (
-                        <p className="ark-etiket text-ark-accent-on-dark">
-                          {slayt.etiket}
-                        </p>
-                      )}
+                        )}
+                        {slayt.etiket}
+                      </p>
 
                       {sira === ANA_BASLIK_SIRASI ? (
                         <h1
                           id="hero-basligi"
-                          className="ark-display mt-4 text-balance text-ark-on-dark"
+                          className="ark-display mt-4 text-balance"
+                          style={{ color: BASLIK_RENGI }}
                         >
-                          {slayt.baslik}
+                          <VurguluBaslik
+                            baslik={slayt.baslik ?? ""}
+                            vurgu={slayt.vurgu}
+                          />
                         </h1>
                       ) : (
-                        <p className="ark-display mt-4 text-balance text-ark-on-dark">
-                          {slayt.baslik}
+                        <p
+                          className="ark-display mt-4 text-balance"
+                          style={{ color: BASLIK_RENGI }}
+                        >
+                          <VurguluBaslik
+                            baslik={slayt.baslik ?? ""}
+                            vurgu={slayt.vurgu}
+                          />
                         </p>
                       )}
 
-                      <p className="ark-giris ark-olcu mt-5 text-ark-on-dark-2">
+                      <p
+                        className="ark-giris ark-olcu mt-5"
+                        style={{ color: METIN_RENGI }}
+                      >
                         {slayt.metin}
                       </p>
 
@@ -293,11 +338,8 @@ export default function HeroKaydirici({
                           {slayt.bilgiEtiketleri.map((bilgi) => (
                             <li
                               key={bilgi}
-                              className={`rounded-full px-3.5 py-1.5 text-sm text-ark-on-dark ${
-                                slayt.acilDurum
-                                  ? "border border-[#f87171]/60 bg-[#dc2626]/15"
-                                  : "border border-ark-line-dark bg-white/5"
-                              }`}
+                              className="rounded-full border border-black/10 bg-black/[0.03] px-3.5 py-1.5 text-sm"
+                              style={{ color: METIN_RENGI }}
                             >
                               {bilgi}
                             </li>
@@ -314,11 +356,17 @@ export default function HeroKaydirici({
                             onClick={() => setDuraklat(false)}
                             className={
                               dugme.tur === "birincil"
-                                ? slayt.acilDurum
-                                  ? // Acil durum birincil düğmesi: dolu kırmızı, beyaz metin (4.83:1, AA).
-                                    "inline-flex min-h-[44px] items-center rounded-xl bg-[#dc2626] px-6 py-3.5 font-semibold text-white transition duration-200 hover:bg-[#b91c1c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white active:scale-[0.98] motion-reduce:active:scale-100"
-                                  : "inline-flex min-h-[44px] items-center rounded-xl bg-white px-6 py-3.5 font-semibold text-ark-ink transition duration-200 hover:bg-ark-on-dark-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent-on-dark active:scale-[0.98] motion-reduce:active:scale-100"
-                                : "inline-flex min-h-[44px] items-center rounded-xl border border-ark-line-dark px-6 py-3.5 font-semibold text-ark-on-dark transition duration-200 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent-on-dark"
+                                ? "inline-flex min-h-[44px] items-center rounded-xl px-6 py-3.5 font-semibold text-white transition duration-200 hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 active:scale-[0.98] motion-reduce:active:scale-100"
+                                : "inline-flex min-h-[44px] items-center rounded-xl border px-6 py-3.5 font-semibold transition duration-200 hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                            }
+                            style={
+                              dugme.tur === "birincil"
+                                ? { backgroundColor: VURGU_RENGI, outlineColor: BASLIK_RENGI }
+                                : {
+                                    color: BASLIK_RENGI,
+                                    borderColor: `${BASLIK_RENGI}33`,
+                                    outlineColor: VURGU_RENGI,
+                                  }
                             }
                           >
                             {dugme.metin}
@@ -327,14 +375,14 @@ export default function HeroKaydirici({
                       </div>
 
                       {slayt.beyanUyarisi && (
-                        <p className="mt-6 flex items-start gap-2.5 text-sm leading-relaxed text-ark-on-dark-2">
+                        <p
+                          className="mt-6 flex items-start gap-2.5 text-sm leading-relaxed"
+                          style={{ color: METIN_RENGI }}
+                        >
                           <span
                             aria-hidden="true"
-                            className={`mt-0.5 shrink-0 ${
-                              slayt.acilDurum
-                                ? "text-[#f87171]"
-                                : "text-ark-accent-on-dark"
-                            }`}
+                            className="mt-0.5 shrink-0"
+                            style={{ color: VURGU_RENGI }}
                           >
                             <IkonKalkan />
                           </span>
@@ -343,25 +391,35 @@ export default function HeroKaydirici({
                       )}
                     </div>
 
-                    <div className="order-1 lg:order-2 lg:col-span-6">
+                    <div className="order-1 lg:order-2 lg:col-span-7">
                       {/*
                         Kadraj `UrunGorselleri` içindeki `konum` değeriyle
-                        ayarlanır; acil durum görselinde QR okutma anı hem
-                        4:3 (mobil) hem 5:4 (masaüstü) kırpmada çerçevede
-                        kalır. "Temsili görsel" ibaresi sağ altta durur.
+                        ayarlanır; her slayt kendi odak noktasını korur.
+
+                        SERT SINIR YOK: görselin metne bakan kenarı beyaza
+                        doğru yumuşak bir gradyanla erir. Masaüstünde bu
+                        geçiş SOLDAN (metnin olduğu taraftan), mobilde
+                        ALTTAN (metnin altta olduğu yerden) gelir.
                       */}
-                      <div
-                        className={`relative aspect-[4/3] overflow-hidden rounded-3xl shadow-ark-3 sm:aspect-[5/4] ${
-                          slayt.acilDurum
-                            ? "border-2 border-[#dc2626]"
-                            : "border border-ark-line-dark"
-                        }`}
-                      >
+                      <div className="relative aspect-[4/3] overflow-hidden rounded-3xl sm:aspect-[5/4] lg:aspect-[4/3]">
                         <Gorsel
                           anahtar={slayt.gorsel!}
                           oncelikli={sira === ANA_BASLIK_SIRASI}
-                          sizes="(min-width: 1024px) 46vw, 92vw"
+                          /*
+                            Kaydırıcıda tembel yükleme KAPALI: slaytlar
+                            `translateX` ile taşındığı için uzaktaki
+                            görseller görünüre girse bile yüklenmiyor ve
+                            kırık görsel gibi boş kalıyordu.
+                          */
+                          hemenYukle
+                          sizes="(min-width: 1024px) 54vw, 92vw"
                         />
+
+                        <div
+                          aria-hidden="true"
+                          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white via-white/25 to-transparent lg:bg-gradient-to-r lg:from-white lg:via-white/20 lg:to-transparent"
+                        />
+
                         <TemsiliRozet metin={metinler.temsiliGorsel} />
                       </div>
                     </div>
@@ -378,13 +436,14 @@ export default function HeroKaydirici({
           Mobilde kaydırıcı olmadığı için HİÇ render edilmezler.
         */}
         {(
-        <div className="mt-10 flex items-center justify-between gap-4 border-t border-ark-line-dark pt-6">
+        <div className="mt-10 flex items-center justify-between gap-4 border-t border-black/10 pt-6">
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => git(etkin - 1)}
               aria-label={metinler.oncekiSlayt}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-ark-line-dark text-ark-on-dark transition duration-200 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent-on-dark"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-black/15 transition duration-200 hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+              style={{ color: BASLIK_RENGI, outlineColor: VURGU_RENGI }}
             >
               <span aria-hidden="true" className="text-lg leading-none">
                 ‹
@@ -395,7 +454,8 @@ export default function HeroKaydirici({
               type="button"
               onClick={() => git(etkin + 1)}
               aria-label={metinler.sonrakiSlayt}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-ark-line-dark text-ark-on-dark transition duration-200 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent-on-dark"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-black/15 transition duration-200 hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+              style={{ color: BASLIK_RENGI, outlineColor: VURGU_RENGI }}
             >
               <span aria-hidden="true" className="text-lg leading-none">
                 ›
@@ -411,15 +471,18 @@ export default function HeroKaydirici({
                 onClick={() => git(sira)}
                 aria-label={`${slayt.etiket} — ${metinler.slaydiGoster}`}
                 aria-current={sira === etkin}
-                className="inline-flex h-11 w-8 items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ark-accent-on-dark"
+                className="inline-flex h-11 w-8 items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                style={{ outlineColor: VURGU_RENGI }}
               >
                 <span
                   aria-hidden="true"
                   className={`block h-1.5 rounded-full transition-all duration-200 ${
-                    sira === etkin
-                      ? "w-7 bg-white"
-                      : "w-1.5 bg-white/35"
+                    sira === etkin ? "w-7" : "w-1.5"
                   }`}
+                  style={{
+                    backgroundColor:
+                      sira === etkin ? VURGU_RENGI : `${BASLIK_RENGI}33`,
+                  }}
                 />
               </button>
             ))}
