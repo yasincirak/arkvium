@@ -9,6 +9,8 @@ import { sozluk } from "@/lib/i18n";
  * kaçış yapılarak basılır.
  *
  * Telefon numarası ekranda AÇIK YAZILMAZ; yalnızca arama bağlantısı sunulur.
+ * Tek istisna 112'dir: kamuya açık acil çağrı numarasıdır, kişisel veri
+ * değildir ve doğrudan aranabilir bir düğme olarak gösterilir.
  */
 
 function Satir({ baslik, deger }: { baslik: string; deger: string }) {
@@ -109,9 +111,43 @@ export default function AcilDurumBolumu({
         )}
       </div>
 
-      <p className="mt-5 border-t border-red-400/20 pt-4 text-sm font-semibold text-red-100">
-        {s.acilDurumGorunum.acilCagri}
-      </p>
+      {/*
+        112 ACİL ÇAĞRI.
+
+        Yalnızca bilgi cümlesi yeterli değildi: etiketi okutan kişi acil
+        bir sahnede metni okuyup numarayı elle tuşlamak zorunda kalıyordu.
+        Burada gerçek bir `tel:` bağlantısı sunulur; telefon uygulaması
+        numarayı hazır açar, çevirme işlemini KULLANICI onaylar.
+
+        112 sabit ve herkese açık bir acil çağrı numarasıdır; kişisel veri
+        değildir ve gizlenmesi gerekmez. Gizli/maskeli arama, SMS veya
+        başka bir kanal EKLENMEZ.
+      */}
+      <div className="mt-5 border-t border-red-400/20 pt-4">
+        <a
+          href="tel:112"
+          aria-label={s.acilDurumGorunum.acilAraErisilebilirAd}
+          className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-base font-bold text-white transition hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-200"
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-5 w-5"
+          >
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.35 1.9.66 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.31 1.85.53 2.81.66A2 2 0 0 1 22 16.92Z" />
+          </svg>
+          {s.acilDurumGorunum.acilAra}
+        </a>
+
+        <p className="mt-3 text-sm font-semibold text-red-100">
+          {s.acilDurumGorunum.acilCagri}
+        </p>
+      </div>
     </section>
   );
 }

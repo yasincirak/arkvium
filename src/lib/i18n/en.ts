@@ -512,6 +512,8 @@ export const EN: DerinKismi<Sozluk> = {
     },
     acilCagri:
       "If there is a risk to life, call 112 (emergency services) first.",
+    acilAra: "Call 112",
+    acilAraErisilebilirAd: "Call 112 emergency services",
   },
 
   kimlik: {

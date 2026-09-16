@@ -70,6 +70,20 @@ const BASLIK_RENGI = "#132238";
 const VURGU_RENGI = "#0E8A68";
 const METIN_RENGI = "#263238";
 
+/*
+  ACİL DURUM RENK DÜZENİ.
+
+  YALNIZCA `acilDurum: true` taşıyan slaytlarda (kask ve araç kazası)
+  zümrüt vurgunun yerini alır. Diğer dört slayt (çanta, valiz,
+  anahtarlık, künye) zümrüt düzeni AYNEN korur.
+
+  Başlık ve açıklama renkleri iki düzende de aynıdır; değişen yalnızca
+  VURGU: rozet, başlığın vurgulanan bölümü ve birincil düğme.
+*/
+const ACIL_ROZET_ZEMIN = "#FEF2F2";
+const ACIL_ROZET_YAZI = "#B91C1C";
+const ACIL_VURGU_RENGI = "#DC2626";
+
 const GECIS_SURESI = 6000;
 const KAYDIRMA_ESIGI = 48;
 
@@ -83,11 +97,23 @@ export type HeroMetinleri = {
 };
 
 /**
- * Başlığı, `vurgu` alt dizesini zümrüt yeşiliyle ayırarak basar.
+ * Başlığı, `vurgu` alt dizesini vurgu rengiyle ayırarak basar.
+ *
+ * Vurgu rengi slayta göre gelir: normal slaytlarda zümrüt, acil durum
+ * slaytlarında kırmızı. Başlığın geri kalanı her iki durumda da
+ * `BASLIK_RENGI` ile kalır.
  *
  * Vurgu bulunamazsa başlık olduğu gibi yazılır — metin ASLA kaybolmaz.
  */
-function VurguluBaslik({ baslik, vurgu }: { baslik: string; vurgu?: string }) {
+function VurguluBaslik({
+  baslik,
+  vurgu,
+  renk,
+}: {
+  baslik: string;
+  vurgu?: string;
+  renk: string;
+}) {
   const sira = vurgu ? baslik.indexOf(vurgu) : -1;
 
   if (sira === -1 || !vurgu) {
@@ -97,7 +123,7 @@ function VurguluBaslik({ baslik, vurgu }: { baslik: string; vurgu?: string }) {
   return (
     <>
       {baslik.slice(0, sira)}
-      <span style={{ color: VURGU_RENGI }}>{vurgu}</span>
+      <span style={{ color: renk }}>{vurgu}</span>
       {baslik.slice(sira + vurgu.length)}
     </>
   );
@@ -237,6 +263,15 @@ export default function HeroKaydirici({
             {SLAYTLAR.map((slayt, sira) => {
               const gizli = sira !== etkin;
 
+              /*
+                Acil durum slaytlarında (kask, araç kazası) vurgu rengi
+                kırmızıdır; diğer dört slaytta zümrüt kalır. Tek yerden
+                türetilir ki rozet, başlık vurgusu ve düğme ASLA
+                birbirinden ayrışmasın.
+              */
+              const acil = slayt.acilDurum === true;
+              const vurguRengi = acil ? ACIL_VURGU_RENGI : VURGU_RENGI;
+
               return (
                 <div
                   key={slayt.kod}
@@ -280,24 +315,35 @@ export default function HeroKaydirici({
                     */}
                     <div className="order-2 lg:order-1 lg:col-span-5">
                       {/*
-                        Rozet, beş slaytta da AYNI sistemi kullanır:
-                        açık zümrüt zemin + koyu zümrüt metin. Acil durum
-                        slaytları yalnızca noktayla ayrılır.
-                      */}
-                      {/*
-                        Rozet, beş slaytta da AYNI sistemi kullanır:
-                        açık zümrüt zemin + koyu zümrüt metin. Acil durum
-                        slaytları yalnızca noktayla ayrılır.
+                        ROZET — iki renk düzeni, tek biçim.
+
+                        Normal slaytlar: açık zümrüt zemin + koyu zümrüt
+                        metin. Acil durum slaytları: açık kırmızı zemin
+                        (#FEF2F2) + koyu kırmızı metin ve nokta (#B91C1C).
+                        Ölçüler, yuvarlaklık ve tipografi AYNI kalır.
                       */}
                       <p
-                        className="ark-etiket inline-flex items-center gap-2 rounded-full bg-[#0E8A68]/10 px-3.5 py-1.5"
-                        style={{ color: VURGU_RENGI }}
+                        className={`ark-etiket inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 ${
+                          acil ? "" : "bg-[#0E8A68]/10"
+                        }`}
+                        style={
+                          acil
+                            ? {
+                                backgroundColor: ACIL_ROZET_ZEMIN,
+                                color: ACIL_ROZET_YAZI,
+                              }
+                            : { color: VURGU_RENGI }
+                        }
                       >
                         {slayt.acilDurum && (
                           <span
                             aria-hidden="true"
                             className="inline-block h-2 w-2 rounded-full"
-                            style={{ backgroundColor: VURGU_RENGI }}
+                            style={{
+                              backgroundColor: acil
+                                ? ACIL_ROZET_YAZI
+                                : VURGU_RENGI,
+                            }}
                           />
                         )}
                         {slayt.etiket}
@@ -312,6 +358,7 @@ export default function HeroKaydirici({
                           <VurguluBaslik
                             baslik={slayt.baslik ?? ""}
                             vurgu={slayt.vurgu}
+                            renk={vurguRengi}
                           />
                         </h1>
                       ) : (
@@ -322,6 +369,7 @@ export default function HeroKaydirici({
                           <VurguluBaslik
                             baslik={slayt.baslik ?? ""}
                             vurgu={slayt.vurgu}
+                            renk={vurguRengi}
                           />
                         </p>
                       )}
@@ -354,18 +402,42 @@ export default function HeroKaydirici({
                             href={dugme.href}
                             tabIndex={gizli ? -1 : undefined}
                             onClick={() => setDuraklat(false)}
+                            /*
+                              BİRİNCİL DÜĞME.
+
+                              Acil durum slaytlarında zemin ve `hover`
+                              rengi SINIFLA verilir (`bg-[#DC2626]` /
+                              `hover:bg-[#B91C1C]`), satır içi `style`
+                              ile DEĞİL: satır içi arka plan `hover`
+                              kuralını her zaman yener ve fare üzerine
+                              gelince renk değişmezdi.
+
+                              Zümrüt düğme mevcut davranışını
+                              (`hover:brightness-95` + satır içi zemin)
+                              olduğu gibi korur.
+                            */
                             className={
                               dugme.tur === "birincil"
-                                ? "inline-flex min-h-[44px] items-center rounded-xl px-6 py-3.5 font-semibold text-white transition duration-200 hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 active:scale-[0.98] motion-reduce:active:scale-100"
+                                ? `inline-flex min-h-[44px] items-center rounded-xl px-6 py-3.5 font-semibold text-white transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 active:scale-[0.98] motion-reduce:active:scale-100 ${
+                                    acil
+                                      ? "bg-[#DC2626] hover:bg-[#B91C1C]"
+                                      : "hover:brightness-95"
+                                  }`
                                 : "inline-flex min-h-[44px] items-center rounded-xl border px-6 py-3.5 font-semibold transition duration-200 hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                             }
                             style={
                               dugme.tur === "birincil"
-                                ? { backgroundColor: VURGU_RENGI, outlineColor: BASLIK_RENGI }
+                                ? {
+                                    /* Kırmızı zemin sınıftan gelir. */
+                                    backgroundColor: acil
+                                      ? undefined
+                                      : VURGU_RENGI,
+                                    outlineColor: BASLIK_RENGI,
+                                  }
                                 : {
                                     color: BASLIK_RENGI,
                                     borderColor: `${BASLIK_RENGI}33`,
-                                    outlineColor: VURGU_RENGI,
+                                    outlineColor: vurguRengi,
                                   }
                             }
                           >
@@ -382,7 +454,7 @@ export default function HeroKaydirici({
                           <span
                             aria-hidden="true"
                             className="mt-0.5 shrink-0"
-                            style={{ color: VURGU_RENGI }}
+                            style={{ color: vurguRengi }}
                           >
                             <IkonKalkan />
                           </span>
@@ -396,10 +468,17 @@ export default function HeroKaydirici({
                         Kadraj `UrunGorselleri` içindeki `konum` değeriyle
                         ayarlanır; her slayt kendi odak noktasını korur.
 
-                        SERT SINIR YOK: görselin metne bakan kenarı beyaza
-                        doğru yumuşak bir gradyanla erir. Masaüstünde bu
-                        geçiş SOLDAN (metnin olduğu taraftan), mobilde
-                        ALTTAN (metnin altta olduğu yerden) gelir.
+                        SERT SINIR YOK: masaüstünde görselin metne bakan
+                        SOL kenarı beyaza doğru yumuşak bir gradyanla erir.
+
+                        Geçiş DAR tutulur (yaklaşık ilk %24) ve %24'ten
+                        sonra tamamen saydamdır: fotoğrafın orta ve sağ
+                        bölümü — sahnedeki kişiler ve QR etiketi — hiç
+                        soldurulmaz.
+
+                        MOBİLDE GRADYAN YOKTUR. Dar ekranda metin görselin
+                        ALTINDADIR; üstüne beyaz bindirmenin bir işlevi
+                        olmadığı gibi fotoğrafı gereksiz yere soluklaştırır.
                       */}
                       <div className="relative aspect-[4/3] overflow-hidden rounded-3xl sm:aspect-[5/4] lg:aspect-[4/3]">
                         <Gorsel
@@ -417,7 +496,7 @@ export default function HeroKaydirici({
 
                         <div
                           aria-hidden="true"
-                          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white via-white/25 to-transparent lg:bg-gradient-to-r lg:from-white lg:via-white/20 lg:to-transparent"
+                          className="pointer-events-none absolute inset-0 hidden lg:block lg:bg-[linear-gradient(to_right,#FFFFFF_0%,rgba(255,255,255,0.72)_6%,rgba(255,255,255,0.28)_14%,rgba(255,255,255,0)_24%)]"
                         />
 
                         <TemsiliRozet metin={metinler.temsiliGorsel} />

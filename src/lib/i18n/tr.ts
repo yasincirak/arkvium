@@ -538,6 +538,8 @@ export const TR = {
     },
     acilCagri:
       "Hayati tehlike varsa önce 112 Acil Çağrı Merkezi'ni arayın.",
+    acilAra: "112 Acil Ara",
+    acilAraErisilebilirAd: "112 Acil Çağrı Merkezi'ni ara",
   },
 
   kimlik: {
