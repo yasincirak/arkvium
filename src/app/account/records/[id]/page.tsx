@@ -12,6 +12,7 @@ import { sifrelemeHazirMi } from "@/lib/acil-durum-sifreleme";
 import { getUserSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getFinderMessagesForOwner } from "@/lib/store";
+import { urunSayfasiAdresi } from "@/lib/etiket-yonetim-kurallari";
 import { etiketAdresi, etiketKoduBicimle } from "@/lib/tags";
 import { ITEM_DURUM_ETIKETLERI } from "@/lib/types";
 
@@ -202,8 +203,28 @@ export default async function AccountRecordDetailPage({
               className="inline-flex rounded-xl border border-white/10 bg-white/5 px-5 py-3 font-semibold text-white transition hover:bg-white/10"
             >{ceviri.hesap.urunuDuzenle}</Link>
 
+            {/*
+              "Ürün Sayfasını Aç" GERÇEK QR HEDEFİNİ açar.
+
+              Önceden eski `/item/<kayıt-id>` adresine gidiyordu; o sayfa
+              acil durum kartını ÇİZMEZ, yani sahibi kendi yayınladığı
+              acil durum bilgisini önizleyemiyordu. Etiketi olan kayıtlar
+              artık QR okutulduğunda açılan canonical `/t/<token>`
+              adresine gider.
+
+              Etiketi olmayan (eski) kayıtlar için `/item/...` korunur:
+              basılmış eski QR'lar hâlâ o adrese bakıyor, bağlantı
+              kırılmaz.
+
+              Token burada yeni bir sızıntı oluşturmaz: bu sayfa yalnızca
+              kaydın SAHİBİNE açıktır ve etiket adresi zaten yukarıdaki
+              TagPanel'de gösterilmektedir.
+            */}
             <Link
-              href={`/item/${record.id}`}
+              href={urunSayfasiAdresi({
+                kayitId: record.id,
+                publicToken: record.tag?.publicToken ?? null,
+              })}
               className="inline-flex rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition hover:bg-indigo-500"
             >{ceviri.kalanlar.urunSayfasiniAc}</Link>
           </div>

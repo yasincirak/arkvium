@@ -899,7 +899,7 @@ export const EN: DerinKismi<Sozluk> = {
     aciklama2:
       "appear to whoever scans your QR code once the profile is published. Health data is sensitive personal data; you can withdraw your consent or delete the profile at any time.",
     kapsamUyarisi:
-      "Important: Every time you update the details, the profile is unpublished for safety. To share the new information you need to give the consents again.",
+      " Every time you update the details, the profile is unpublished for safety. To share the new information you need to give the consents again.",
     taslakUyarisi: "DRAFT — REQUIRES LEGAL REVIEW.",
     taslakMetin:
       "The consent texts below are not final and are for testing only.",

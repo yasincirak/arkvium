@@ -938,7 +938,7 @@ export const TR = {
     aciklama2:
       "olarak işaretlediklerin, profili yayına aldığında QR kodu okutan kişiye görünür. Sağlık bilgisi özel nitelikli kişisel veridir; istediğin an rızanı geri çekebilir veya profili silebilirsin.",
     kapsamUyarisi:
-      "Önemli: Bilgileri her güncellediğinde profil güvenlik gereği yayından kaldırılır. Yeni bilgilerin paylaşılması için onayları tekrar vermen gerekir.",
+      " Bilgileri her güncellediğinde profil güvenlik gereği yayından kaldırılır. Yeni bilgilerin paylaşılması için onayları tekrar vermen gerekir.",
     taslakUyarisi: "TASLAK — HUKUKÇU İNCELEMESİ GEREKTİRİR.",
     taslakMetin:
       "Aşağıdaki onay metinleri henüz kesinleşmemiştir ve yalnızca test amaçlıdır.",

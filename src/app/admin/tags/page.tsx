@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import BaskiKontrolListesi from "@/components/admin/BaskiKontrolListesi";
+import EtiketArama from "@/components/admin/EtiketArama";
 import TagGenerator from "@/components/admin/TagGenerator";
 import TagStokOzeti from "@/components/admin/TagStokOzeti";
 import { SIPARIS_URUNLERI } from "@/lib/siparis";
@@ -38,6 +39,12 @@ export default function AdminTagsPage() {
       >
         <TagStokOzeti />
       </Suspense>
+
+      {/*
+        Etiket arama, üretim formundan ÖNCE durur: var olan bir etiketi
+        bulmak günlük işte üretimden daha sık gereken iştir.
+      */}
+      <EtiketArama />
 
       <BaskiKontrolListesi />
 

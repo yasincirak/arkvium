@@ -52,6 +52,16 @@ const nextConfig = {
         "./node_modules/react/**",
         "./node_modules/react-dom/**",
       ],
+      /*
+        Tekil etiket QR indirme ucu da QR'ı sunucuda üretir; aynı
+        dosyalara ihtiyaç duyar. Yol burada yazılmazsa production'da
+        "Cannot find module" alınır.
+      */
+      "/api/admin/tags/[tagId]/qr": [
+        "./node_modules/qrcode.react/**",
+        "./node_modules/react/**",
+        "./node_modules/react-dom/**",
+      ],
     },
   },
 
